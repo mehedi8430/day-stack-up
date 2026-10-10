@@ -54,7 +54,9 @@ export function PlannerManagement({
   const [tasks, setTasks] = React.useState(initialTasks);
   const [loadedWeekStart, setLoadedWeekStart] = React.useState(initialWeekStart);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [showWeekStrip, setShowWeekStrip] = React.useState(false);
   const requestIdRef = React.useRef(0);
+  const taskListSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [toDelete, setToDelete] = React.useState<PlannerTask | null>(null);
   const [editing, setEditing] = React.useState<PlannerTask | null>(null);
   const [order, setOrder] = React.useState<string[]>(() =>
@@ -109,6 +111,14 @@ export function PlannerManagement({
     void loadWeek(
       dateKey(addDays(parseISO(`${loadedWeekStart}T12:00:00`), offset * 7)),
     );
+  };
+
+  const selectDateFromStrip = (date: string) => {
+    void selectDate(date);
+    taskListSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
   const date = parseISO(`${selectedDate}T12:00:00`);
@@ -221,21 +231,33 @@ export function PlannerManagement({
           void selectDate(dateKey(addDays(date, offset)))
         }
         onToday={() => void selectDate(today)}
+        isWeekStripOpen={showWeekStrip}
+        onOpenWeekStrip={() => setShowWeekStrip(true)}
       />
 
-      <WeekStrip
-        weekStart={loadedWeekStart}
-        selectedDate={selectedDate}
-        today={today}
-        tasks={tasks}
-        isLoading={isLoading}
-        onSelectDate={(value) => void selectDate(value)}
-        onChangeWeek={changeWeek}
-        onThisWeek={() => void selectDate(today)}
-        onTaskCreated={addTaskToDay}
-      />
+      {showWeekStrip && (
+        <WeekStrip
+          weekStart={loadedWeekStart}
+          selectedDate={selectedDate}
+          today={today}
+          tasks={tasks}
+          isLoading={isLoading}
+          onSelectDate={selectDateFromStrip}
+          onChangeWeek={changeWeek}
+          onThisWeek={() => void selectDate(today)}
+          onTaskCreated={addTaskToDay}
+          onClose={() => setShowWeekStrip(false)}
+          onStatusChange={updateStatus}
+          onDeleteTask={setToDelete}
+          onMoveTask={moveTaskToNextDay}
+          onEditTask={setEditing}
+        />
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div
+        ref={taskListSectionRef}
+        className="grid scroll-mt-4 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]"
+      >
         <PlannerStatsSidebar
           isLoading={isLoading}
           completedCount={completedCount}

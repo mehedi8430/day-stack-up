@@ -1,15 +1,24 @@
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PlannerHeader({
   date,
   onChangeDate,
   onToday,
+  isWeekStripOpen,
+  onOpenWeekStrip,
 }: {
   date: Date;
   onChangeDate: (offset: number) => void;
   onToday: () => void;
+  isWeekStripOpen: boolean;
+  onOpenWeekStrip: () => void;
 }) {
   return (
     <header className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -25,6 +34,16 @@ export function PlannerHeader({
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {!isWeekStripOpen && (
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={onOpenWeekStrip}
+          >
+            <CalendarRange className="h-4 w-4" />
+            <span className="hidden sm:inline">Weekly planner</span>
+          </Button>
+        )}
         <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
           <Button
             variant="ghost"

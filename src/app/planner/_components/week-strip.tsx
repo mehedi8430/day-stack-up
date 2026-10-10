@@ -2,76 +2,17 @@
 
 import * as React from "react";
 import { addDays, format, parseISO } from "date-fns";
-import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createPlannerTask } from "@/app/actions/planner.actions";
-import type { PlannerTask } from "@/lib/planner-types";
+import type { PlannerStatus, PlannerTask } from "@/lib/planner-types";
 import { sortPlannerTasks } from "@/lib/planner-utils";
+import { DayTasksDialog } from "./day-tasks-dialog";
 
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX_PREVIEW = 3;
 
 function dateKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
-}
-
-function DayQuickAdd({
-  date,
-  onCreated,
-}: {
-  date: string;
-  onCreated: (task: PlannerTask) => void;
-}) {
-  const [title, setTitle] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmed = title.trim();
-    if (!trimmed || saving) return;
-    setSaving(true);
-    const result = await createPlannerTask({
-      title: trimmed,
-      date,
-      priority: "medium",
-    });
-    setSaving(false);
-    if ("error" in result) {
-      toast.error(result.error);
-      return;
-    }
-    onCreated(result.task);
-    setTitle("");
-    toast.success("Task added to planner");
-  };
-
-  return (
-    <form onSubmit={submit} className="mt-3 border-t pt-2">
-      <div className="flex items-center gap-1">
-        <Input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Add task..."
-          aria-label={`Add task to ${date}`}
-          maxLength={160}
-          disabled={saving}
-          className="h-8 text-xs"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          disabled={!title.trim() || saving}
-          aria-label="Add task"
-          title="Add task"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-    </form>
-  );
 }
 
 export function WeekStrip({
@@ -84,6 +25,11 @@ export function WeekStrip({
   onChangeWeek,
   onThisWeek,
   onTaskCreated,
+  onClose,
+  onStatusChange,
+  onDeleteTask,
+  onMoveTask,
+  onEditTask,
 }: {
   weekStart: string;
   selectedDate: string;
@@ -94,7 +40,16 @@ export function WeekStrip({
   onChangeWeek: (offset: number) => void;
   onThisWeek: () => void;
   onTaskCreated: (task: PlannerTask) => void;
+  onClose: () => void;
+  onStatusChange: (task: PlannerTask, status: PlannerStatus) => void;
+  onDeleteTask: (task: PlannerTask) => void;
+  onMoveTask: (task: PlannerTask) => void;
+  onEditTask: (task: PlannerTask) => void;
 }) {
+  const [activeDate, setActiveDate] = React.useState<string | null>(null);
+  const activeTasks = activeDate
+    ? sortPlannerTasks(tasks.filter((task) => task.date === activeDate))
+    : [];
   const start = parseISO(`${weekStart}T12:00:00`);
   const end = addDays(start, 6);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
@@ -104,6 +59,23 @@ export function WeekStrip({
       className="rounded-xl border bg-card p-4 shadow-sm"
       aria-label="Week planner"
     >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          See your whole week at a glance. Click a day to open it below, or add
+          a task directly from any day.
+        </p>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close weekly planner"
+          title="Close weekly planner"
+          className="shrink-0"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">This week</h2>
@@ -154,7 +126,7 @@ export function WeekStrip({
           return (
             <div
               key={key}
-              className={`flex min-w-[9.5rem] flex-1 flex-col rounded-lg border p-2.5 ${
+              className={`flex min-w-38 flex-1 flex-col rounded-lg border p-2.5 ${
                 selected
                   ? "border-primary ring-1 ring-primary/40"
                   : "border-muted"
@@ -163,14 +135,16 @@ export function WeekStrip({
               <button
                 type="button"
                 onClick={() => onSelectDate(key)}
-                className="mb-2 flex items-center justify-between gap-1 rounded-md px-1 py-1 text-left hover:bg-muted/60"
+                className="mb-2 flex items-center justify-between gap-1 rounded-md px-1 py-1 text-left hover:bg-muted/60 cursor-pointer"
                 aria-label={`Open ${format(day, "EEEE MMM d")}`}
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {weekdayLabels[index]}
                   </p>
-                  <p className={`text-lg font-bold ${isToday ? "text-primary" : ""}`}>
+                  <p
+                    className={`text-lg font-bold ${isToday ? "text-primary" : ""}`}
+                  >
                     {format(day, "d")}
                   </p>
                 </div>
@@ -207,11 +181,34 @@ export function WeekStrip({
                 )}
               </div>
 
-              <DayQuickAdd date={key} onCreated={onTaskCreated} />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full gap-1"
+                onClick={() => setActiveDate(key)}
+              >
+                <Plus className="h-4 w-4" />
+                Add task
+              </Button>
             </div>
           );
         })}
       </div>
+
+      <DayTasksDialog
+        date={activeDate}
+        open={activeDate !== null}
+        tasks={activeTasks}
+        onOpenChange={(open) => {
+          if (!open) setActiveDate(null);
+        }}
+        onTaskCreated={onTaskCreated}
+        onStatusChange={onStatusChange}
+        onDeleteTask={onDeleteTask}
+        onMoveTask={onMoveTask}
+        onEditTask={onEditTask}
+      />
     </section>
   );
 }
