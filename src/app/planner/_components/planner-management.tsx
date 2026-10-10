@@ -161,18 +161,22 @@ export function PlannerManagement({
 
   const moveTaskToNextDay = async (task: PlannerTask) => {
     const previous = tasks;
-    const previousOrder = order;
-    setTasks((current) => current.filter((item) => item.id !== task.id));
-    setOrder((current) => current.filter((id) => id !== task.id));
-    const result = await movePlannerTaskToDate(
-      task.id,
-      dateKey(addDays(date, 1)),
+    const nextDate = dateKey(addDays(date, 1));
+    setTasks((current) =>
+      current.map((item) =>
+        item.id === task.id
+          ? { ...item, date: nextDate, status: "planned" }
+          : item,
+      ),
     );
+    const result = await movePlannerTaskToDate(task.id, nextDate);
     if ("error" in result) {
       setTasks(previous);
-      setOrder(previousOrder);
       toast.error(result.error);
     } else {
+      setTasks((current) =>
+        current.map((item) => (item.id === task.id ? result.task : item)),
+      );
       toast.success("Task moved to tomorrow");
     }
   };
@@ -180,11 +184,11 @@ export function PlannerManagement({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = order.indexOf(active.id as string);
-    const newIndex = order.indexOf(over.id as string);
+    const oldIndex = orderedDayTasks.indexOf(active.id as string);
+    const newIndex = orderedDayTasks.indexOf(over.id as string);
     if (oldIndex < 0 || newIndex < 0) return;
 
-    const reordered = arrayMove(order, oldIndex, newIndex);
+    const reordered = arrayMove(orderedDayTasks, oldIndex, newIndex);
     setOrder(reordered);
     reorderPlannerTasks(reordered).then((result) => {
       if ("error" in result) toast.error(result.error);
@@ -236,9 +240,7 @@ export function PlannerManagement({
           isLoading={isLoading}
           sortedTasks={sortedTasks}
           sensors={sensors}
-          onTaskCreated={(task) => {
-            setTasks((current) => [...current, task]);
-          }}
+          onTaskCreated={addTaskToDay}
           onDragEnd={handleDragEnd}
           onStatusChange={updateStatus}
           onDeleteTask={setToDelete}
