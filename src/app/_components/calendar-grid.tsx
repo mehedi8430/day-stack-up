@@ -155,12 +155,6 @@ export function CalendarGrid({
                 <span className="hidden sm:inline">Daily Planner</span>
               </Button>
             </Link>
-            <Link href="/planner/weekly">
-              <Button variant="outline" className="gap-2 px-2.5 sm:px-4">
-                <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Weekly Planner</span>
-              </Button>
-            </Link>
             <Button onClick={openAdd} className="gap-2 px-2.5 sm:px-4">
               <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Habit</span>
             </Button>

@@ -1,6 +1,5 @@
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PlannerHeader({
@@ -59,12 +58,6 @@ export function PlannerHeader({
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Link href="/planner/weekly">
-          <Button variant="outline" className="gap-2">
-            <CalendarRange className="h-4 w-4" />
-            Weekly planner
-          </Button>
-        </Link>
       </div>
     </header>
   );

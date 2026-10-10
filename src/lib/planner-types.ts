@@ -15,20 +15,3 @@ export interface PlannerTask {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface WeeklyPlannerGoal {
-  id: string;
-  userId: string;
-  title: string;
-  weekday: number;
-  startTime: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface WeeklyPlannerGoalOccurrence {
-  goalId: string;
-  date: string;
-  completed: boolean;
-}
