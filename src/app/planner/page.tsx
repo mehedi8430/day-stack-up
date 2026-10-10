@@ -1,9 +1,6 @@
-import { format } from "date-fns";
+import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { redirect } from "next/navigation";
-import {
-  getPlannerTasks,
-  getWeeklyGoalsForDate,
-} from "@/app/actions/planner.actions";
+import { getPlannerTasksBetween } from "@/app/actions/planner.actions";
 import { createClient } from "@/lib/supabase/server";
 import { PlannerManagement } from "./_components/planner-management";
 
@@ -27,18 +24,20 @@ export default async function PlannerPage({
       ? resolvedParams.date
       : today;
 
-  const [{ tasks }, weeklyGoalData] = await Promise.all([
-    getPlannerTasks(requestedDate),
-    getWeeklyGoalsForDate(requestedDate),
-  ]);
+  const weekStart = startOfWeek(parseISO(`${requestedDate}T12:00:00`), {
+    weekStartsOn: 1,
+  });
+  const start = format(weekStart, "yyyy-MM-dd");
+  const end = format(addDays(weekStart, 6), "yyyy-MM-dd");
+
+  const { tasks } = await getPlannerTasksBetween(start, end);
 
   return (
     <PlannerManagement
       initialTasks={tasks}
-      initialWeeklyGoals={weeklyGoalData.goals}
-      initialWeeklyGoalOccurrences={weeklyGoalData.occurrences}
       today={today}
       selectedDate={requestedDate}
+      weekStart={start}
     />
   );
 }

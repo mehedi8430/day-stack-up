@@ -8,162 +8,136 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { addDays, format, parseISO } from "date-fns";
+import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import {
   deletePlannerTask,
-  getPlannerTasks,
-  getWeeklyGoalsForDate,
+  getPlannerTasksBetween,
   movePlannerTaskToDate,
   reorderPlannerTasks,
-  setWeeklyPlannerGoalCompletion,
   updatePlannerTask,
 } from "@/app/actions/planner.actions";
-import type {
-  PlannerStatus,
-  PlannerTask,
-  WeeklyPlannerGoal,
-  WeeklyPlannerGoalOccurrence,
-} from "@/lib/planner-types";
+import type { PlannerStatus, PlannerTask } from "@/lib/planner-types";
+import { sortPlannerTasks } from "@/lib/planner-utils";
+import { DeletePlannerTaskDialog } from "./delete-planner-task-dialog";
 import { EditTaskDialog } from "./edit-task-dialog";
 import { PlannerHeader } from "./planner-header";
 import { PlannerStatsSidebar } from "./planner-stats-sidebar";
 import { PlannerTaskManagement } from "./planner-task-management";
-import { DeletePlannerTaskDialog } from "./delete-planner-task-dialog";
+import { WeekStrip } from "./week-strip";
 
 interface PlannerManagementProps {
   initialTasks: PlannerTask[];
-  initialWeeklyGoals: WeeklyPlannerGoal[];
-  initialWeeklyGoalOccurrences: WeeklyPlannerGoalOccurrence[];
   today: string;
-  selectedDate?: string;
+  selectedDate: string;
+  weekStart: string;
 }
 
 function dateKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
-function sortTasks(tasks: PlannerTask[]): PlannerTask[] {
-  return [...tasks].sort((a, b) => {
-    if (!a.startTime && !b.startTime) return a.position - b.position;
-    if (!a.startTime) return 1;
-    if (!b.startTime) return -1;
-    return a.startTime.localeCompare(b.startTime) || a.position - b.position;
-  });
+function weekStartOf(date: string): string {
+  return dateKey(
+    startOfWeek(parseISO(`${date}T12:00:00`), { weekStartsOn: 1 }),
+  );
 }
 
 export function PlannerManagement({
   initialTasks,
-  initialWeeklyGoals,
-  initialWeeklyGoalOccurrences,
   today,
-  selectedDate: selectedDateProp,
+  selectedDate: initialDate,
+  weekStart: initialWeekStart,
 }: PlannerManagementProps) {
-  const initialDate = selectedDateProp ?? today;
   const [selectedDate, setSelectedDate] = React.useState(initialDate);
   const [tasks, setTasks] = React.useState(initialTasks);
-  const [weeklyGoals, setWeeklyGoals] = React.useState(initialWeeklyGoals);
-  const [weeklyGoalOccurrences, setWeeklyGoalOccurrences] = React.useState(
-    initialWeeklyGoalOccurrences,
-  );
-  const [lastLoadedDate, setLastLoadedDate] = React.useState(initialDate);
-  const [lastLoadedWeeklyDate, setLastLoadedWeeklyDate] = React.useState(initialDate);
-  const [orderedIds, setOrderedIds] = React.useState(() =>
-    sortTasks(initialTasks).map((task) => task.id),
-  );
+  const [loadedWeekStart, setLoadedWeekStart] = React.useState(initialWeekStart);
+  const [isLoading, setIsLoading] = React.useState(false);
   const [toDelete, setToDelete] = React.useState<PlannerTask | null>(null);
   const [editing, setEditing] = React.useState<PlannerTask | null>(null);
+  const [order, setOrder] = React.useState<string[]>(() =>
+    sortPlannerTasks(
+      initialTasks.filter((task) => task.date === initialDate),
+    ).map((task) => task.id),
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  React.useEffect(() => {
-    if (selectedDate === lastLoadedDate) return;
-    let cancelled = false;
+  const loadWeek = React.useCallback(async (weekStart: string) => {
+    setIsLoading(true);
+    const weekEnd = dateKey(addDays(parseISO(`${weekStart}T12:00:00`), 6));
+    try {
+      const { tasks: loaded } = await getPlannerTasksBetween(
+        weekStart,
+        weekEnd,
+      );
+      setTasks(loaded);
+      setLoadedWeekStart(weekStart);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load planner",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    getPlannerTasks(selectedDate)
-      .then(({ tasks: loadedTasks }) => {
-        if (cancelled) return;
-        setTasks(loadedTasks);
-        setOrderedIds(sortTasks(loadedTasks).map((task) => task.id));
-        setLastLoadedDate(selectedDate);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setTasks([]);
-        setOrderedIds([]);
-        setLastLoadedDate(selectedDate);
-        toast.error(error instanceof Error ? error.message : "Failed to load planner");
-      });
+  const selectDate = async (date: string) => {
+    setSelectedDate(date);
+    const targetWeekStart = weekStartOf(date);
+    if (targetWeekStart !== loadedWeekStart) {
+      await loadWeek(targetWeekStart);
+    }
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDate, lastLoadedDate]);
-
-  React.useEffect(() => {
-    if (selectedDate === lastLoadedWeeklyDate) return;
-    let cancelled = false;
-
-    getWeeklyGoalsForDate(selectedDate)
-      .then((result) => {
-        if (cancelled) return;
-        setWeeklyGoals(result.goals);
-        setWeeklyGoalOccurrences(result.occurrences);
-        setLastLoadedWeeklyDate(selectedDate);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setWeeklyGoals([]);
-        setWeeklyGoalOccurrences([]);
-        setLastLoadedWeeklyDate(selectedDate);
-        toast.error(
-          error instanceof Error ? error.message : "Failed to load weekly goals",
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDate, lastLoadedWeeklyDate]);
+  const changeWeek = (offset: number) => {
+    const nextSelected = dateKey(
+      addDays(parseISO(`${selectedDate}T12:00:00`), offset * 7),
+    );
+    setSelectedDate(nextSelected);
+    void loadWeek(
+      dateKey(addDays(parseISO(`${loadedWeekStart}T12:00:00`), offset * 7)),
+    );
+  };
 
   const date = parseISO(`${selectedDate}T12:00:00`);
-  const isDateLoading =
-    selectedDate !== lastLoadedDate || selectedDate !== lastLoadedWeeklyDate;
-  const completedWeeklyGoals = weeklyGoals.filter((goal) =>
-    weeklyGoalOccurrences.some(
-      (occurrence) =>
-        occurrence.goalId === goal.id &&
-        occurrence.date === selectedDate &&
-        occurrence.completed,
-    ),
+  const dayTasks = React.useMemo(
+    () =>
+      sortPlannerTasks(
+        tasks.filter((task) => task.date === selectedDate),
+      ),
+    [tasks, selectedDate],
+  );
+  const orderedDayTasks = React.useMemo(() => {
+    const dayIds = dayTasks.map((task) => task.id);
+    const kept = order.filter((id) => dayIds.includes(id));
+    const added = dayIds.filter((id) => !kept.includes(id));
+    return [...kept, ...added];
+  }, [order, dayTasks]);
+  const sortedTasks = orderedDayTasks
+    .map((id) => dayTasks.find((task) => task.id === id))
+    .filter((task): task is PlannerTask => Boolean(task));
+  const completedCount = dayTasks.filter(
+    (task) => task.status === "done",
   ).length;
-  const completedCount =
-    tasks.filter((task) => task.status === "done").length + completedWeeklyGoals;
-  const totalTaskCount = tasks.length + weeklyGoals.length;
-  const activeCount =
-    tasks.filter((task) => task.status !== "done" && task.status !== "skipped")
-      .length +
-    weeklyGoals.length -
-    completedWeeklyGoals;
-  const scheduledMinutes = tasks.reduce(
+  const totalTaskCount = dayTasks.length;
+  const activeCount = dayTasks.filter(
+    (task) => task.status !== "done" && task.status !== "skipped",
+  ).length;
+  const scheduledMinutes = dayTasks.reduce(
     (total, task) => total + (task.durationMinutes ?? 0),
     0,
   );
-  const sortedTasks = orderedIds
-    .map((id) => tasks.find((task) => task.id === id))
-    .filter((task): task is PlannerTask => Boolean(task));
-
-  const changeDate = (offset: number) => {
-    setSelectedDate(dateKey(addDays(date, offset)));
-  };
 
   const updateStatus = async (task: PlannerTask, status: PlannerStatus) => {
     const previous = tasks;
     setTasks((current) =>
-      current.map((item) => (item.id === task.id ? { ...item, status } : item)),
+      current.map((item) =>
+        item.id === task.id ? { ...item, status } : item,
+      ),
     );
     const result = await updatePlannerTask(task.id, { status });
     if ("error" in result) {
@@ -174,29 +148,29 @@ export function PlannerManagement({
 
   const deleteTask = async (task: PlannerTask) => {
     const previous = tasks;
-    const previousIds = orderedIds;
+    const previousOrder = order;
     setTasks((current) => current.filter((item) => item.id !== task.id));
-    setOrderedIds((current) => current.filter((id) => id !== task.id));
+    setOrder((current) => current.filter((id) => id !== task.id));
     const result = await deletePlannerTask(task.id);
     if (result.error) {
       setTasks(previous);
-      setOrderedIds(previousIds);
+      setOrder(previousOrder);
       toast.error(result.error);
     }
   };
 
   const moveTaskToNextDay = async (task: PlannerTask) => {
     const previous = tasks;
-    const previousIds = orderedIds;
+    const previousOrder = order;
     setTasks((current) => current.filter((item) => item.id !== task.id));
-    setOrderedIds((current) => current.filter((id) => id !== task.id));
+    setOrder((current) => current.filter((id) => id !== task.id));
     const result = await movePlannerTaskToDate(
       task.id,
       dateKey(addDays(date, 1)),
     );
     if ("error" in result) {
       setTasks(previous);
-      setOrderedIds(previousIds);
+      setOrder(previousOrder);
       toast.error(result.error);
     } else {
       toast.success("Task moved to tomorrow");
@@ -206,12 +180,12 @@ export function PlannerManagement({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = orderedIds.indexOf(active.id as string);
-    const newIndex = orderedIds.indexOf(over.id as string);
+    const oldIndex = order.indexOf(active.id as string);
+    const newIndex = order.indexOf(over.id as string);
     if (oldIndex < 0 || newIndex < 0) return;
 
-    const reordered = arrayMove(orderedIds, oldIndex, newIndex);
-    setOrderedIds(reordered);
+    const reordered = arrayMove(order, oldIndex, newIndex);
+    setOrder(reordered);
     reorderPlannerTasks(reordered).then((result) => {
       if ("error" in result) toast.error(result.error);
     });
@@ -223,63 +197,48 @@ export function PlannerManagement({
     );
   };
 
-  const toggleWeeklyGoal = async (goal: WeeklyPlannerGoal) => {
-    const existing = weeklyGoalOccurrences.find(
-      (occurrence) =>
-        occurrence.goalId === goal.id && occurrence.date === selectedDate,
-    );
-    const completed = !(existing?.completed ?? false);
-    const previous = weeklyGoalOccurrences;
-    setWeeklyGoalOccurrences((current) =>
-      existing
-        ? current.map((occurrence) =>
-            occurrence.goalId === goal.id && occurrence.date === selectedDate
-              ? { ...occurrence, completed }
-              : occurrence,
-          )
-        : [...current, { goalId: goal.id, date: selectedDate, completed }],
-    );
-
-    const result = await setWeeklyPlannerGoalCompletion(
-      goal.id,
-      selectedDate,
-      completed,
-    );
-    if ("error" in result) {
-      setWeeklyGoalOccurrences(previous);
-      toast.error(result.error);
-    }
+  const addTaskToDay = (task: PlannerTask) => {
+    setTasks((current) => [...current, task]);
   };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
       <PlannerHeader
         date={date}
-        onChangeDate={changeDate}
-        onToday={() => setSelectedDate(today)}
+        onChangeDate={(offset) =>
+          void selectDate(dateKey(addDays(date, offset)))
+        }
+        onToday={() => void selectDate(today)}
+      />
+
+      <WeekStrip
+        weekStart={loadedWeekStart}
+        selectedDate={selectedDate}
+        today={today}
+        tasks={tasks}
+        isLoading={isLoading}
+        onSelectDate={(value) => void selectDate(value)}
+        onChangeWeek={changeWeek}
+        onThisWeek={() => void selectDate(today)}
+        onTaskCreated={addTaskToDay}
       />
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <PlannerStatsSidebar
-          isLoading={isDateLoading}
+          isLoading={isLoading}
           completedCount={completedCount}
           totalTaskCount={totalTaskCount}
           activeCount={activeCount}
           scheduledMinutes={scheduledMinutes}
         />
         <PlannerTaskManagement
-          date={date}
           selectedDate={selectedDate}
-          isLoading={isDateLoading}
-          weeklyGoals={weeklyGoals}
-          weeklyGoalOccurrences={weeklyGoalOccurrences}
+          isLoading={isLoading}
           sortedTasks={sortedTasks}
           sensors={sensors}
           onTaskCreated={(task) => {
             setTasks((current) => [...current, task]);
-            setOrderedIds((current) => [...current, task.id]);
           }}
-          onToggleWeeklyGoal={toggleWeeklyGoal}
           onDragEnd={handleDragEnd}
           onStatusChange={updateStatus}
           onDeleteTask={setToDelete}
