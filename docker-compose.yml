@@ -1,4 +1,5 @@
 services:
+  # Define the application service
   app:
     build:
       context: .
@@ -12,8 +13,8 @@ services:
       - /app/node_modules
       - /app/.next
     networks:
-      - app-network
+      - demo-network
 
 networks:
-  app-network:
+  demo-network:
     driver: bridge
