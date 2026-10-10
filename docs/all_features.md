@@ -53,9 +53,10 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Delete task** — confirmation dialog before removal
 - **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations)
 - Footer note reminding that time blocks are guidance
-- **Weekly goals** (`/planner/weekly`) — define recurring goals for specific weekdays (for example, solve a LeetCode problem every Monday or publish a LinkedIn post every Sunday), optionally with a time and note
-- **Per-date progress** — each recurring goal appears on its weekday every week, with completion saved independently for each date; goals can be edited or deleted
-- Weekly goal view includes week navigation and links to each date's daily planner; it is linked from the home calendar and daily planner, not added to the main navigation
+- **Week strip** — at the top of the daily planner, a 7-day (Mon–Sun) overview
+  of the current week: each day shows a preview of its tasks, a per-day
+  quick-add input, week navigation (prev / next / this week), and click-to-open
+  any day in the planner below
 
 ### 7. Analytics Dashboard (`/analytics`)
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
@@ -85,8 +86,6 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - `habits` — id, user_id, name, emoji, category, sort_order, goal, notes
 - `completions` — id, user_id, habit_id, date, completed, timestamps; UNIQUE(habit_id, date)
 - `daily_planner_tasks` — id, user_id, title, date, start_time, duration_minutes, priority, status, notes, position
-- `weekly_planner_goals` — user_id-scoped recurring goal templates with title, weekday, optional time, and notes
-- `weekly_planner_goal_occurrences` — user_id-scoped completion state for each goal/date occurrence; deleting a template cascades its occurrences
 - `habit_topics` (milestones) — id, user_id, habit_id, title, status, start_date, target_date, details, resources, sort_order
 - **RLS enabled on all tables** with full CRUD policies scoped to `auth.uid()`
 - Indexes on foreign keys and ordering columns

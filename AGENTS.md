@@ -33,7 +33,7 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
 - Habit data is scoped per user and enforced via Supabase RLS.
 - The home page is the monthly habit calendar; task completion is driven by `habits` + `completions` rows.
 - Planner and analytics read from their own tables and computed aggregates rather than a generic ORM layer.
-- Weekly planner goals are recurring templates in `weekly_planner_goals`; completion is recorded per date in `weekly_planner_goal_occurrences`, not on the template itself.
+- The daily planner stores concrete per-date tasks in `daily_planner_tasks`; the week strip on the planner page is a client-side grouping of those tasks by date.
 - Notes are stored on the `habits` table, not on individual completion rows.
 - Mood/behavior/analytics rely on server-side computed data, not ad hoc client-only logic.
 
@@ -108,7 +108,6 @@ When making changes, the agent should:
 ## Typical target files by concern
 - Habit/calendar logic: `src/app/actions/habit.actions.ts`, `src/stores/store.ts`, `src/app/_components/calendar-grid.tsx`
 - Planner logic: `src/app/planner/_components/*`, `src/app/actions/planner.actions.ts`
-- Weekly recurring goals: `src/app/planner/weekly/**`, `src/app/actions/planner.actions.ts`, `src/lib/planner-types.ts`, `supabase/migrations/*weekly_planner_goals*`
 - Milestones: `src/app/habits/**`, `src/app/actions/milestone.actions.ts`
 - Analytics: `src/app/analytics/**`
 - Shared types: `src/lib/types.ts`
