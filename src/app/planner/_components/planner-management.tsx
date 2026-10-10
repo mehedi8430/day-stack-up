@@ -54,6 +54,7 @@ export function PlannerManagement({
   const [tasks, setTasks] = React.useState(initialTasks);
   const [loadedWeekStart, setLoadedWeekStart] = React.useState(initialWeekStart);
   const [isLoading, setIsLoading] = React.useState(false);
+  const requestIdRef = React.useRef(0);
   const [toDelete, setToDelete] = React.useState<PlannerTask | null>(null);
   const [editing, setEditing] = React.useState<PlannerTask | null>(null);
   const [order, setOrder] = React.useState<string[]>(() =>
@@ -67,6 +68,7 @@ export function PlannerManagement({
   );
 
   const loadWeek = React.useCallback(async (weekStart: string) => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     const weekEnd = dateKey(addDays(parseISO(`${weekStart}T12:00:00`), 6));
     try {
@@ -74,14 +76,20 @@ export function PlannerManagement({
         weekStart,
         weekEnd,
       );
+      if (requestId !== requestIdRef.current) return;
       setTasks(loaded);
       setLoadedWeekStart(weekStart);
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
+      setTasks([]);
+      setLoadedWeekStart(weekStart);
       toast.error(
         error instanceof Error ? error.message : "Failed to load planner",
       );
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
