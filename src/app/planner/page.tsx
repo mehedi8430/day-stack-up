@@ -25,7 +25,7 @@ export default async function PlannerPage({
       : today;
 
   const weekStart = startOfWeek(parseISO(`${requestedDate}T12:00:00`), {
-    weekStartsOn: 1,
+    weekStartsOn: 6,
   });
   const start = format(weekStart, "yyyy-MM-dd");
   const end = format(addDays(weekStart, 6), "yyyy-MM-dd");

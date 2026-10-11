@@ -40,7 +40,7 @@ function dateKey(date: Date): string {
 
 function weekStartOf(date: string): string {
   return dateKey(
-    startOfWeek(parseISO(`${date}T12:00:00`), { weekStartsOn: 1 }),
+    startOfWeek(parseISO(`${date}T12:00:00`), { weekStartsOn: 6 }),
   );
 }
 

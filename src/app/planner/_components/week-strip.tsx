@@ -8,7 +8,7 @@ import type { PlannerStatus, PlannerTask } from "@/lib/planner-types";
 import { sortPlannerTasks } from "@/lib/planner-utils";
 import { DayTasksDialog } from "./day-tasks-dialog";
 
-const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdayLabels = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 const MAX_PREVIEW = 3;
 
 function dateKey(date: Date): string {
