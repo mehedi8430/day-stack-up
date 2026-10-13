@@ -26,7 +26,7 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
 - `src/lib/` — shared types, date helpers, and Supabase client helpers
 - `src/stores/store.ts` — Zustand state for habit/completion optimistic updates
 - `src/proxy.ts` — route protection for authenticated pages
-- `supabase/migrations/` — database schema and data migration history
+- `prisma/migrations/` — Prisma migration history (schema source of truth: `prisma/schema.prisma`)
 - `docs/` — features and design notes, including product specs
 
 ## Core product behavior
@@ -59,10 +59,11 @@ Examples:
 
 ### 4) Database changes should be migration-first
 If a feature requires a schema change:
-- add or update the SQL migration in `supabase/migrations/`
-- keep migration naming consistent with the existing timestamp naming convention
+- edit `prisma/schema.prisma` and create a migration with `npx prisma migrate dev` (local); apply with `npm run db:deploy`
+- keep Prisma's timestamp migration naming (existing convention)
 - prefer incremental changes with clear intent
 - do not edit historical migration files casually unless there is a very specific reason
+- Note: Supabase Auth and all runtime queries remain on the Supabase JS client. RLS/CHECK constraints are hand-written in migration SQL (Prisma cannot model them). No `@prisma/client` is used.
 
 ## Development commands
 Run these from the project root:
@@ -122,4 +123,4 @@ Before finalizing a task, confirm:
 - Relevant validation has been run and the evidence is included in the final update.
 
 ## One important note for future agents
-This project already contains feature documentation and design notes in `docs/` and migration history in `supabase/migrations/`. Read those when a change touches product behavior or a prior design decision. Do not assume the current code is the only source of truth.
+This project already contains feature documentation and design notes in `docs/` and migration history in `prisma/migrations/`. Read those when a change touches product behavior or a prior design decision. Do not assume the current code is the only source of truth.

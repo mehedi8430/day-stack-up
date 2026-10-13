@@ -46,7 +46,7 @@ A modern productivity habit tracker built with **Next.js** and **Supabase**. Sta
 ### 1. Set Up Supabase
 
 1. Create a new project at [supabase.com](https://supabase.com).
-2. Open the **SQL Editor** and run the migration in [`supabase/migrations/20250820090000_init_schema.sql`](supabase/migrations/20250820090000_init_schema.sql). This creates the tables and RLS policies.
+2. Set up the database schema: the schema and RLS migrations live in `prisma/migrations/`. Copy the Supabase Postgres connection string into `SUPABASE_DATABASE_URL` in `.env.local`, then apply the migrations with `DATABASE_URL="$SUPABASE_DATABASE_URL" npm run db:deploy` (`npx prisma migrate deploy`). For local development against the Docker Postgres, `DATABASE_URL` already points at that instance and `npm run db:deploy` is used directly.
 3. Under **Authentication → Providers**, enable **Email/Password**.
 4. From **Project Settings → API**, copy your project URL, anon key, and service role key.
 
@@ -63,6 +63,8 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL`   | Your Supabase project URL            |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anonymous key              |
 | `SUPABASE_SERVICE_ROLE_KEY`  | Server-side service role key         |
+| `DATABASE_URL`               | Postgres connection string read by the Prisma CLI (local Docker Postgres in dev; set to the Supabase string to deploy) |
+| `SUPABASE_DATABASE_URL`      | Supabase Postgres direct/session connection string, used as the deploy override: `DATABASE_URL="$SUPABASE_DATABASE_URL" npm run db:deploy` |
 
 ### 3. Install and Run
 
@@ -97,3 +99,8 @@ src/
 | `npm run build`   | Create a production build          |
 | `npm start`       | Serve the production build         |
 | `npm run lint`    | Run ESLint                         |
+| `npm run db:migrate`  | Create/apply a migration in local dev (`prisma migrate dev`) |
+| `npm run db:deploy`   | Apply pending migrations (`prisma migrate deploy`) |
+| `npm run db:status`   | Show migration status (`prisma migrate status`) |
+| `npm run db:studio`   | Open Prisma Studio (`prisma studio`) |
+| `npm run db:validate` | Validate `prisma/schema.prisma` |
