@@ -8,13 +8,35 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/daystackup?schema=public
     volumes:
       - .:/app
       - /app/node_modules
       - /app/.next
     networks:
-      - demo-network
+      - daystackup-network
 
+  # Define the database service
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: daystackup
+    ports:
+      - "5432:5432"
+    volumes:
+      - daystackup_pgdata:/var/lib/postgresql/data
+    networks:
+      - daystackup-network
+
+# Define the volume for persistent database storage
+volumes:
+  daystackup_pgdata:
+
+# Define the custom network for the services
 networks:
-  demo-network:
+  daystackup-network:
     driver: bridge
