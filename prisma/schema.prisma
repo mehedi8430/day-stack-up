@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public", "auth"]
+}
+
+model Habit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  emoji     String   @default("📋")
+  category  String   @default("other")
+  sortOrder Int      @default(0) @map("sort_order")
+  goal      String   @default("")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  completions Completion[]
+  topics      HabitTopic[]
+
+  @@index([userId], map: "idx_habits_user_id")
+  @@index([userId, sortOrder], map: "idx_habits_user_order")
+  @@map("habits")
+  @@schema("public")
+}
+
+model Completion {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  habitId   String   @map("habit_id") @db.Uuid
+  date      DateTime @db.Date
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date], map: "completions_habit_id_date_key")
+  @@index([userId], map: "idx_completions_user_id")
+  @@index([userId, date], map: "idx_completions_user_date")
+  @@index([habitId], map: "idx_completions_habit_id")
+  @@map("completions")
+  @@schema("public")
+}
+
+model DailyPlannerTask {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  title           String
+  date            DateTime  @db.Date
+  startTime       DateTime? @map("start_time") @db.Time(6)
+  durationMinutes Int?      @map("duration_minutes")
+  priority        String    @default("medium")
+  status          String    @default("planned")
+  notes           String?
+  position        Int       @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId, date], map: "idx_daily_planner_tasks_user_date")
+  @@map("daily_planner_tasks")
+  @@schema("public")
+}
+
+model HabitTopic {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  habitId    String    @map("habit_id") @db.Uuid
+  title      String
+  status     String    @default("planned")
+  details    String    @default("")
+  resources  String    @default("")
+  sortOrder  Int       @default(0) @map("sort_order")
+  startDate  DateTime? @map("start_date") @db.Date
+  targetDate DateTime? @map("target_date") @db.Date
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([habitId, sortOrder], map: "idx_habit_topics_habit_order")
+  @@map("habit_topics")
+  @@schema("public")
+}
