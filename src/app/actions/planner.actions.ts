@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import type {
   PlannerPriority,
@@ -9,45 +10,49 @@ import type {
   PlannerTask,
 } from "@/lib/planner-types";
 
-function mapTask(task: Record<string, unknown>): PlannerTask {
+function mapTask(task: unknown): PlannerTask {
+  const t = task as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   return {
-    id: task.id as string,
-    userId: task.user_id as string,
-    title: task.title as string,
-    date: task.date as string,
-    startTime: (task.start_time as string) ?? null,
-    durationMinutes: (task.duration_minutes as number) ?? null,
-    priority: task.priority as PlannerPriority,
-    status: task.status as PlannerStatus,
-    notes: (task.notes as string) ?? null,
-    position: task.position as number,
-    createdAt: task.created_at as string,
-    updatedAt: task.updated_at as string,
+    id: t.id,
+    userId: t.userId,
+    title: t.title,
+    date: t.date.toISOString().split("T")[0],
+    startTime: t.startTime ?? null,
+    durationMinutes: t.durationMinutes ?? null,
+    priority: t.priority as PlannerPriority,
+    status: t.status as PlannerStatus,
+    notes: t.notes ?? null,
+    position: t.position,
+    createdAt: t.createdAt.toISOString(),
+    updatedAt: t.updatedAt.toISOString(),
   };
 }
 
 async function getUser() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  return { supabase, user };
+  return { user };
 }
 
 export async function getPlannerTasksBetween(
   from: string,
   to: string
 ): Promise<{ tasks: PlannerTask[] }> {
-  const { supabase, user } = await getUser();
-  const { data, error } = await supabase
-    .from("daily_planner_tasks")
-    .select("*")
-    .eq("user_id", user.id)
-    .gte("date", from)
-    .lte("date", to)
-    .order("date", { ascending: true });
-
-  if (error) throw new Error(`Failed to fetch planner tasks: ${error.message}`);
-  return { tasks: (data ?? []).map((task) => mapTask(task as Record<string, unknown>)) };
+  const { user } = await getUser();
+  const tasks = await prisma.dailyPlannerTask.findMany({
+    where: {
+      userId: user.id,
+      date: {
+        gte: new Date(from),
+        lte: new Date(to),
+      },
+    },
+    orderBy: [{ date: "asc" }, { position: "asc" }],
+  });
+  return { tasks: tasks.map((task) => mapTask(task)) };
 }
 
 export async function createPlannerTask(data: {
@@ -58,31 +63,29 @@ export async function createPlannerTask(data: {
   priority: PlannerPriority;
   notes?: string;
 }): Promise<{ task: PlannerTask } | { error: string }> {
-  const { supabase, user } = await getUser();
-  const { count } = await supabase
-    .from("daily_planner_tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("date", data.date);
+  const { user } = await getUser();
+  const count = await prisma.dailyPlannerTask.count({
+    where: {
+      userId: user.id,
+      date: new Date(data.date),
+    },
+  });
 
-  const { data: task, error } = await supabase
-    .from("daily_planner_tasks")
-    .insert({
-      user_id: user.id,
+  const task = await prisma.dailyPlannerTask.create({
+    data: {
+      userId: user.id,
       title: data.title.trim(),
-      date: data.date,
-      start_time: data.startTime || null,
-      duration_minutes: data.durationMinutes || null,
+      date: new Date(data.date),
+      startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}`) : null,
+      durationMinutes: data.durationMinutes || null,
       priority: data.priority,
       notes: data.notes?.trim() || null,
-      position: count ?? 0,
-    })
-    .select()
-    .single();
+      position: count,
+    },
+  });
 
-  if (error) return { error: error.message };
   revalidatePath("/planner");
-  return { task: mapTask(task as Record<string, unknown>) };
+  return { task: mapTask(task) };
 }
 
 export async function updatePlannerTask(
@@ -96,52 +99,44 @@ export async function updatePlannerTask(
     notes?: string | null;
   }
 ): Promise<{ task: PlannerTask } | { error: string }> {
-  const { supabase, user } = await getUser();
-  const values: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const { user } = await getUser();
+  const values: Record<string, unknown> = { updatedAt: new Date() };
   if (updates.title !== undefined) values.title = updates.title.trim();
-  if (updates.startTime !== undefined) values.start_time = updates.startTime || null;
-  if (updates.durationMinutes !== undefined) values.duration_minutes = updates.durationMinutes || null;
+  if (updates.startTime !== undefined) {
+    values.startTime = updates.startTime ? new Date(`1970-01-01T${updates.startTime}`) : null;
+  }
+  if (updates.durationMinutes !== undefined) values.durationMinutes = updates.durationMinutes || null;
   if (updates.priority !== undefined) values.priority = updates.priority;
   if (updates.status !== undefined) values.status = updates.status;
   if (updates.notes !== undefined) values.notes = updates.notes;
 
-  const { data: task, error } = await supabase
-    .from("daily_planner_tasks")
-    .update(values)
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single();
+  const task = await prisma.dailyPlannerTask.update({
+    where: { id, userId: user.id },
+    data: values,
+  });
 
-  if (error) return { error: error.message };
   revalidatePath("/planner");
-  return { task: mapTask(task as Record<string, unknown>) };
+  return { task: mapTask(task) };
 }
 
 export async function deletePlannerTask(id: string): Promise<{ error?: string }> {
-  const { supabase, user } = await getUser();
-  const { error } = await supabase
-    .from("daily_planner_tasks")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-  if (error) return { error: error.message };
+  const { user } = await getUser();
+  await prisma.dailyPlannerTask.delete({
+    where: { id, userId: user.id },
+  });
   revalidatePath("/planner");
   return {};
 }
 
 export async function reorderPlannerTasks(ids: string[]): Promise<{ success: true } | { error: string }> {
-  const { supabase, user } = await getUser();
+  const { user } = await getUser();
   const updates = ids.map((id, index) =>
-    supabase
-      .from("daily_planner_tasks")
-      .update({ position: index, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("user_id", user.id),
+    prisma.dailyPlannerTask.update({
+      where: { id, userId: user.id },
+      data: { position: index, updatedAt: new Date() },
+    }),
   );
-  const results = await Promise.all(updates);
-  const err = results.find((r) => r.error);
-  if (err) return { error: err.error!.message };
+  await Promise.all(updates);
   revalidatePath("/planner");
   return { success: true };
 }
@@ -150,28 +145,24 @@ export async function movePlannerTaskToDate(
   id: string,
   date: string
 ): Promise<{ task: PlannerTask } | { error: string }> {
-  const { supabase, user } = await getUser();
+  const { user } = await getUser();
+  const count = await prisma.dailyPlannerTask.count({
+    where: {
+      userId: user.id,
+      date: new Date(date),
+    },
+  });
 
-  const { count } = await supabase
-    .from("daily_planner_tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("date", date);
-
-  const { data: task, error } = await supabase
-    .from("daily_planner_tasks")
-    .update({
-      date,
+  const task = await prisma.dailyPlannerTask.update({
+    where: { id, userId: user.id },
+    data: {
+      date: new Date(date),
       status: "planned",
-      position: count ?? 0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single();
+      position: count,
+      updatedAt: new Date(),
+    },
+  });
 
-  if (error) return { error: error.message };
   revalidatePath("/planner");
-  return { task: mapTask(task as Record<string, unknown>) };
+  return { task: mapTask(task) };
 }

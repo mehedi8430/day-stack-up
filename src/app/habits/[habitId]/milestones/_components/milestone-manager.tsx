@@ -69,7 +69,7 @@ export function MilestoneManager({
       habitId,
       reordered.map((milestone) => milestone.id),
     );
-    if ("error" in result) toast.error(result.error);
+    if ("error" in result) toast.error(result.error as string);
   };
   const updateStatus = async (
     milestone: HabitMilestone,
@@ -85,7 +85,7 @@ export function MilestoneManager({
       status,
     });
     if ("error" in result) {
-      toast.error(result.error);
+      toast.error(result.error as string);
       setMilestones((current) =>
         current.map((item) => (item.id === milestone.id ? milestone : item)),
       );
@@ -95,7 +95,7 @@ export function MilestoneManager({
     if (!window.confirm(`Delete milestone "${milestone.title}"?`)) return;
     const result = await actions.deleteHabitMilestone(milestone.id, habitId);
     if ("error" in result) {
-      toast.error(result.error);
+      toast.error(result.error as string);
       return;
     }
     setMilestones((current) =>

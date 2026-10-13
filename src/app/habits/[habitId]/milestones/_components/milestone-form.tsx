@@ -55,7 +55,7 @@ export function MilestoneForm({
         });
     setSaving(false);
     if ("error" in result) {
-      toast.error(result.error);
+      toast.error(result.error as string);
       return;
     }
     onSaved(result.milestone);
