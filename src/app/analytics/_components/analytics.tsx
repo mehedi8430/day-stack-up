@@ -13,7 +13,7 @@ import {
   computeStreaks,
   formatDayShort,
 } from "@/lib/date";
-import { useHabitStore } from "@/stores/store";
+import { useHabitStore } from "@/stores/habit.store";
 import { getCategory, Habit } from "@/lib/types";
 import { CompletionRow } from "@/app/actions/habit.actions";
 import { PlannerTask } from "@/lib/planner-types";

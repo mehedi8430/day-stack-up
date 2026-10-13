@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useHabitStore } from "@/stores/store";
+import { useHabitStore } from "@/stores/habit.store";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Habit } from "@/lib/types";
