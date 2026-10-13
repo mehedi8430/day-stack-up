@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 import type { HabitMilestone, MilestoneStatus } from "@/lib/types";
 
 function mapMilestone(milestone: unknown): HabitMilestone {
@@ -22,11 +21,7 @@ function mapMilestone(milestone: unknown): HabitMilestone {
 }
 
 export async function getHabitMilestones(habitId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const [habit, milestones] = await Promise.all([
     prisma.habit.findFirst({
@@ -52,11 +47,7 @@ export async function getHabitMilestones(habitId: string) {
 export type HabitMilestoneInput = Omit<HabitMilestone, "id" | "habitId" | "order">;
 
 export async function createHabitMilestone(habitId: string, data: HabitMilestoneInput) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const last = await prisma.habitTopic.findFirst({
     where: { habitId, userId: user.id },
@@ -83,11 +74,7 @@ export async function createHabitMilestone(habitId: string, data: HabitMilestone
 }
 
 export async function updateHabitMilestone(milestoneId: string, habitId: string, data: HabitMilestoneInput) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   const milestone = await prisma.habitTopic.update({
     where: { id: milestoneId, userId: user.id },
@@ -107,11 +94,7 @@ export async function updateHabitMilestone(milestoneId: string, habitId: string,
 }
 
 export async function deleteHabitMilestone(milestoneId: string, habitId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   await prisma.habitTopic.delete({
     where: { id: milestoneId, userId: user.id },
@@ -122,11 +105,7 @@ export async function deleteHabitMilestone(milestoneId: string, habitId: string)
 }
 
 export async function reorderHabitMilestones(habitId: string, ids: string[]) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
   await Promise.all(
     ids.map((id, index) =>

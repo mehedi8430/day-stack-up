@@ -1,9 +1,9 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { Habit } from "@/lib/types";
 
 export interface CompletionRow {
@@ -57,14 +57,7 @@ export async function addHabit(data: {
   category: string;
   goal: string;
 }): Promise<{ success: true; habit: Habit } | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const lastHabit = await prisma.habit.findFirst({
     where: { userId: user.id },
@@ -105,14 +98,7 @@ export async function updateHabit(
   id: string,
   data: { name: string; category: string; goal: string }
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   await prisma.habit.update({
     where: { id, userId: user.id },
@@ -129,14 +115,7 @@ export async function updateHabit(
 }
 
 export async function deleteHabit(id: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   await prisma.habit.delete({
     where: { id, userId: user.id },
@@ -148,14 +127,7 @@ export async function deleteHabit(id: string) {
 }
 
 export async function reorderHabits(ids: string[]) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const updates = ids.map((id, index) =>
     prisma.habit.update({
@@ -172,14 +144,7 @@ export async function reorderHabits(ids: string[]) {
 }
 
 export async function toggleCompletion(habitId: string, date: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const dateObj = new Date(date);
 
@@ -222,14 +187,7 @@ export async function setCompletion(
   date: string,
   completed: boolean
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   const dateObj = new Date(date);
 
@@ -272,14 +230,7 @@ export async function setCompletion(
 }
 
 export async function saveNotes(habitId: string, notes: string | null) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const user = await requireUser();
 
   await prisma.habit.update({
     where: { id: habitId, userId: user.id },
