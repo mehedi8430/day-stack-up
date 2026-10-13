@@ -1,2 +1,0 @@
-ALTER TABLE public.completions
-ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL;
