@@ -46,16 +46,25 @@ A modern productivity habit tracker built with **Next.js** and **Supabase**. Sta
 ### 1. Set Up Supabase
 
 1. Create a new project at [supabase.com](https://supabase.com).
-2. Set up the database schema: the schema and RLS migrations live in `prisma/migrations/`. Copy the Supabase Postgres connection string into `SUPABASE_DATABASE_URL` in `.env.local`, then apply the migrations with `DATABASE_URL="$SUPABASE_DATABASE_URL" npm run db:deploy`. Prisma uses `DATABASE_URL` when set and falls back to `SUPABASE_DATABASE_URL`; locally, `DATABASE_URL` points at Docker Postgres. For production, configure `SUPABASE_DATABASE_URL` as a deployment secret and set `LOCAL_AUTH_BOOTSTRAP=0` (or leave it unset).
+2. Set up the database schema: the schema and RLS migrations live in `prisma/migrations/`. Put the Supabase Postgres connection string in `SUPABASE_DATABASE_URL` in `.env`, then apply the migrations with `npm run db:deploy`. The Prisma CLI reads `.env` via `dotenv/config` (it does **not** read `.env.local`). Prisma uses `DATABASE_URL` when set and falls back to `SUPABASE_DATABASE_URL`; locally, `DATABASE_URL` points at Docker Postgres. For production, configure `SUPABASE_DATABASE_URL` as a deployment secret and set `LOCAL_AUTH_BOOTSTRAP=0` (or leave it unset).
+   - Use the **Session Pooler** connection string (Supabase → **Connect → Session pooler**, host `aws-0-[region].pooler.supabase.com`). Supabase's direct host (`db.[project-ref].supabase.co`) is **IPv6-only**, so it fails with `P1001: Can't reach database server` on IPv4-only networks.
+   - If the database **already has these tables** (e.g. migrated from the old `supabase/migrations`), do not re-run the create migrations. Baseline the existing history once instead, then deploy:
+     ```bash
+     for m in 20261013090000_auth_bootstrap 20261013100000_init 20261013110000_constraints 20261013120000_rls; do
+       npx prisma migrate resolve --applied "$m"
+     done
+     npm run db:deploy
+     ```
+     This only records the migrations as applied; it does not run their SQL or touch existing data.
 3. Under **Authentication → Providers**, enable **Email/Password**.
 4. From **Project Settings → API**, copy your project URL, anon key, and service role key.
 
 ### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
 | Variable                        | Description                                                                          |
@@ -64,7 +73,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anonymous key                                                                 |
 | `SUPABASE_SERVICE_ROLE_KEY`     | Server-side service role key                                                         |
 | `DATABASE_URL`                  | Postgres connection string; takes precedence when set (local Docker Postgres in dev) |
-| `SUPABASE_DATABASE_URL`         | Supabase Postgres connection string; used when `DATABASE_URL` is not set             |
+| `SUPABASE_DATABASE_URL`         | Supabase Postgres string (prefer the Session Pooler IPv4 host); used when `DATABASE_URL` is not set |
 | `LOCAL_AUTH_BOOTSTRAP`          | Set to `1` only for local Docker Postgres; set to `0` or leave unset in production   |
 
 ### 3. Install and Run
