@@ -1,24 +1,25 @@
 # DayStackUp
 
-A modern productivity habit tracker built with **Next.js** and **Supabase**. Stack your day, build streaks, track habits on a monthly calendar, plan your day with the planner, and measure progress with a full analytics dashboard — with multi-user support out of the box.
+A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Supabase**. Stack your day, build streaks, track habits on a monthly calendar, plan your day with the planner, and measure progress with a full analytics dashboard — with multi-user support out of the box.
 
 [![Live Demo](https://daystackup.vercel.app/)](https://daystackup.vercel.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)](https://www.typescriptlang.org)
+[![Prisma](https://img.shields.io/badge/Prisma-7-2D3748)](https://www.prisma.io)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres_&_Auth-3fcf8e)](https://supabase.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8)](https://tailwindcss.com)
 
 ## Features
 
 - **Email & password authentication** — sign up, log in, and log out, with protected routes that redirect unauthenticated visitors to the login page.
-- **Multi-user by design** — each user's habits and completions are isolated at the database level using Postgres Row Level Security (RLS).
+- **Multi-user by design** — every query is scoped to the signed-in user, and Postgres Row Level Security is enabled on all tables as defense-in-depth.
 - **Calendar grid** — month view with one-click completion toggles for every habit, plus a per-month done counter.
 - **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal.
 - **Drag-and-drop ordering** — rearrange habits into the order that works for you.
 - **Habit notes** — click any habit's name to attach free-form notes.
 - **Milestones** — break each habit into tracked milestones with start/target dates, details, resources, and progress statuses.
-- **Daily planner** — plan each day with time-blocked tasks: start time, duration, priority, notes, and a planned → in-progress → done → skipped workflow.
+- **Daily planner** — plan each day with time-blocked tasks (start time, duration, priority, notes, and a planned → in-progress → done → skipped workflow), plus a weekly strip (Saturday-start) for a whole-week overview.
 - **Analytics dashboard** — completion rates, per-habit and daily-score charts, time worked from planner tasks, current and best streaks, and a GitHub-style yearly heatmap.
 - **Dark & light mode** — switch themes from the header.
 
@@ -28,7 +29,9 @@ A modern productivity habit tracker built with **Next.js** and **Supabase**. Sta
 | --------------- | ---------------------------------- |
 | Framework       | Next.js 16 (App Router) · React 19 |
 | Language        | TypeScript                         |
-| Database & Auth | Supabase (Postgres + Auth + RLS)   |
+| Database & Auth | Supabase (Postgres + Auth)         |
+| Data access     | Prisma Client + `@prisma/adapter-pg` |
+| Schema & migrations | Prisma (`prisma/schema.prisma`) |
 | Client state    | Zustand                            |
 | Styling         | Tailwind CSS v4                    |
 | UI components   | shadcn/ui (Radix primitives)       |
@@ -78,12 +81,17 @@ cp .env.example .env
 
 ### 3. Install and Run
 
+The app reads and writes through the Prisma Client, which is generated from `prisma/schema.prisma`. Start the local Postgres (Docker), generate the client, apply the migrations, then run the dev server:
+
 ```bash
 npm install
+docker compose up -d db   # local Postgres 16 on :5432
+npx prisma generate       # build the Prisma Client used by the server actions
+npm run db:deploy         # apply migrations to the local database
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`. Create an account via **Sign up**, add your first habit, and start tracking.
+Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`. Create an account via **Sign up**, add your first habit, and start tracking. For local auth to work against the Docker database, keep `LOCAL_AUTH_BOOTSTRAP=1` in `.env` so the signed-in Supabase user is mirrored into the local `auth.users` stub (the `user_id` foreign keys depend on it).
 
 ## Project Structure
 
@@ -93,12 +101,16 @@ src/
 │   ├── (auth)/          # Login and signup pages
 │   ├── api/auth/        # Signup, login, logout, session endpoints
 │   ├── habits/          # Milestone hub and per-habit milestone manager
-│   ├── planner/         # Daily planner
+│   ├── planner/         # Weekly planner (Saturday-start week strip + day view)
 │   ├── analytics/       # Analytics dashboard
 │   ├── actions/         # Server actions for habits, completions, planner & milestones
 │   └── page.tsx         # Habit calendar (home)
-├── components/          # Calendar grid, milestone & planner UI, analytics, header, UI kit
-└── lib/                 # Supabase clients, Zustand store, date helpers, types
+├── components/          # Shared UI (header, back button, UI kit)
+├── lib/                 # Prisma + Supabase clients, date helpers, types
+└── stores/              # Zustand store (optimistic habit/completion state)
+prisma/
+├── schema.prisma        # Schema source of truth
+└── migrations/          # Migration history (tables, constraints, RLS)
 ```
 
 ## Available Scripts
@@ -106,7 +118,7 @@ src/
 | Command               | Description                                                  |
 | --------------------- | ------------------------------------------------------------ |
 | `npm run dev`         | Start the development server                                 |
-| `npm run build`       | Create a production build                                    |
+| `npm run build`       | Generate the Prisma client and create a production build (`prisma generate && next build`) |
 | `npm start`           | Serve the production build                                   |
 | `npm run lint`        | Run ESLint                                                   |
 | `npm run db:migrate`  | Create/apply a migration in local dev (`prisma migrate dev`) |
@@ -114,3 +126,5 @@ src/
 | `npm run db:status`   | Show migration status (`prisma migrate status`)              |
 | `npm run db:studio`   | Open Prisma Studio (`prisma studio`)                         |
 | `npm run db:validate` | Validate `prisma/schema.prisma`                              |
+
+The production build runs `prisma generate` first, so the generated client exists on a fresh install (such as Vercel) before Next.js compiles.

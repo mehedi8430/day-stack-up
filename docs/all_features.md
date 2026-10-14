@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A full-stack daily habit tracker. Track daily habits on a calendar, plan each day with time-blocked tasks in the planner, break habits down into milestones, attach notes and goals, and visualize progress through a full analytics dashboard. Multi-user support with secure data isolation via Postgres Row Level Security (RLS).
+A full-stack daily habit tracker. Track daily habits on a calendar, plan each day with time-blocked tasks in the planner, break habits down into milestones, attach notes and goals, and visualize progress through a full analytics dashboard. Multi-user support with per-user data isolation (explicit `userId` scoping in every query, with Postgres Row Level Security as defense-in-depth).
 
 ## Complete Feature List
 
@@ -53,10 +53,10 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Delete task** — confirmation dialog before removal
 - **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations)
 - Footer note reminding that time blocks are guidance
-- **Week strip** — at the top of the daily planner, a 7-day (Mon–Sun) overview
-  of the current week: each day shows a preview of its tasks, a per-day
-  quick-add input, week navigation (prev / next / this week), and click-to-open
-  any day in the planner below
+- **Weekly planner strip** — a collapsible 7-day strip (weeks start **Saturday**:
+  Sat → Fri) opened from the "Weekly planner" button. Each day previews up to 3
+  of its tasks, has a per-day quick-add input, and can be clicked to open that
+  day below; includes week navigation (prev / next / this week)
 
 ### 7. Analytics Dashboard (`/analytics`)
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
@@ -82,14 +82,19 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **shadcn/ui components** (Radix primitives) styled with Tailwind CSS v4
 - Responsive, accessible dialogs, form validation, and aria labels throughout
 
-### 9. Data Layer (Supabase migrations)
-- `habits` — id, user_id, name, emoji, category, sort_order, goal, notes
-- `completions` — id, user_id, habit_id, date, completed, timestamps; UNIQUE(habit_id, date)
-- `daily_planner_tasks` — id, user_id, title, date, start_time, duration_minutes, priority, status, notes, position
-- `habit_topics` (milestones) — id, user_id, habit_id, title, status, start_date, target_date, details, resources, sort_order
-- **RLS enabled on all tables** with full CRUD policies scoped to `auth.uid()`
+### 9. Data Layer (Prisma schema + migrations)
+- **Schema source of truth** — `prisma/schema.prisma`; migration history lives in `prisma/migrations/` (the old `supabase/migrations/` was removed)
+- **Runtime data access** — the **Prisma Client** (`@prisma/client` with the `@prisma/adapter-pg` driver adapter) is used inside the server actions and `src/lib/auth.ts`. Supabase is used only for authentication.
+- Tables:
+  - `habits` — id, user_id, name, emoji, category, sort_order, goal, notes
+  - `completions` — id, user_id, habit_id, date, completed, timestamps; UNIQUE(habit_id, date)
+  - `daily_planner_tasks` — id, user_id, title, date, start_time, duration_minutes, priority, status, notes, position
+  - `habit_topics` (milestones) — id, user_id, habit_id, title, status, start_date, target_date, details, resources, sort_order
+- **RLS enabled on all tables** with full CRUD policies scoped to `auth.uid()`, shipped as guarded raw SQL in the migration set (Prisma cannot model RLS or CHECK constraints)
+- **CHECK constraints** on `priority`, `status`, and `duration_minutes` (`status`/`priority` stay `String` columns, not Prisma enums)
+- `user_id` foreign keys reference `auth.users(id) ON DELETE CASCADE` (Supabase-managed `auth` schema; stubbed locally for Docker Postgres)
 - Indexes on foreign keys and ordering columns
-- Data-backfill migration that moved notes from `completions` to `habits`
+- Because the app connects through a privileged database role, **runtime user isolation is enforced by explicit `userId` filters in every Prisma query**; the RLS policies remain in place as defense-in-depth
 
 ## Tech Stack
 
@@ -97,7 +102,9 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 |---|---|
 | Framework | Next.js (App Router), React 19 |
 | Language | TypeScript |
-| Database & Auth | Supabase (Postgres + RLS) |
+| Database & Auth | Supabase (Postgres + Auth) |
+| Data access | Prisma Client (`@prisma/client` + `@prisma/adapter-pg`) |
+| Schema & migrations | Prisma (`prisma/schema.prisma`, `prisma/migrations/`) |
 | State | Zustand |
 | Styling | Tailwind CSS + shadcn/ui |
 | Charts | Recharts |
@@ -112,21 +119,29 @@ src/
 │   ├── (auth)/      # Login and signup pages
 │   ├── api/auth/    # Signup, login, logout, session endpoints
 │   ├── habits/      # Milestone hub and per-habit milestone manager
-│   ├── planner/     # Daily planner
+│   ├── planner/     # Weekly planner (week strip + day view)
 │   ├── analytics/   # Analytics dashboard
 │   ├── actions/     # Server actions for habits, completions, planner & milestones
 │   └── ...          # Habit calendar (home), global layout
-├── components/      # UI components (header, calendar, analytics, UI kit)
-├── lib/             # Supabase clients, Zustand store, date helpers, types
+├── components/      # UI components (header, UI kit)
+├── lib/             # Prisma + Supabase clients, date helpers, types
+├── stores/          # Zustand store (habit.store.ts)
 └── proxy.ts         # Route protection middleware
-supabase/
-└── migrations/      # Database schema
+prisma/
+├── schema.prisma    # Schema source of truth
+└── migrations/      # Migration history (tables, constraints, RLS)
 ```
 
 ## How It Works
 
-1. User signs up/logs in → Supabase Auth handles sessions
-2. Habits stored in `habits`, completions in `completions`, planner tasks in `daily_planner_tasks`, milestones in `habit_topics`
-3. All mutations go through Server Actions → Supabase → revalidate cache
-4. Zustand store holds client state with optimistic updates
-5. Analytics computed from completion data using date-fns
+1. User signs up/logs in → **Supabase Auth** handles sessions; protected routes redirect to `/login`
+2. Data is read and written through server actions using the **Prisma Client**, always scoped by `userId`
+3. Habits are stored in `habits`, completions in `completions`, planner tasks in `daily_planner_tasks`, milestones in `habit_topics`
+4. Mutations go Server Action → Prisma Client → Postgres, then `revalidatePath` refreshes the cache
+5. The Zustand store holds client state with optimistic updates and rolls back on error
+6. Analytics are computed server-side from completion and planner data using date-fns
+
+## Build & Deploy
+
+- `npm run build` runs `prisma generate && next build`, so the generated Prisma Client exists on a fresh install (e.g. Vercel) before Next.js compiles.
+- Schema changes are applied to Supabase with `npm run db:deploy` (Prisma reads `SUPABASE_DATABASE_URL` when `DATABASE_URL` is unset).

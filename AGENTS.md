@@ -7,7 +7,9 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
 - Framework: Next.js 16 (App Router)
 - UI: React 19 + TypeScript
 - Styling: Tailwind CSS v4 + shadcn/ui primitives
-- Data/auth: Supabase Postgres + Auth + Row Level Security (RLS)
+- Data: Prisma Client (`@prisma/client` + `@prisma/adapter-pg`) over Supabase Postgres
+- Auth: Supabase Auth (`@supabase/ssr`)
+- Schema & migrations: Prisma (`prisma/schema.prisma` + `prisma/migrations/`); RLS/CHECK constraints live in migration SQL
 - State: Zustand for optimistic local state
 - Charts: Recharts
 - Drag/drop: dnd-kit
@@ -19,35 +21,36 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
   - `src/app/actions/` — server actions for habits, completions, planner, and milestones
   - `src/app/api/auth/` — auth endpoints for login, logout, signup, and session
   - `src/app/habits/` — milestone hub and per-habit milestone management pages
-  - `src/app/planner/` — daily planner screen and task UI
+  - `src/app/planner/` — weekly planner screen (Saturday-start week strip + day view) and task UI
   - `src/app/analytics/` — analytics dashboard
   - `src/app/page.tsx` — main habit calendar landing page
 - `src/components/` — shared UI like header, back button, and UI primitives
-- `src/lib/` — shared types, date helpers, and Supabase client helpers
-- `src/stores/store.ts` — Zustand state for habit/completion optimistic updates
+- `src/lib/` — shared types, date helpers, the Prisma client (`prisma.ts`), and Supabase auth helpers
+- `src/stores/habit.store.ts` — Zustand state for habit/completion optimistic updates
 - `src/proxy.ts` — route protection for authenticated pages
 - `prisma/migrations/` — Prisma migration history (schema source of truth: `prisma/schema.prisma`)
 - `docs/` — features and design notes, including product specs
 
 ## Core product behavior
-- Habit data is scoped per user and enforced via Supabase RLS.
+- Habit data is scoped per user. Runtime isolation is enforced by an explicit `userId` filter in every Prisma query (`auth.uid()` RLS policies remain in the migrations as defense-in-depth).
 - The home page is the monthly habit calendar; task completion is driven by `habits` + `completions` rows.
-- Planner and analytics read from their own tables and computed aggregates rather than a generic ORM layer.
+- Planner and analytics read their own tables through the Prisma client and compute aggregates server-side; analytics reuses the habit and planner server actions rather than querying directly.
 - The daily planner stores concrete per-date tasks in `daily_planner_tasks`; the week strip on the planner page is a client-side grouping of those tasks by date.
 - Notes are stored on the `habits` table, not on individual completion rows.
 - Mood/behavior/analytics rely on server-side computed data, not ad hoc client-only logic.
 
 ## Important architecture patterns
 ### 1) Server actions are the data layer
-Most mutating logic lives in `src/app/actions/*.ts` and is called from either server components or client code. Keep data changes there, not in component files.
+Most mutating logic lives in `src/app/actions/*.ts` and is called from either server components or client code. Server actions read and write through the Prisma client (`src/lib/prisma.ts`) and use Supabase only for authentication. Keep data changes there, not in component files.
 
 Examples:
 - `src/app/actions/habit.actions.ts` handles habits and completions.
 - Keep `revalidatePath("/")` and other invalidation calls after successful mutation.
 - Always check for authenticated user state and return a consistent `success`/`error` shape when appropriate.
+- Always scope Prisma queries by the authenticated `userId` (e.g. `where: { id, userId: user.id }`).
 
 ### 2) Zustand is used for optimistic UI updates
-`src/stores/store.ts` updates local state optimistically and rolls back on server error. When changing behavior tied to habits or completions:
+`src/stores/habit.store.ts` updates local state optimistically and rolls back on server error. When changing behavior tied to habits or completions:
 - update the Zustand store if a UI action should feel instant
 - preserve rollback logic on failure
 - avoid duplicating queries or data derivation in multiple places
@@ -63,13 +66,15 @@ If a feature requires a schema change:
 - keep Prisma's timestamp migration naming (existing convention)
 - prefer incremental changes with clear intent
 - do not edit historical migration files casually unless there is a very specific reason
-- Note: Supabase Auth and all runtime queries remain on the Supabase JS client. RLS/CHECK constraints are hand-written in migration SQL (Prisma cannot model them). No `@prisma/client` is used.
+- Note: Supabase Auth handles sessions only; runtime data queries use the Prisma Client (`@prisma/client` + `@prisma/adapter-pg`). RLS/CHECK constraints are hand-written in migration SQL (Prisma cannot model them). Every Prisma query must scope by `userId`.
+- The production build runs `prisma generate` before `next build` (`"build": "prisma generate && next build"`). Keep this so a fresh install (e.g. Vercel) has the generated client; otherwise the build fails with `Cannot find module '.prisma/client/default'`.
+- `prisma.config.ts` must resolve the datasource URL without throwing when the database env vars are absent, so `prisma generate` (and the build) works on a host like Vercel before runtime env is configured. Read the variables directly (`process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL ?? ""`) instead of Prisma's `env()` helper, which raises `PrismaConfigEnvError` during config load and fails the build. The runtime still needs `DATABASE_URL` or `SUPABASE_DATABASE_URL` set.
 
 ## Development commands
 Run these from the project root:
 - `npm install` — install dependencies
 - `npm run dev` — start local Next.js dev server
-- `npm run build` — production build
+- `npm run build` — generate the Prisma client and production build (`prisma generate && next build`)
 - `npm start` — run production build
 - `npm run lint` — lint project with ESLint
 
@@ -84,7 +89,7 @@ No dedicated test suite is present right now; lint is the primary validation pat
 - Prefer minimal, local edits over “cleanup” changes.
 
 ## Data and domain rules
-- User isolation is mandatory. All table access should be scoped by `user_id` or equivalent auth checks.
+- User isolation is mandatory. Every Prisma query must be scoped by `userId` (server actions use the authenticated user from `requireUser()`); RLS policies in the migrations are defense-in-depth, not the runtime mechanism.
 - Completion rows are unique per habit/day; respect that model.
 - Habit ordering uses `sort_order` and should be maintained consistently through reorder actions.
 - Dates should use the existing local date helpers and ISO/date string conventions already used across the app.
@@ -102,25 +107,26 @@ When making changes, the agent should:
 ## Safe change guidance
 - Do not add placeholder code or fake data to production flows.
 - Do not add test-only methods to production classes or files.
-- Do not bypass auth or RLS assumptions unless the task explicitly requires a local-only prototype.
+- Do not bypass auth or per-user scoping. Every Prisma query must filter by the authenticated `userId`; never rely on RLS alone at runtime.
 - Do not rewrite the app architecture for convenience; preserve the repository’s patterns.
 - If a feature touches DB schema, update migrations and account for user-scoped behavior.
 
 ## Typical target files by concern
-- Habit/calendar logic: `src/app/actions/habit.actions.ts`, `src/stores/store.ts`, `src/app/_components/calendar-grid.tsx`
+- Habit/calendar logic: `src/app/actions/habit.actions.ts`, `src/stores/habit.store.ts`, `src/app/_components/calendar-grid.tsx`
 - Planner logic: `src/app/planner/_components/*`, `src/app/actions/planner.actions.ts`
 - Milestones: `src/app/habits/**`, `src/app/actions/milestone.actions.ts`
 - Analytics: `src/app/analytics/**`
+- Data access: `src/lib/prisma.ts`, `src/app/actions/*.ts`
 - Shared types: `src/lib/types.ts`
-- Auth: `src/proxy.ts`, `src/app/api/auth/**`, `src/lib/supabase/server.ts`
+- Auth: `src/proxy.ts`, `src/app/api/auth/**`, `src/lib/auth.ts`, `src/lib/supabase/server.ts`
 
 ## Quality bar for AI agents
 Before finalizing a task, confirm:
-- The change fits the existing Next.js + Supabase architecture.
+- The change fits the existing Next.js + Prisma + Supabase Auth architecture.
 - The behavior matches the intended user-facing feature.
-- Auth and user scoping remain intact.
+- Auth and per-user (`userId`) scoping remain intact.
 - The patch is minimal and does not introduce dead code.
 - Relevant validation has been run and the evidence is included in the final update.
 
 ## One important note for future agents
-This project already contains feature documentation and design notes in `docs/` and migration history in `prisma/migrations/`. Read those when a change touches product behavior or a prior design decision. Do not assume the current code is the only source of truth.
+This project already contains feature documentation and design notes in `docs/` and migration history in `prisma/migrations/`. Read those when a change touches product behavior or a prior design decision. Do not assume the current code is the only source of truth. Note that the dated files under `docs/superpowers/` are historical records: where they conflict with the current code (for example, the Prisma migration design predates moving runtime queries to the Prisma Client), the code and `docs/all_features.md` take precedence.
