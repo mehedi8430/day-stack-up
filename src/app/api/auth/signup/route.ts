@@ -1,3 +1,4 @@
+import { ensureLocalAuthUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -20,6 +21,10 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    if (data.user) {
+      await ensureLocalAuthUser(data.user.id, data.user.email ?? null);
     }
 
     return NextResponse.json({ user: data.user });

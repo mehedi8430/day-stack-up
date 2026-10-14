@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useHabitStore } from "@/stores/store";
+import { useHabitStore } from "@/stores/habit.store";
 import { Habit, CATEGORIES } from "@/lib/types";
 import {
   Dialog,
@@ -41,7 +41,7 @@ function HabitFormFields({
 
   const [name, setName] = React.useState(habit?.name ?? "");
   const [category, setCategory] = React.useState(
-    habit?.category ?? CATEGORIES[0].id
+    habit?.category ?? CATEGORIES[0].id,
   );
   const [goal, setGoal] = React.useState(habit?.goal ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -52,7 +52,11 @@ function HabitFormFields({
     setSaving(true);
     try {
       if (habit) {
-        await updateHabit(habit.id, { name: trimmed, category, goal: goal.trim() });
+        await updateHabit(habit.id, {
+          name: trimmed,
+          category,
+          goal: goal.trim(),
+        });
       } else {
         await addHabit({ name: trimmed, category, goal: goal.trim() });
       }

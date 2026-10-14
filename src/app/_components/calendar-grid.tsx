@@ -17,7 +17,7 @@ import {
 import { format, addMonths, subMonths, isToday } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
 import Link from "next/link";
-import { useHabitStore } from "@/stores/store";
+import { useHabitStore } from "@/stores/habit.store";
 import { getMonthDays, toKey } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -156,7 +156,8 @@ export function CalendarGrid({
               </Button>
             </Link>
             <Button onClick={openAdd} className="gap-2 px-2.5 sm:px-4">
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Habit</span>
+              <Plus className="h-4 w-4" />{" "}
+              <span className="hidden sm:inline">Add Habit</span>
             </Button>
           </div>
         </div>
