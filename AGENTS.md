@@ -68,6 +68,7 @@ If a feature requires a schema change:
 - do not edit historical migration files casually unless there is a very specific reason
 - Note: Supabase Auth handles sessions only; runtime data queries use the Prisma Client (`@prisma/client` + `@prisma/adapter-pg`). RLS/CHECK constraints are hand-written in migration SQL (Prisma cannot model them). Every Prisma query must scope by `userId`.
 - The production build runs `prisma generate` before `next build` (`"build": "prisma generate && next build"`). Keep this so a fresh install (e.g. Vercel) has the generated client; otherwise the build fails with `Cannot find module '.prisma/client/default'`.
+- `prisma.config.ts` must resolve the datasource URL without throwing when the database env vars are absent, so `prisma generate` (and the build) works on a host like Vercel before runtime env is configured. Read the variables directly (`process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL ?? ""`) instead of Prisma's `env()` helper, which raises `PrismaConfigEnvError` during config load and fails the build. The runtime still needs `DATABASE_URL` or `SUPABASE_DATABASE_URL` set.
 
 ## Development commands
 Run these from the project root:
