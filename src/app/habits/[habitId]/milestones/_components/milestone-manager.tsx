@@ -19,6 +19,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ export function MilestoneManager({
     typeof emptyMilestone | HabitMilestone | null
   >(null);
   const [viewing, setViewing] = React.useState<HabitMilestone | null>(null);
+  const [toDelete, setToDelete] = React.useState<HabitMilestone | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -92,7 +94,6 @@ export function MilestoneManager({
     }
   };
   const removeMilestone = async (milestone: HabitMilestone) => {
-    if (!window.confirm(`Delete milestone "${milestone.title}"?`)) return;
     const result = await actions.deleteHabitMilestone(milestone.id, habitId);
     if ("error" in result) {
       toast.error(result.error as string);
@@ -167,7 +168,7 @@ export function MilestoneManager({
                     key={milestone.id}
                     milestone={milestone}
                     onEdit={() => setForm(milestone)}
-                    onDelete={() => removeMilestone(milestone)}
+                    onDelete={() => setToDelete(milestone)}
                     onStatus={(status) => updateStatus(milestone, status)}
                     onView={() => setViewing(milestone)}
                   />
@@ -218,6 +219,25 @@ export function MilestoneManager({
           onEdit={() => {
             if (viewing) setForm(viewing);
             setViewing(null);
+          }}
+        />
+        <ConfirmDialog
+          open={!!toDelete}
+          onOpenChange={(open) => !open && setToDelete(null)}
+          title="Delete milestone?"
+          description={
+            <>
+              This will permanently remove{" "}
+              <span className="font-semibold">{toDelete?.title}</span> from this
+              habit. This action cannot be undone.
+            </>
+          }
+          confirmLabel="Delete"
+          onConfirm={() => {
+            if (!toDelete) return;
+            const milestone = toDelete;
+            setToDelete(null);
+            void removeMilestone(milestone);
           }}
         />
       </section>

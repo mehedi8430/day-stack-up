@@ -15,6 +15,7 @@ import {
   Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,12 +34,14 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = React.useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       toast.success("Logged out successfully");
+      setLogoutDialogOpen(false);
       router.push("/login");
     } catch {
       toast.error("Failed to log out");
@@ -103,7 +106,7 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleLogout}
+              onClick={() => setLogoutDialogOpen(true)}
               aria-label="Log out"
               disabled={loggingOut}
               className="hidden sm:inline-flex"
@@ -159,19 +162,35 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
                       </SheetClose>
                     );
                   })}
-                  <Button
-                    variant="ghost"
-                    className="mt-2 w-full justify-start gap-2 text-destructive hover:text-destructive"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Log out
-                  </Button>
+                  <SheetClose asChild>
+                    <Button
+                      variant="ghost"
+                      className="mt-2 w-full justify-start gap-2 text-destructive hover:text-destructive"
+                      onClick={() => setLogoutDialogOpen(true)}
+                      disabled={loggingOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </Button>
+                  </SheetClose>
                 </nav>
               </SheetContent>
             </Sheet>
           )}
+          <ConfirmDialog
+            open={logoutDialogOpen}
+            onOpenChange={(open) => {
+              if (!loggingOut) setLogoutDialogOpen(open);
+            }}
+            title="Log out?"
+            description="You will be signed out of DayStackUp. You can log back in anytime."
+            confirmLabel="Log out"
+            cancelLabel="Cancel"
+            variant="destructive"
+            confirmDisabled={loggingOut}
+            cancelDisabled={loggingOut}
+            onConfirm={() => void handleLogout()}
+          />
         </div>
       </div>
     </header>

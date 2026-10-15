@@ -11,6 +11,13 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/daystackup?schema=public
       LOCAL_AUTH_BOOTSTRAP: "1"
+    # The local/ISP resolver returns SERVFAIL for supabase.co domains,
+    # which breaks Supabase auth (AuthRetryableFetchError: fetch failed).
+    # Use public resolvers inside the container; Docker's embedded DNS
+    # still resolves service names like `db`.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       - .:/app
       - /app/node_modules

@@ -20,7 +20,7 @@ import {
 } from "@/app/actions/planner.actions";
 import type { PlannerStatus, PlannerTask } from "@/lib/planner-types";
 import { sortPlannerTasks } from "@/lib/planner-utils";
-import { DeletePlannerTaskDialog } from "./delete-planner-task-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditTaskDialog } from "./edit-task-dialog";
 import { PlannerHeader } from "./planner-header";
 import { PlannerStatsSidebar } from "./planner-stats-sidebar";
@@ -287,9 +287,18 @@ export function PlannerManagement({
         </span>
       </footer>
 
-      <DeletePlannerTaskDialog
-        task={toDelete}
-        onClose={() => setToDelete(null)}
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Delete task?"
+        description={
+          <>
+            This will permanently remove{" "}
+            <span className="font-semibold">{toDelete?.title}</span> from your
+            planner. This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
         onConfirm={() => {
           if (!toDelete) return;
           const task = toDelete;

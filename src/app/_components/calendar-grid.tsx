@@ -22,14 +22,7 @@ import { getMonthDays, toKey } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HabitForm } from "@/app/_components/habit-form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { Habit } from "@/lib/types";
 import { CompletionRow } from "@/app/actions/habit.actions";
@@ -237,42 +230,31 @@ export function CalendarGrid({
 
       <HabitForm open={formOpen} onOpenChange={setFormOpen} habit={editing} />
 
-      {/* Delete habi alert dialog */}
-      <Dialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete habit?</DialogTitle>
-            <DialogDescription>
-              This will permanently remove{" "}
-              <span className="font-semibold">{toDelete?.name}</span> and all of
-              its completion history. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setToDelete(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!toDelete) return;
-                try {
-                  await deleteHabit(toDelete.id);
-                  setToDelete(null);
-                } catch (err) {
-                  toast.error(
-                    err instanceof Error
-                      ? err.message
-                      : "Failed to delete habit",
-                  );
-                }
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete habit confirm dialog */}
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title="Delete habit?"
+        description={
+          <>
+            This will permanently remove{" "}
+            <span className="font-semibold">{toDelete?.name}</span> and all of
+            its completion history. This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!toDelete) return;
+          try {
+            await deleteHabit(toDelete.id);
+            setToDelete(null);
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "Failed to delete habit",
+            );
+          }
+        }}
+      />
 
       <NotesDialog
         open={!!notesDialog}
