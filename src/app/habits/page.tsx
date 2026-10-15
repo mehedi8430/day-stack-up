@@ -1,11 +1,19 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getInitialData } from "@/app/actions/habit.actions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getCategory } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function HabitsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
   const data = await getInitialData();
   if (!data.user) notFound();
   const { habits } = data;
@@ -24,7 +32,10 @@ export default async function HabitsPage() {
         <div className="rounded-lg border bg-card p-12 text-center">
           <p className="text-sm text-muted-foreground">
             No habits yet.{" "}
-            <Link href="/" className="font-medium text-foreground underline underline-offset-4">
+            <Link
+              href="/"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
               Create your first habit
             </Link>{" "}
             on the calendar, then come back to add milestones.
@@ -45,7 +56,9 @@ export default async function HabitsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         {habit.emoji && (
-                          <span className="text-2xl shrink-0">{habit.emoji}</span>
+                          <span className="text-2xl shrink-0">
+                            {habit.emoji}
+                          </span>
                         )}
                         <CardTitle className="truncate text-base">
                           {habit.name}
