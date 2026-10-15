@@ -43,6 +43,7 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
       toast.success("Logged out successfully");
       setLogoutDialogOpen(false);
       router.push("/login");
+      router.refresh();
     } catch {
       toast.error("Failed to log out");
       setLoggingOut(false);
