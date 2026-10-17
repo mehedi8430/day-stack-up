@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face{font-family:'Geist';src:url('file:///tmp/opencode/node_modules/geist/dist/fonts/geist-sans/Geist-Regular.woff2');font-weight:400;font-display:block;}
+  @font-face{font-family:'Geist';src:url('file:///tmp/opencode/node_modules/geist/dist/fonts/geist-sans/Geist-Medium.woff2');font-weight:500;font-display:block;}
+  @font-face{font-family:'Geist';src:url('file:///tmp/opencode/node_modules/geist/dist/fonts/geist-sans/Geist-SemiBold.woff2');font-weight:600;font-display:block;}
+  @font-face{font-family:'Geist';src:url('file:///tmp/opencode/node_modules/geist/dist/fonts/geist-sans/Geist-Bold.woff2');font-weight:700;font-display:block;}
+  :root{
+    --ink:#09090b; --paper:#ffffff; --muted:#71717a; --muted2:#a1a1aa;
+    --border:#e4e4e7; --border2:#f4f4f5;
+    --dk-bg:#09090b; --dk-card:#141416; --dk-fg:#fafafa; --dk-muted:#a1a1aa; --dk-border:#27272a;
+    --health:#22c55e; --mind:#a855f7; --work:#3b82f6; --fitness:#ef4444; --other:#eab308;
+    --emerald:#10b981;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:#000;}
+  #stage{position:absolute;width:1920px;height:1080px;font-family:'Geist','Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  .scene{position:absolute;inset:0;will-change:opacity;}
+  .abs{position:absolute;}
+  .eyebrow{font-size:15px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+  .h1{font-size:52px;font-weight:600;letter-spacing:-0.025em;color:var(--ink);}
+  .card{background:var(--paper);border:1px solid var(--border);border-radius:16px;}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .cell{border-radius:8px;background:var(--border2);}
+  .bigNum{font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="abs" style="inset:0;background:var(--dk-bg);"></div>
+  <div id="dotgrid" class="abs" style="inset:0;opacity:.55;"></div>
+
+  <!-- S1 HOOK -->
+  <div class="scene" id="s1">
+    <div class="abs" style="inset:0;background:radial-gradient(1200px 800px at 50% 42%, rgba(255,255,255,0.045), transparent 70%);"></div>
+    <div class="abs" style="left:0;right:0;top:380px;text-align:center;">
+      <div id="s1l1" class="abs" style="width:1920px;top:0;font-size:92px;font-weight:600;letter-spacing:-0.03em;color:var(--dk-fg);">You plan the day.</div>
+      <div id="s1l2" class="abs" style="width:1920px;top:124px;font-size:92px;font-weight:600;letter-spacing:-0.03em;color:var(--dk-muted);">The day happens anyway.</div>
+    </div>
+    <div id="s1stack" class="abs" style="left:941px;top:608px;width:38px;"></div>
+    <div id="s1l3" class="abs" style="left:0;right:0;top:766px;text-align:center;font-size:34px;color:var(--dk-muted);">What if the small wins stacked up?</div>
+  </div>
+
+  <!-- S2 BRAND -->
+  <div class="scene" id="s2">
+    <div class="abs" style="inset:0;background:radial-gradient(1200px 800px at 50% 45%, rgba(255,255,255,0.05), transparent 70%);"></div>
+    <div id="s2mark" class="abs" style="left:894px;top:336px;width:132px;height:132px;border-radius:30px;background:var(--dk-fg);"></div>
+    <div class="abs" style="left:0;right:0;top:516px;text-align:center;">
+      <div id="s2name" class="abs" style="width:1920px;font-size:96px;font-weight:600;letter-spacing:-0.03em;color:var(--dk-fg);">DayStackUp</div>
+    </div>
+    <div id="s2tag" class="abs" style="left:0;right:0;top:648px;text-align:center;font-size:38px;color:var(--dk-muted);">Stack your day. Keep moving up.</div>
+  </div>
+
+  <!-- S3 CALENDAR -->
+  <div class="scene" id="s3">
+    <div class="abs" style="inset:0;background:var(--paper);"></div>
+    <div class="abs" style="left:128px;top:96px;">
+      <div id="s3eb" class="eyebrow">Monthly calendar</div>
+      <div id="s3h" class="h1" style="margin-top:14px;">Every habit. Every day. One click.</div>
+    </div>
+    <div id="s3card" class="abs card" style="left:128px;top:256px;width:1664px;height:360px;">
+      <div class="abs" style="left:24px;top:22px;font-size:28px;font-weight:600;color:var(--ink);">October 2026</div>
+      <div id="s3counter" class="abs" style="right:24px;top:26px;text-align:right;font-size:20px;color:var(--muted);"></div>
+      <div id="s3grid" class="abs" style="left:24px;top:84px;"></div>
+    </div>
+    <div id="s3sub" class="abs" style="left:128px;top:664px;font-size:22px;color:var(--muted);">Completions tick in as you go — tap any cell to log the day.</div>
+  </div>
+
+  <!-- S4 PLANNER -->
+  <div class="scene" id="s4">
+    <div class="abs" style="inset:0;background:var(--paper);"></div>
+    <div class="abs" style="left:128px;top:96px;">
+      <div id="s4eb" class="eyebrow">Daily planner</div>
+      <div id="s4h" class="h1" style="margin-top:14px;">Time-block the day.</div>
+    </div>
+    <div id="s4week" class="abs card" style="left:128px;top:296px;width:478px;height:392px;padding:26px;"></div>
+    <div id="s4day" class="abs card" style="left:630px;top:296px;width:1162px;height:392px;padding:26px;"></div>
+    <div id="s4sub" class="abs" style="left:128px;top:726px;font-size:22px;color:var(--muted);">Planned &rarr; in progress &rarr; done, right inside today.</div>
+  </div>
+
+  <!-- S5 MILESTONES -->
+  <div class="scene" id="s5">
+    <div class="abs" style="inset:0;background:var(--paper);"></div>
+    <div class="abs" style="left:128px;top:96px;">
+      <div id="s5eb" class="eyebrow">Milestones</div>
+      <div id="s5h" class="h1" style="margin-top:14px;">Big goals, broken into small wins.</div>
+    </div>
+    <div id="s5card" class="abs card" style="left:410px;top:286px;width:1100px;height:400px;padding:30px;"></div>
+  </div>
+
+  <!-- S6 ANALYTICS -->
+  <div class="scene" id="s6">
+    <div class="abs" style="inset:0;background:var(--paper);"></div>
+    <div class="abs" style="left:128px;top:96px;">
+      <div id="s6eb" class="eyebrow">Analytics</div>
+      <div id="s6h" class="h1" style="margin-top:14px;">Progress you can see.</div>
+    </div>
+    <div id="s6left" class="abs card" style="left:128px;top:286px;width:900px;height:400px;padding:30px;"></div>
+    <div id="s6right" class="abs" style="left:1052px;top:286px;"></div>
+  </div>
+
+  <!-- S7 CLOSE -->
+  <div class="scene" id="s7">
+    <div class="abs" style="inset:0;background:radial-gradient(1200px 800px at 50% 45%, rgba(255,255,255,0.05), transparent 70%);"></div>
+    <div id="s7mark" class="abs" style="left:894px;top:266px;width:132px;height:132px;border-radius:30px;background:var(--dk-fg);"></div>
+    <div class="abs" style="left:0;right:0;top:448px;text-align:center;">
+      <div id="s7name" class="abs" style="width:1920px;font-size:96px;font-weight:600;letter-spacing:-0.03em;color:var(--dk-fg);">DayStackUp</div>
+    </div>
+    <div id="s7tag" class="abs" style="left:0;right:0;top:580px;text-align:center;font-size:38px;color:var(--dk-muted);">Stack your day. Keep moving up.</div>
+    <div id="s7feat" class="abs" style="left:0;right:0;top:664px;text-align:center;font-size:22px;color:#52525b;letter-spacing:.02em;">Calendar &middot; Planner &middot; Milestones &middot; Analytics</div>
+    <div id="s7cta" class="abs" style="left:0;right:0;top:724px;text-align:center;">
+      <span id="s7url" style="display:inline-block;padding:13px 26px;border:1px solid var(--dk-border);border-radius:999px;color:var(--dk-muted);font-size:24px;">daystackup.vercel.app</span>
+      <span id="s7btn" style="display:inline-block;margin-left:16px;padding:13px 30px;border-radius:999px;color:#09090b;font-size:24px;font-weight:600;">Start stacking free</span>
+    </div>
+  </div>
+
+  <div id="blackout" class="abs" style="inset:0;background:#000;opacity:0;"></div>
+</div>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+var clamp01 = function (v) { return v < 0 ? 0 : (v > 1 ? 1 : v); };
+function seg(t, a, b) { return clamp01((t - a) / (b - a)); }
+function lerp0(a, b, u) { return a + (b - a) * clamp01(u); }
+function easeOutCubic(u) { u = clamp01(u); return 1 - Math.pow(1 - u, 3); }
+function easeOutExpo(u) { u = clamp01(u); return u === 1 ? 1 : 1 - Math.pow(2, -10 * u); }
+function outBack(u) { u = clamp01(u); var c = 1.70158; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); }
+var Q = function (id) { return document.getElementById(id); };
+function st(id, prop, val) { var e = Q(id); if (e) e.style.setProperty(prop, val); }
+function sceneOp(t, w, fin, fout) { var a = t - w[0], d = w[1] - w[0]; return seg(a, 0, fin) * (1 - seg(a, d - fout, d)); }
+function lineIn(el, u, dy) { el.style.opacity = clamp01(u * 1.1); el.style.transform = 'translateY(' + lerp0(dy || 26, 0, easeOutCubic(u)) + 'px)'; }
+function cardIn(id, u, dy) { var el = Q(id); if (!el) return; el.style.opacity = clamp01(u * 1.2); el.style.transform = 'translateY(' + lerp0(dy || 22, 0, easeOutCubic(u)) + 'px)'; }
+function el3(id, u, dy) { var el = Q(id); if (!el) return; el.style.opacity = clamp01(u * 1.2); el.style.transform = 'translateY(' + lerp0(dy || 10, 0, easeOutCubic(u)) + 'px)'; }
+
+var T1 = [0.0, 4.8], T2 = [4.8, 10.0], T3 = [10.0, 19.4], T4 = [19.4, 26.6],
+    T5 = [26.6, 33.2], T6 = [33.2, 40.8], T7 = [40.8, 47.0];
+var DUR = 47.0;
+
+(function () {
+  var g = Q('dotgrid');
+  g.style.backgroundImage = 'radial-gradient(rgba(255,255,255,0.10) 1.2px, transparent 1.3px)';
+  g.style.backgroundSize = '56px 56px';
+})();
+
+/* brand mark: light rounded square, 2x2 outlined cells, bottom-right solid */
+function buildMark(parentId, outline, solid) {
+  var m = Q(parentId); m.innerHTML = '';
+  var pos = [[39, 39], [75, 39], [39, 75], [75, 75]];
+  for (var i = 0; i < 4; i++) {
+    var d = document.createElement('div');
+    d.className = 'abs';
+    d.style.cssText = 'left:' + pos[i][0] + 'px;top:' + pos[i][1] + 'px;width:22px;height:22px;border-radius:6px;';
+    if (i === 3) d.style.background = solid;
+    else { d.style.border = '3px solid ' + outline; d.style.opacity = '0.35'; }
+    d.style.transformOrigin = '50% 50%';
+    m.appendChild(d);
+  }
+}
+buildMark('s2mark', '#09090b', '#09090b');
+buildMark('s7mark', '#09090b', '#09090b');
+
+/* s7 button color */
+Q('s7btn').style.background = 'var(--dk-fg)';
+
+/* ---------- S1 HOOK ---------- */
+function s1(t) {
+  var a = t - T1[0];
+  st('s1', 'opacity', sceneOp(t, T1, .5, .45).toFixed(3));
+  lineIn(Q('s1l1'), seg(a, .30, 1.10), 30);
+  lineIn(Q('s1l2'), seg(a, 1.25, 2.05), 30);
+  lineIn(Q('s1l3'), seg(a, 2.85, 3.60), 20);
+  var sq = ['s1q1', 's1q2', 's1q3'], delay = [3.0, 3.18, 3.36];
+  var stack = Q('s1stack');
+  if (!stack.children.length) {
+    var cols = ['#22c55e', '#a855f7', '#3b82f6'];
+    for (var i = 0; i < 3; i++) {
+      var d = document.createElement('div'); d.className = 'abs'; d.id = sq[i];
+      d.style.cssText = 'left:0;width:38px;height:38px;border-radius:9px;background:' + cols[i] + ';font-size:0;';
+      stack.appendChild(d);
+    }
+  }
+  for (i = 0; i < 3; i++) {
+    var u = outBack(seg(a, delay[i], delay[i] + .6));
+    var el = Q(sq[i]);
+    el.style.top = lerp0(-46, 38 * i, u).toFixed(1) + 'px';
+    el.style.opacity = clamp01(seg(a, delay[i], delay[i] + .35) * 1.3);
+  }
+}
+
+/* ---------- S2 BRAND ---------- */
+function s2(t) {
+  var a = t - T2[0];
+  st('s2', 'opacity', sceneOp(t, T2, .5, .45).toFixed(3));
+  var kids = Q('s2mark').children;
+  for (var i = 0; i < 4; i++) {
+    var u = outBack(seg(a, .25 + i * .12, .25 + i * .12 + .5));
+    var x = i < 2 ? 39 : 75, y = i % 2 === 0 ? 39 : 75;
+    kids[i].style.left = x + 'px'; kids[i].style.top = y + 'px';
+    kids[i].style.transform = 'scale(' + lerp0(.2, 1, u).toFixed(3) + ')';
+    kids[i].style.opacity = clamp01(u * 1.4);
+  }
+  lineIn(Q('s2name'), seg(a, .55, 1.3), 24);
+  lineIn(Q('s2tag'), seg(a, .95, 1.7), 20);
+}
+
+/* rebuild mark cells when scene re-enters (outBack from scratch is fine since seg resets) */
+/* ---------- S3 CALENDAR ---------- */
+var HABITS = [
+  { name: 'Drink water', col: '#22c55e' },
+  { name: 'Read 20 min', col: '#a855f7' },
+  { name: 'Deep work 2h', col: '#3b82f6' },
+  { name: 'Push-ups', col: '#ef4444' },
+  { name: 'Journal', col: '#eab308' }
+];
+var PAT = [
+  [1,1,1,1,0,1,1, 1,1,1,1,1,0,1, 1,1,1,1,0,1,1, 1,1,1,1,1,0,1, 1,1],
+  [1,0,1,1,0,1,0, 1,0,1,1,0,1,1, 0,1,1,0,1,1,0, 1,0,1,1,0,1,1, 0,1],
+  [1,1,0,1,1,0,0, 1,1,0,1,1,0,1, 1,0,1,1,0,0,1, 1,0,1,1,1,0,0, 1,1],
+  [1,0,1,0,1,0,0, 1,0,1,0,1,0,1, 0,1,0,1,1,0,0, 1,0,1,0,1,0,1, 0,1],
+  [1,0,0,1,0,0,1, 0,1,0,0,1,0,1, 0,1,0,0,1,0,1, 0,1,0,0,1,0,1, 0,1]
+];
+PAT[4][16] = 0; /* Oct 17 on Journal flips via the simulated click */
+var CELL = 41, STEP = 45, LBL = 216, ROW0 = 30;
+var S3 = { t0: 1.7, t1: 7.0, clickRow: 4, clickDay: 16, clickAt: 7.45 };
+function buildS3() {
+  var g = Q('s3grid'); g.innerHTML = '';
+  var wk = ['T', 'F', 'S', 'S', 'M', 'T', 'W']; /* Oct 1 2026 = Thursday */
+  for (var d = 0; d < 31; d++) {
+    var w = document.createElement('div'); w.className = 'abs';
+    w.style.cssText = 'left:' + (LBL + d * STEP) + 'px;top:0;width:41px;text-align:center;font-size:12px;color:var(--muted2);font-weight:500;';
+    w.textContent = wk[d % 7];
+    g.appendChild(w);
+  }
+  var tint = document.createElement('div'); tint.className = 'abs';
+  tint.style.cssText = 'left:' + (LBL + 16 * STEP - 6) + 'px;top:24px;width:53px;height:231px;background:#fafafa;border:1px dashed var(--border);border-radius:12px;';
+  g.appendChild(tint);
+  for (var h = 0; h < 5; h++) {
+    var rowY = ROW0 + h * STEP;
+    var lb = document.createElement('div'); lb.className = 'abs';
+    lb.style.cssText = 'left:0;top:' + (rowY + 10) + 'px;width:206px;font-size:16px;color:var(--ink);white-space:nowrap;';
+    lb.innerHTML = '<span class="dot" style="background:' + HABITS[h].col + ';margin-right:10px;vertical-align:2px;"></span>' + HABITS[h].name;
+    g.appendChild(lb);
+    for (d = 0; d < 31; d++) {
+      var cx = LBL + d * STEP;
+      var base = document.createElement('div'); base.className = 'abs cell';
+      base.id = 's3c' + h + '_' + d;
+      base.style.cssText = 'left:' + cx + 'px;top:' + rowY + 'px;width:41px;height:41px;border-radius:9px;';
+      g.appendChild(base);
+      if (PAT[h][d] || (h === S3.clickRow && d === S3.clickDay)) {
+        var f = document.createElement('div'); f.className = 'abs';
+        f.id = 's3f' + h + '_' + d;
+        f.style.cssText = 'left:' + (cx + 4) + 'px;top:' + (rowY + 4) + 'px;width:33px;height:33px;border-radius:8px;background:#09090b;transform-origin:50% 50%;';
+        g.appendChild(f);
+      }
+    }
+  }
+  var ring = document.createElement('div'); ring.id = 's3ring'; ring.className = 'abs';
+  ring.style.cssText = 'left:0;top:0;width:60px;height:60px;border:3px solid #09090b;border-radius:14px;opacity:0;';
+  g.appendChild(ring);
+}
+buildS3();
+function cursorAt(a) { return lerp0(-0.6, 31.4, seg(a, S3.t0, S3.t1)); }
+function cellTime(d) { return S3.t0 + (S3.t1 - S3.t0) * ((d + 0.6) / 32.0) + 0.02; }
+function clickFillAt(row, day, a) {
+  var on = a >= S3.clickAt;
+  if (!on) return 0;
+  return outBack(seg(a, S3.clickAt, S3.clickAt + .3));
+}
+function s3(t) {
+  var a = t - T3[0];
+  st('s3', 'opacity', sceneOp(t, T3, .5, .5).toFixed(3));
+  lineIn(Q('s3eb'), seg(a, .15, .8), 14);
+  lineIn(Q('s3h'), seg(a, .28, .95), 18);
+  cardIn('s3card', seg(a, .5, 1.15));
+  lineIn(Q('s3sub'), seg(a, 1.35, 2.0), 12);
+
+  var D = Math.floor(cursorAt(a));
+  var shown = 0;
+  var clickFu = 0;
+  for (var h = 0; h < 5; h++) {
+    for (var d = 0; d < 31; d++) {
+      var base = Q('s3c' + h + '_' + d);
+      var on = false, fu = 0;
+      if (h === S3.clickRow && d === S3.clickDay) {
+        clickFu = clickFillAt(h, d, a);
+        on = clickFu > 0; fu = clickFu;
+      } else if (d < D && PAT[h][d]) {
+        on = true;
+        fu = outBack(seg(a, cellTime(d), cellTime(d) + .3));
+      }
+      if (on && fu > 0.1) {
+        base.style.background = 'transparent';
+        shown++;
+      } else {
+        base.style.background = (d === 16) ? '#fafafa' : '';
+      }
+      var fEl = Q('s3f' + h + '_' + d);
+      if (fEl) {
+        fEl.style.opacity = clamp01(fu * 1.3);
+        fEl.style.transform = 'scale(' + lerp0(.35, 1, fu).toFixed(3) + ')';
+      }
+    }
+  }
+  /* note: alternate fill column pop order (row offset) for organic feel */
+  Q('s3counter').innerHTML = '<span class="bigNum" style="font-size:22px;font-weight:600;color:#09090b;">' + shown + '</span> <span style="font-size:16px;">tasks done</span>';
+  var ring = Q('s3ring');
+  var rx = LBL + S3.clickDay * STEP - 9.5, ry = ROW0 + S3.clickRow * STEP - 9.5;
+  var ru = seg(a, S3.clickAt - .15, S3.clickAt + .45);
+  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+  ring.style.opacity = (ru > 0 && ru < 1) ? (1 - ru).toFixed(3) : '0';
+  ring.style.transform = 'scale(' + lerp0(1, 1.7, easeOutCubic(ru)).toFixed(3) + ')';
+}
+
+/* ---------- S4 PLANNER ---------- */
+var WEEK = [{ d: 'Sa', n: 17, today: true }, { d: 'Su', n: 18 }, { d: 'Mo', n: 19 }, { d: 'Tu', n: 20 }, { d: 'We', n: 21 }, { d: 'Th', n: 22 }, { d: 'Fr', n: 23 }];
+var PILL = {
+  planned: 'color:#52525b;border:1px solid var(--border);',
+  inprog: 'color:#1d4ed8;border:1px solid #bfdbfe;background:#eff6ff;',
+  done: 'color:#fff;background:var(--emerald);'
+};
+function pill(lbl, kind) { return '<span style="display:inline-block;padding:5px 14px;border-radius:999px;font-size:14px;font-weight:500;' + PILL[kind] + '">' + lbl + '</span>'; }
+function buildS4() {
+  var wk = Q('s4week'); wk.innerHTML = '';
+  wk.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">This week</div><div class="abs" style="left:26px;top:50px;font-size:14px;color:var(--muted2);">Saturday start</div>');
+  for (var i = 0; i < 7; i++) {
+    var chip = WEEK[i];
+    var x = 26 + i * 62;
+    var hl = chip.today ? 'background:#09090b;color:#fff;box-shadow:0 0 0 4px rgba(9,9,11,0.08);' : 'background:var(--border2);color:#52525b;';
+    wk.insertAdjacentHTML('beforeend', '<div class="abs" id="s4chip' + i + '" style="left:' + x + 'px;top:150px;width:54px;height:88px;border-radius:12px;text-align:center;padding-top:16px;font-size:13px;' + hl + '"><div>' + chip.d + '</div><div style="font-size:19px;font-weight:600;margin-top:8px;">' + chip.n + '</div></div>');
+    if (chip.today) wk.insertAdjacentHTML('beforeend', '<div class="abs" id="s4todlbl" style="left:' + x + 'px;top:246px;width:54px;text-align:center;font-size:11px;color:#18181b;font-weight:600;">Today</div>');
+  }
+  wk.insertAdjacentHTML('beforeend', '<div class="abs" id="s4wksum" style="left:26px;top:316px;font-size:15px;color:var(--muted);"><span class="bigNum" style="font-weight:600;color:#09090b;">18</span> planned this week &middot; <span class="bigNum" style="font-weight:600;color:#09090b;">12</span> done</div>');
+  var dv = Q('s4day'); dv.innerHTML = '';
+  dv.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">Saturday, Oct 17</div>');
+  var TASKS = [
+    { t: '07:00', name: 'Morning run', dur: '30m', cat: '#ef4444', base: 'done' },
+    { t: '09:30', name: 'Deep work &mdash; Q3 report', dur: '2h', cat: '#3b82f6', base: 'switch' },
+    { t: '13:00', name: 'Team review', dur: '45m', cat: '#3b82f6', pri: 'High', base: 'planned' },
+    { t: '19:30', name: 'Read "Deep Work"', dur: '20m', cat: '#a855f7', base: 'planned' }
+  ];
+  for (var i = 0; i < 4; i++) {
+    var tk = TASKS[i], y = 64 + i * 76;
+    var high = tk.pri ? '<span style="color:#b45309;font-size:11px;font-weight:600;border:1px solid #fde68a;background:#fffbeb;border-radius:6px;padding:2px 7px;margin-left:10px;vertical-align:3px;">' + tk.pri + '</span>' : '';
+    dv.insertAdjacentHTML('beforeend',
+      '<div class="abs" id="s4task' + i + '" style="left:26px;top:' + y + 'px;width:1080px;height:66px;border:1px solid var(--border);border-radius:12px;background:#fff;">' +
+      '<div class="abs bigNum" style="left:18px;top:22px;width:64px;font-size:14px;color:var(--muted);">' + tk.t + '</div>' +
+      '<span class="dot abs" style="left:94px;top:29px;background:' + tk.cat + ';"></span>' +
+      '<div class="abs" style="left:116px;top:14px;font-size:17px;font-weight:500;color:var(--ink);">' + tk.name + high + '</div>' +
+      '<div class="abs" style="left:116px;top:41px;font-size:13px;color:var(--muted2);">' + tk.dur + '</div>' +
+      '<div class="abs" id="s4pill' + i + '" style="right:18px;top:18px;"></div>' +
+      '</div>');
+  }
+}
+buildS4();
+function s4(t) {
+  var a = t - T4[0];
+  st('s4', 'opacity', sceneOp(t, T4, .5, .5).toFixed(3));
+  lineIn(Q('s4eb'), seg(a, .15, .8), 14);
+  lineIn(Q('s4h'), seg(a, .28, .95), 18);
+  cardIn('s4week', seg(a, .5, 1.1));
+  cardIn('s4day', seg(a, .62, 1.25));
+  lineIn(Q('s4sub'), seg(a, 1.5, 2.1), 12);
+  for (var i = 0; i < 7; i++) el3('s4chip' + i, easeOutExpo(seg(a, .75 + i * .07, .75 + i * .07 + .55)), 28);
+  el3('s4todlbl', seg(a, 1.3, 1.6), 6);
+  el3('s4wksum', seg(a, 1.7, 2.1), 10);
+  for (i = 0; i < 4; i++) {
+    var el = Q('s4task' + i);
+    var u = easeOutExpo(seg(a, .9 + i * .16, .9 + i * .16 + .6));
+    el.style.opacity = clamp01(u * 1.2);
+    el.style.transform = 'translateX(' + lerp0(36, 0, u) + 'px)';
+  }
+  /* status flows: morning run already done; deep work planned -> in progress -> done; others planned */
+  var st1 = a < 2.9 ? 'Planned' : (a < 4.7 ? 'In progress' : 'Done');
+  Q('s4pill0').innerHTML = pill('Done', 'done');
+  Q('s4pill1').innerHTML = pill(st1, st1 === 'Done' ? 'done' : st1 === 'In progress' ? 'inprog' : 'planned');
+  Q('s4pill2').innerHTML = pill('Planned', 'planned');
+  Q('s4pill3').innerHTML = pill('Planned', 'planned');
+}
+
+/* ---------- S5 MILESTONES ---------- */
+var MILES = [
+  { n: 'Weekly 3× 5K runs', s: 'done' },
+  { n: 'Full 15K training week', s: 'done', flip: 2.6 },
+  { n: 'Sub-30-minute 5K', s: 'active' },
+  { n: 'Race-day 10K', s: 'todo' }
+];
+function buildS5() {
+  var c = Q('s5card'); c.innerHTML = '';
+  c.insertAdjacentHTML('beforeend',
+    '<span class="dot abs" style="left:30px;top:40px;width:14px;height:14px;border-radius:4px;background:#ef4444;"></span>' +
+    '<div class="abs" style="left:58px;top:30px;font-size:24px;font-weight:600;color:var(--ink);">Run a 10K</div>' +
+    '<div class="abs" style="left:58px;top:64px;font-size:14px;color:var(--muted2);">Milestones under the habit "Morning run" &middot; Fitness</div>');
+  for (var i = 0; i < 4; i++) {
+    var y = 106 + i * 58;
+    c.insertAdjacentHTML('beforeend', '<div class="abs" id="s5m' + i + '" style="left:30px;top:' + y + 'px;width:1010px;height:48px;"></div>');
+  }
+  c.insertAdjacentHTML('beforeend', '<div class="abs" style="left:30px;top:338px;width:1010px;height:9px;border-radius:5px;background:var(--border2);overflow:hidden;"><div id="s5bar" style="width:0;height:100%;background:#09090b;border-radius:5px;"></div></div>');
+  c.insertAdjacentHTML('beforeend', '<div class="abs" style="left:30px;top:362px;font-size:14px;font-weight:600;color:var(--muted);">Progress</div><div class="abs bigNum" id="s5pct" style="right:30px;top:362px;font-size:14px;color:#09090b;font-weight:600;">0%</div>');
+}
+buildS5();
+function s5(t) {
+  var a = t - T5[0];
+  st('s5', 'opacity', sceneOp(t, T5, .5, .5).toFixed(3));
+  lineIn(Q('s5eb'), seg(a, .15, .8), 14);
+  lineIn(Q('s5h'), seg(a, .28, .95), 18);
+  cardIn('s5card', seg(a, .5, 1.1));
+  for (var i = 0; i < 4; i++) {
+    var box = Q('s5m' + i);
+    var u = easeOutExpo(seg(a, .9 + i * .18, .9 + i * .18 + .6));
+    box.style.opacity = clamp01(u * 1.2);
+    box.style.transform = 'translateX(' + lerp0(32, 0, u) + 'px)';
+    var stat = MILES[i].s;
+    if (stat === 'done' && MILES[i].flip && a < MILES[i].flip) stat = 'active';
+    var chk, stp, namec;
+    if (stat === 'done') {
+      chk = '<span style="display:inline-block;width:26px;height:26px;border-radius:8px;background:var(--emerald);color:#fff;text-align:center;line-height:26px;font-size:15px;font-weight:600;margin-left:14px;">&#10003;</span>';
+      stp = pill('Done', 'done');
+      namec = 'color:#71717a;text-decoration:line-through;';
+    } else if (stat === 'active') {
+      chk = '<span style="display:inline-block;width:26px;height:26px;border-radius:8px;border:2.5px solid #f59e0b;background:#fffbeb;margin-left:14px;"></span>';
+      stp = pill('In progress', 'inprog');
+      namec = 'color:var(--ink);font-weight:500;';
+    } else {
+      chk = '<span style="display:inline-block;width:26px;height:26px;border-radius:8px;border:2.5px solid var(--border);background:#fafafa;margin-left:14px;"></span>';
+      stp = pill('Planned', 'planned');
+      namec = 'color:var(--ink);font-weight:500;';
+    }
+    box.innerHTML = '<span class="abs" style="left:0;top:-2px;">' + chk + '</span>' +
+      '<div class="abs" style="left:62px;top:8px;font-size:16px;' + namec + '">' + MILES[i].n + '</div>' +
+      '<div class="abs" style="right:0;top:3px;">' + stp + '</div>';
+  }
+  var barU = easeOutCubic(seg(a, 2.9, 4.5));
+  var pct = 62 * barU;
+  Q('s5bar').style.width = pct.toFixed(1) + '%';
+  Q('s5pct').innerHTML = Math.round(pct) + '%';
+}
+
+/* ---------- S6 ANALYTICS ---------- */
+var BARSV = [42, 55, 38, 61, 48, 72, 66, 58, 74, 80, 69, 86, 78, 94];
+var HEATW = 18, HEATH = 7, HSTEP = 34, HYSTEP = 16;
+function buildS6() {
+  var L = Q('s6left'); L.innerHTML = '';
+  L.insertAdjacentHTML('beforeend', '<div class="abs" style="left:30px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">Completion rate</div><div class="abs" style="left:30px;top:50px;font-size:14px;color:var(--muted2);">Last 14 days</div><div class="abs" id="s6avg" style="right:30px;top:24px;font-size:14px;color:var(--muted);"></div>');
+  var area = document.createElement('div'); area.className = 'abs'; area.id = 's6bars';
+  area.style.cssText = 'left:30px;top:120px;width:810px;height:230px;';
+  L.appendChild(area);
+  area.insertAdjacentHTML('beforeend', '<div class="abs" style="left:0;right:0;bottom:0;height:1px;background:var(--border);"></div>');
+  for (var i = 0; i < 14; i++) {
+    var x = i * 58 + 10;
+    area.insertAdjacentHTML('beforeend', '<div class="abs" id="s6b' + i + '" style="left:' + x + 'px;bottom:0;width:40px;border-radius:8px 8px 2px 2px;background:#09090b;height:0;"></div>');
+    area.insertAdjacentHTML('beforeend', '<div class="abs bigNum" id="s6x' + i + '" style="left:' + (x + 3) + 'px;bottom:-26px;width:34px;text-align:center;font-size:11px;color:var(--muted2);">' + (i + 4) + '</div>');
+  }
+  var R = Q('s6right');
+  var tiles = [['12', 'day streak'], ['94%', 'completion rate'], ['18.5h', 'planned time'], ['31', 'best streak']];
+  for (i = 0; i < 4; i++) {
+    var tx = (i % 2) * 374, ty = Math.floor(i / 2) * 164;
+    R.insertAdjacentHTML('beforeend',
+      '<div class="abs card" id="s6t' + i + '" style="left:' + tx + 'px;top:' + ty + 'px;width:350px;height:140px;">' +
+      '<div class="abs bigNum" style="left:24px;top:26px;font-size:44px;font-weight:600;color:var(--ink);">' + tiles[i][0] + '</div>' +
+      '<div class="abs" style="left:24px;top:92px;font-size:15px;color:var(--muted);">' + tiles[i][1] + '</div>' +
+      '</div>');
+  }
+  var hm = '<div class="abs card" id="s6hm" style="left:0;top:352px;width:724px;height:188px;">' +
+    '<div class="abs" style="left:22px;top:16px;font-size:15px;font-weight:600;color:var(--ink);">Yearly heatmap</div>' +
+    '<div class="abs" style="left:22px;top:46px;" id="s6hmc"></div></div>';
+  R.insertAdjacentHTML('beforeend', hm);
+  var hc = Q('s6hmc');
+  var hcols = { 0: '#f4f4f5', 1: '#27272a', 2: '#71717a', 3: '#09090b' };
+  for (var w = 0; w < HEATW; w++) for (var h2 = 0; h2 < HEATH; h2++) {
+    var v = (w * 73 + h2 * 131 + w * h2 * 7) % 100;
+    var inten = v < 15 ? 0 : v < 45 ? 1 : v < 75 ? 2 : 3;
+    hc.insertAdjacentHTML('beforeend', '<div class="abs" id="s6h_' + w + '_' + h2 + '" style="left:' + (w * HSTEP) + 'px;top:' + (h2 * HYSTEP) + 'px;width:14px;height:14px;border-radius:4px;background:' + hcols[inten] + ';opacity:0;"></div>');
+  }
+}
+buildS6();
+function s6(t) {
+  var a = t - T6[0];
+  st('s6', 'opacity', sceneOp(t, T6, .5, .5).toFixed(3));
+  lineIn(Q('s6eb'), seg(a, .15, .8), 14);
+  lineIn(Q('s6h'), seg(a, .28, .95), 18);
+  cardIn('s6left', seg(a, .5, 1.1));
+  for (var i = 0; i < 4; i++) {
+    var dly = (i % 2) * .15 + Math.floor(i / 2) * .12;
+    cardIn('s6t' + i, seg(a, .75 + dly, 1.35 + dly), 18);
+  }
+  cardIn('s6hm', seg(a, .85, 1.45), 18);
+  var maxH = 230, sum = 0, wsum = 0;
+  for (i = 0; i < 14; i++) {
+    var bu = easeOutExpo(seg(a, 1.2 + i * .07, 1.2 + i * .07 + .8));
+    Q('s6b' + i).style.height = (maxH * (BARSV[i] / 100) * bu).toFixed(1) + 'px';
+    el3('s6x' + i, clamp01(bu * 1.2), 6);
+    var wgt = clamp01(seg(a, 1.4, 2.6));
+    sum += BARSV[i] * wgt; wsum += wgt;
+  }
+  var avg = wsum > 0 ? Math.round(sum / wsum) : 0;
+  Q('s6avg').innerHTML = 'avg <span class="bigNum" style="color:#09090b;font-weight:600;">' + avg + '%</span>';
+  for (var w = 0; w < HEATW; w++) {
+    var hu = seg(a, 1.8 + w * .055, 1.8 + w * .055 + .55);
+    for (var h2 = 0; h2 < HEATH; h2++) {
+      var el = Q('s6h_' + w + '_' + h2);
+      el.style.opacity = clamp01((hu * 3.2 - h2 * .3) * 1.1);
+    }
+  }
+}
+
+/* ---------- S7 CLOSE ---------- */
+function s7(t) {
+  var a = t - T7[0];
+  st('s7', 'opacity', seg(a, 0, .5).toFixed(3));
+  var kids = Q('s7mark').children;
+  for (var i = 0; i < 4; i++) {
+    var u = outBack(seg(a, .3 + i * .11, .3 + i * .11 + .5));
+    var x = i < 2 ? 39 : 75, y = i % 2 === 0 ? 39 : 75;
+    kids[i].style.left = x + 'px'; kids[i].style.top = y + 'px';
+    kids[i].style.transform = 'scale(' + lerp0(.2, 1, u).toFixed(3) + ')';
+    kids[i].style.opacity = clamp01(u * 1.4);
+  }
+  lineIn(Q('s7name'), seg(a, .7, 1.5), 24);
+  lineIn(Q('s7tag'), seg(a, 1.0, 1.8), 20);
+  el3('s7feat', seg(a, 1.25, 1.85), 10);
+  el3('s7cta', seg(a, 1.5, 2.2), 10);
+}
+
+/* ---------- master ---------- */
+function render(t) {
+  s1(t); s2(t); s3(t); s4(t); s5(t); s6(t); s7(t);
+  Q('blackout').style.opacity = seg(t, DUR - 1.0, DUR - 0.12).toFixed(3);
+  document.body.offsetHeight;
+}
+window.render = render;
+render(0);
+</script>
+</body>
+</html>
