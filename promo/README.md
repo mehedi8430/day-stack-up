@@ -35,3 +35,8 @@ Tip: run `node capture.mjs preview` first — it renders ~25 sample frames at ke
 | Milestones | `MILES` array |
 | Analytics numbers | `BARSV`, stat tiles in `buildS6` |
 | Fonts | `@font-face` at the top (points at the `geist` npm package's woff2 files) |
+
+The rendered video is also used by the landing page: `public/promo/daystackup-promo.mp4`
+(embeds in the hero via `src/app/landing/_components/landing-promo-video.tsx`, with
+`daystackup-promo-poster.jpg` as its poster frame). Re-render and copy the new
+mp4 into `public/promo/` to refresh what the page shows.
