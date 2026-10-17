@@ -60,6 +60,10 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  if (pathname === "/landing") {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur px-4 sm:px-6">
       <div className="container flex h-14 items-center justify-between gap-2">
