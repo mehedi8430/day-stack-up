@@ -39,6 +39,7 @@ export async function getHabitMilestones(habitId: string) {
       id: habit.id,
       name: habit.name,
       goal: habit.goal ?? "",
+      category: habit.category,
     },
     milestones: milestones.map((milestone) => mapMilestone(milestone)),
   };

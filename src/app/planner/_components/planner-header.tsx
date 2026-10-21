@@ -1,4 +1,6 @@
-import { format, isToday, isTomorrow, isYesterday } from "date-fns";
+"use client";
+
+import { format, isToday, isTomorrow, isYesterday, parseISO } from "date-fns";
 import {
   CalendarDays,
   CalendarRange,
@@ -6,20 +8,24 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePlannerStore } from "@/stores/planner.store";
+import { runPlannerAction } from "./planner-feedback";
 
 export function PlannerHeader({
-  date,
-  onChangeDate,
-  onToday,
   isWeekStripOpen,
   onOpenWeekStrip,
 }: {
-  date: Date;
-  onChangeDate: (offset: number) => void;
-  onToday: () => void;
   isWeekStripOpen: boolean;
   onOpenWeekStrip: () => void;
 }) {
+  const selectedDate = usePlannerStore((s) => s.selectedDate);
+  const changeDay = usePlannerStore((s) => s.changeDay);
+  const goToToday = usePlannerStore((s) => s.goToToday);
+
+  const date = selectedDate ? parseISO(`${selectedDate}T12:00:00`) : null;
+
+  if (!date || Number.isNaN(date.getTime())) return null;
+
   return (
     <header className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -48,7 +54,11 @@ export function PlannerHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onChangeDate(-1)}
+            onClick={() =>
+              runPlannerAction(changeDay(-1), {
+                fallback: "Failed to load planner",
+              })
+            }
             aria-label="Previous day"
             title="Previous day"
           >
@@ -57,7 +67,11 @@ export function PlannerHeader({
           <Button
             variant={isToday(date) ? "secondary" : "ghost"}
             size="sm"
-            onClick={onToday}
+            onClick={() =>
+              runPlannerAction(goToToday(), {
+                fallback: "Failed to load planner",
+              })
+            }
           >
             {isToday(date)
               ? "Today"
@@ -70,7 +84,11 @@ export function PlannerHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onChangeDate(1)}
+            onClick={() =>
+              runPlannerAction(changeDay(1), {
+                fallback: "Failed to load planner",
+              })
+            }
             aria-label="Next day"
             title="Next day"
           >

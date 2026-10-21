@@ -1,16 +1,30 @@
-export function PlannerStatsSidebar({
-  isLoading,
-  completedCount,
-  totalTaskCount,
-  activeCount,
-  scheduledMinutes,
-}: {
-  isLoading: boolean;
-  completedCount: number;
-  totalTaskCount: number;
-  activeCount: number;
-  scheduledMinutes: number;
-}) {
+"use client";
+
+import * as React from "react";
+import { usePlannerStore } from "@/stores/planner.store";
+
+export function PlannerStatsSidebar() {
+  const tasks = usePlannerStore((s) => s.tasks);
+  const selectedDate = usePlannerStore((s) => s.selectedDate);
+  const isLoading = usePlannerStore((s) => s.isLoading);
+
+  const { completedCount, totalTaskCount, activeCount, scheduledMinutes } =
+    React.useMemo(() => {
+      const dayTasks = tasks.filter((task) => task.date === selectedDate);
+      return {
+        completedCount: dayTasks.filter((task) => task.status === "done")
+          .length,
+        totalTaskCount: dayTasks.length,
+        activeCount: dayTasks.filter(
+          (task) => task.status !== "done" && task.status !== "skipped",
+        ).length,
+        scheduledMinutes: dayTasks.reduce(
+          (total, task) => total + (task.durationMinutes ?? 0),
+          0,
+        ),
+      };
+    }, [tasks, selectedDate]);
+
   if (isLoading) {
     return (
       <aside className="space-y-3" aria-label="Loading daily planner summary">

@@ -2,12 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  ExternalLink,
-  GripVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Check, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { HabitMilestone, MilestoneStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,10 +16,10 @@ export const statusLabels: Record<MilestoneStatus, string> = {
 
 export const statusStyles: Record<MilestoneStatus, string> = {
   planned:
-    "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
+    "border-slate-200 bg-background text-slate-600 dark:border-slate-700 dark:text-slate-300",
   in_progress:
     "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300",
-  done: "border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300",
+  done: "border-emerald-500 bg-emerald-500 text-white dark:border-emerald-600 dark:bg-emerald-600",
   skipped:
     "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
 };
@@ -55,22 +50,43 @@ export function MilestoneRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "grid min-w-[860px] grid-cols-[2rem_minmax(10rem,1.2fr)_9rem_9rem_minmax(14rem,1fr)_minmax(14rem,1fr)_5rem_5rem] items-center gap-x-4 border-t text-sm",
+        "group flex min-w-0 items-center gap-2 rounded-xl px-1 py-2 text-sm transition-colors hover:bg-muted/40 sm:gap-3 sm:px-2",
         isDragging && "relative z-10 bg-accent shadow-lg",
       )}
     >
       <button
         {...attributes}
         {...listeners}
-        className="flex cursor-grab justify-center text-muted-foreground hover:text-foreground"
+        className="flex shrink-0 cursor-grab justify-center text-muted-foreground/60 hover:text-foreground"
         aria-label="Drag to reorder"
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
       <button
+        type="button"
+        onClick={() => onStatus(milestone.status === "done" ? "planned" : "done")}
+        aria-label={
+          milestone.status === "done"
+            ? `Mark ${milestone.title} as planned`
+            : `Mark ${milestone.title} as done`
+        }
+        aria-pressed={milestone.status === "done"}
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
+          milestone.status === "done"
+            ? "border-emerald-500 bg-emerald-500 text-white"
+            : milestone.status === "in_progress"
+              ? "border-amber-500 bg-amber-50 dark:bg-amber-950"
+              : "border-muted-foreground/25 bg-background hover:border-foreground/50",
+        )}
+      >
+        {milestone.status === "done" && <Check className="h-3 w-3" />}
+      </button>
+      <button
+        type="button"
         onClick={onView}
         className={cn(
-          "min-w-0 px-3 py-3 text-left hover:underline",
+          "min-w-0 flex-1 truncate py-2 text-left font-medium hover:underline",
           milestone.status === "done" && "text-muted-foreground line-through",
         )}
         title={milestone.title}
@@ -78,51 +94,22 @@ export function MilestoneRow({
       >
         {milestone.title}
       </button>
-      <div className="py-3 text-xs tabular-nums text-muted-foreground">
-        {milestone.startDate || "Anytime"}
-      </div>
-      <div className="py-3 text-xs tabular-nums text-muted-foreground">
-        {milestone.targetDate || "-"}
-      </div>
-      <div
-        className="truncate px-3 py-3 text-xs text-muted-foreground"
-        title={milestone.details}
-      >
-        {milestone.details || "-"}
-      </div>
-      <div
-        className="truncate px-3 py-3 text-xs text-muted-foreground"
-        title={milestone.resources}
-      >
-        {milestone.resources ? (
-          <span className="inline-flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" />
-            {milestone.resources}
-          </span>
-        ) : (
-          "-"
+      <select
+        value={milestone.status}
+        onChange={(event) => onStatus(event.target.value as MilestoneStatus)}
+        className={cn(
+          "h-7 max-w-28 shrink-0 cursor-pointer rounded-full border px-2 text-[10px] font-semibold outline-none sm:text-xs",
+          statusStyles[milestone.status],
         )}
-      </div>
-      <div className="px-2 py-3">
-        <select
-          value={milestone.status}
-          onChange={(event) =>
-            onStatus(event.target.value as MilestoneStatus)
-          }
-          className={cn(
-            "h-7 max-w-20 rounded-md border px-1 text-[10px] font-medium outline-none",
-            statusStyles[milestone.status],
-          )}
-          aria-label={`Status for ${milestone.title}`}
-        >
-          {Object.entries(statusLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex items-center justify-end gap-1 px-2">
+        aria-label={`Status for ${milestone.title}`}
+      >
+        {Object.entries(statusLabels).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <Button
           variant="ghost"
           size="icon"
