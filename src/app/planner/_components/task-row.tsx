@@ -11,6 +11,8 @@ import type {
   PlannerTask,
   PlannerStatus,
 } from "@/lib/planner-types";
+import { usePlannerStore } from "@/stores/planner.store";
+import { runPlannerAction } from "./planner-feedback";
 import { TaskStatusButton } from "./task-status-button";
 
 const statusLabels: Record<PlannerStatus, string> = {
@@ -34,19 +36,12 @@ export function formatTime(value: string | null): string {
   return format(date, "h:mm a");
 }
 
-export function TaskRow({
-  task,
-  onStatusChange,
-  onDelete,
-  onMoveNext,
-  onEdit,
-}: {
-  task: PlannerTask;
-  onStatusChange: (task: PlannerTask, status: PlannerStatus) => void;
-  onDelete: (task: PlannerTask) => void;
-  onMoveNext: (task: PlannerTask) => void;
-  onEdit: (task: PlannerTask) => void;
-}) {
+export function TaskRow({ task }: { task: PlannerTask }) {
+  const setTaskStatus = usePlannerStore((s) => s.setTaskStatus);
+  const moveTaskToNextDay = usePlannerStore((s) => s.moveTaskToNextDay);
+  const openEditTask = usePlannerStore((s) => s.openEditTask);
+  const requestDeleteTask = usePlannerStore((s) => s.requestDeleteTask);
+
   const {
     attributes,
     listeners,
@@ -85,10 +80,7 @@ export function TaskRow({
         {formatTime(task.startTime)}
       </div>
       <div className="col-start-2 row-start-1 sm:col-auto sm:row-auto">
-        <TaskStatusButton
-          task={task}
-          onChange={(status) => onStatusChange(task, status)}
-        />
+        <TaskStatusButton task={task} />
       </div>
       <div className="col-start-3 row-start-1 min-w-0 sm:col-auto sm:row-auto">
         <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +115,12 @@ export function TaskRow({
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => onMoveNext(task)}
+              onClick={() =>
+                runPlannerAction(moveTaskToNextDay(task.id), {
+                  success: "Task moved to tomorrow",
+                  fallback: "Failed to move task",
+                })
+              }
               aria-label="Move to tomorrow"
               title="Move to tomorrow"
             >
@@ -133,7 +130,11 @@ export function TaskRow({
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => onStatusChange(task, "skipped")}
+              onClick={() =>
+                runPlannerAction(setTaskStatus(task.id, "skipped"), {
+                  fallback: "Failed to update task",
+                })
+              }
               aria-label="Skip task"
               title="Skip task"
             >
@@ -145,7 +146,7 @@ export function TaskRow({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onEdit(task)}
+          onClick={() => openEditTask(task.id)}
           aria-label="Edit task"
           title="Edit task"
         >
@@ -155,7 +156,7 @@ export function TaskRow({
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-destructive"
-          onClick={() => onDelete(task)}
+          onClick={() => requestDeleteTask(task.id)}
           aria-label="Delete task"
           title="Delete task"
         >

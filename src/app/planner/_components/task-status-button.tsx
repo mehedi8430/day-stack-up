@@ -3,6 +3,8 @@
 import { Check, Circle, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PlannerTask, PlannerStatus } from "@/lib/planner-types";
+import { usePlannerStore } from "@/stores/planner.store";
+import { runPlannerAction } from "./planner-feedback";
 
 const statusLabels: Record<PlannerStatus, string> = {
   planned: "Planned",
@@ -11,13 +13,8 @@ const statusLabels: Record<PlannerStatus, string> = {
   skipped: "Skipped",
 };
 
-export function TaskStatusButton({
-  task,
-  onChange,
-}: {
-  task: PlannerTask;
-  onChange: (status: PlannerStatus) => void;
-}) {
+export function TaskStatusButton({ task }: { task: PlannerTask }) {
+  const setTaskStatus = usePlannerStore((s) => s.setTaskStatus);
   const nextStatus: PlannerStatus =
     task.status === "planned"
       ? "in_progress"
@@ -29,7 +26,11 @@ export function TaskStatusButton({
   return (
     <button
       type="button"
-      onClick={() => onChange(nextStatus)}
+      onClick={() =>
+        runPlannerAction(setTaskStatus(task.id, nextStatus), {
+          fallback: "Failed to update task",
+        })
+      }
       aria-label={`${statusLabels[task.status]}. Set ${statusLabels[nextStatus]}`}
       title={`Set ${statusLabels[nextStatus]}`}
       className={cn(

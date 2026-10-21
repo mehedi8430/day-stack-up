@@ -4,9 +4,10 @@ import * as React from "react";
 import { addDays, format, parseISO } from "date-fns";
 import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PlannerStatus, PlannerTask } from "@/lib/planner-types";
 import { sortPlannerTasks } from "@/lib/planner-utils";
+import { usePlannerStore } from "@/stores/planner.store";
 import { DayTasksDialog } from "./day-tasks-dialog";
+import { runPlannerAction } from "./planner-feedback";
 
 const weekdayLabels = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 const MAX_PREVIEW = 3;
@@ -15,44 +16,32 @@ function dateKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
-export function WeekStrip({
-  weekStart,
-  selectedDate,
-  today,
-  tasks,
-  isLoading,
-  onSelectDate,
-  onChangeWeek,
-  onThisWeek,
-  onTaskCreated,
-  onClose,
-  onStatusChange,
-  onDeleteTask,
-  onMoveTask,
-  onEditTask,
-}: {
-  weekStart: string;
-  selectedDate: string;
-  today: string;
-  tasks: PlannerTask[];
-  isLoading: boolean;
-  onSelectDate: (date: string) => void;
-  onChangeWeek: (offset: number) => void;
-  onThisWeek: () => void;
-  onTaskCreated: (task: PlannerTask) => void;
-  onClose: () => void;
-  onStatusChange: (task: PlannerTask, status: PlannerStatus) => void;
-  onDeleteTask: (task: PlannerTask) => void;
-  onMoveTask: (task: PlannerTask) => void;
-  onEditTask: (task: PlannerTask) => void;
-}) {
+export function WeekStrip({ onClose }: { onClose: () => void }) {
+  const tasks = usePlannerStore((s) => s.tasks);
+  const weekStart = usePlannerStore((s) => s.loadedWeekStart);
+  const selectedDate = usePlannerStore((s) => s.selectedDate);
+  const today = usePlannerStore((s) => s.today);
+  const isLoading = usePlannerStore((s) => s.isLoading);
+  const selectDate = usePlannerStore((s) => s.selectDate);
+  const changeWeek = usePlannerStore((s) => s.changeWeek);
+  const goToToday = usePlannerStore((s) => s.goToToday);
   const [activeDate, setActiveDate] = React.useState<string | null>(null);
-  const activeTasks = activeDate
-    ? sortPlannerTasks(tasks.filter((task) => task.date === activeDate))
-    : [];
+
+  if (!weekStart) return null;
+
   const start = parseISO(`${weekStart}T12:00:00`);
   const end = addDays(start, 6);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
+
+  const selectDateFromStrip = (date: string) => {
+    runPlannerAction(selectDate(date), {
+      fallback: "Failed to load planner",
+    });
+    document.getElementById("planner-tasks")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   return (
     <section
@@ -87,18 +76,34 @@ export function WeekStrip({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onChangeWeek(-1)}
+            onClick={() =>
+              runPlannerAction(changeWeek(-1), {
+                fallback: "Failed to load planner",
+              })
+            }
             aria-label="Previous week"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="sm" onClick={onThisWeek}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              runPlannerAction(goToToday(), {
+                fallback: "Failed to load planner",
+              })
+            }
+          >
             This week
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onChangeWeek(1)}
+            onClick={() =>
+              runPlannerAction(changeWeek(1), {
+                fallback: "Failed to load planner",
+              })
+            }
             aria-label="Next week"
           >
             <ArrowRight className="h-4 w-4" />
@@ -134,7 +139,7 @@ export function WeekStrip({
             >
               <button
                 type="button"
-                onClick={() => onSelectDate(key)}
+                onClick={() => selectDateFromStrip(key)}
                 className="mb-2 flex items-center justify-between gap-1 rounded-md px-1 py-1 text-left hover:bg-muted/60 cursor-pointer"
                 aria-label={`Open ${format(day, "EEEE MMM d")}`}
               >
@@ -198,16 +203,7 @@ export function WeekStrip({
 
       <DayTasksDialog
         date={activeDate}
-        open={activeDate !== null}
-        tasks={activeTasks}
-        onOpenChange={(open) => {
-          if (!open) setActiveDate(null);
-        }}
-        onTaskCreated={onTaskCreated}
-        onStatusChange={onStatusChange}
-        onDeleteTask={onDeleteTask}
-        onMoveTask={onMoveTask}
-        onEditTask={onEditTask}
+        onClose={() => setActiveDate(null)}
       />
     </section>
   );

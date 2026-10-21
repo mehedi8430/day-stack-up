@@ -12,25 +12,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { updatePlannerTask } from "@/app/actions/planner.actions";
 import type { PlannerPriority, PlannerTask } from "@/lib/planner-types";
+import { usePlannerStore } from "@/stores/planner.store";
 
 function EditTaskForm({
   task,
-  onSaved,
   onCancel,
 }: {
   task: PlannerTask;
-  onSaved: (task: PlannerTask) => void;
   onCancel: () => void;
 }) {
+  const updateTask = usePlannerStore((s) => s.updateTask);
   const [title, setTitle] = React.useState(task.title);
   const [startTime, setStartTime] = React.useState(task.startTime ?? "");
   const [duration, setDuration] = React.useState(
-    task.durationMinutes ? String(task.durationMinutes) : ""
+    task.durationMinutes ? String(task.durationMinutes) : "",
   );
   const [priority, setPriority] = React.useState<PlannerPriority>(
-    task.priority
+    task.priority,
   );
   const [notes, setNotes] = React.useState(task.notes ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -40,21 +39,23 @@ function EditTaskForm({
     const trimmed = title.trim();
     if (!trimmed) return;
     setSaving(true);
-    const result = await updatePlannerTask(task.id, {
-      title: trimmed,
-      startTime: startTime || null,
-      durationMinutes: duration ? Number(duration) : null,
-      priority,
-      notes: notes || null,
-    });
-    setSaving(false);
-    if ("error" in result) {
-      toast.error(result.error);
-      return;
+    try {
+      await updateTask(task.id, {
+        title: trimmed,
+        startTime: startTime || null,
+        durationMinutes: duration ? Number(duration) : null,
+        priority,
+        notes: notes || null,
+      });
+      setSaving(false);
+      onCancel();
+      toast.success("Task updated");
+    } catch (error) {
+      setSaving(false);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update task",
+      );
     }
-    onSaved(result.task);
-    onCancel();
-    toast.success("Task updated");
   };
 
   return (
@@ -95,6 +96,7 @@ function EditTaskForm({
           />
         </div>
       </div>
+      {/* priority */}
       <div className="space-y-2">
         <Label htmlFor="edit-priority">Priority</Label>
         <select
@@ -111,14 +113,16 @@ function EditTaskForm({
           <option value="high">High</option>
         </select>
       </div>
+      {/* notes */}
       <div className="space-y-2">
         <Label htmlFor="edit-notes">Notes</Label>
-        <Input
+        <textarea
           id="edit-notes"
           placeholder="Link, context, or definition of done"
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
           disabled={saving}
+          className="min-h-20 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
       <DialogFooter>
@@ -138,30 +142,25 @@ function EditTaskForm({
   );
 }
 
-export function EditTaskDialog({
-  task,
-  open,
-  onOpenChange,
-  onUpdated,
-}: {
-  task: PlannerTask | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdated: (task: PlannerTask) => void;
-}) {
+export function EditTaskDialog() {
+  const task = usePlannerStore(
+    (s) => s.tasks.find((item) => item.id === s.editingTaskId) ?? null,
+  );
+  const closeEditTask = usePlannerStore((s) => s.closeEditTask);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={!!task}
+      onOpenChange={(open) => {
+        if (!open) closeEditTask();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit task</DialogTitle>
         </DialogHeader>
-        {task && open && (
-          <EditTaskForm
-            key={task.id}
-            task={task}
-            onSaved={onUpdated}
-            onCancel={() => onOpenChange(false)}
-          />
+        {task && (
+          <EditTaskForm key={task.id} task={task} onCancel={closeEditTask} />
         )}
       </DialogContent>
     </Dialog>

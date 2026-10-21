@@ -6,16 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { createPlannerTask } from "@/app/actions/planner.actions";
-import type { PlannerPriority, PlannerTask } from "@/lib/planner-types";
+import type { PlannerPriority } from "@/lib/planner-types";
+import { usePlannerStore } from "@/stores/planner.store";
 
-export function NewTaskForm({
-  date,
-  onCreated,
-}: {
-  date: string;
-  onCreated: (task: PlannerTask) => void;
-}) {
+export function NewTaskForm({ date }: { date: string }) {
+  const createTask = usePlannerStore((s) => s.createTask);
   const [title, setTitle] = React.useState("");
   const [startTime, setStartTime] = React.useState("");
   const [duration, setDuration] = React.useState("");
@@ -29,27 +24,29 @@ export function NewTaskForm({
     const trimmed = title.trim();
     if (!trimmed) return;
     setSaving(true);
-    const result = await createPlannerTask({
-      title: trimmed,
-      date,
-      startTime: startTime || undefined,
-      durationMinutes: duration ? Number(duration) : undefined,
-      priority,
-      notes: notes || undefined,
-    });
-    setSaving(false);
-    if ("error" in result) {
-      toast.error(result.error);
-      return;
+    try {
+      await createTask({
+        title: trimmed,
+        date,
+        startTime: startTime || undefined,
+        durationMinutes: duration ? Number(duration) : undefined,
+        priority,
+        notes: notes || undefined,
+      });
+      setTitle("");
+      setStartTime("");
+      setDuration("");
+      setNotes("");
+      setPriority("medium");
+      setDetailsOpen(false);
+      toast.success("Task added to your planner");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add task",
+      );
+    } finally {
+      setSaving(false);
     }
-    onCreated(result.task);
-    setTitle("");
-    setStartTime("");
-    setDuration("");
-    setNotes("");
-    setPriority("medium");
-    setDetailsOpen(false);
-    toast.success("Task added to your planner");
   };
 
   return (
@@ -105,46 +102,52 @@ export function NewTaskForm({
         )}
       </div>
       {detailsOpen && (
-        <div className="mt-4 grid gap-4 border-t pt-4 sm:grid-cols-[10rem_10rem_minmax(0,1fr)]">
-          <div className="space-y-2">
-            <Label htmlFor="task-duration">Duration</Label>
-            <div className="relative">
-              <Input
-                id="task-duration"
-                type="number"
-                min="1"
-                step="5"
-                placeholder="30"
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-              />
-              <span className="pointer-events-none absolute right-3 top-2.5 text-xs text-muted-foreground">
-                min
-              </span>
+        <div className="mt-4 border-t pt-4">
+          <div className="flex gap-4 w-full">
+            {/* Duration */}
+            <div className="space-y-2 w-full">
+              <Label htmlFor="task-duration">Duration</Label>
+              <div className="relative">
+                <Input
+                  id="task-duration"
+                  type="number"
+                  min="1"
+                  step="5"
+                  placeholder="30"
+                  value={duration}
+                  onChange={(event) => setDuration(event.target.value)}
+                />
+                <span className="pointer-events-none absolute right-3 top-2.5 text-xs text-muted-foreground">
+                  min
+                </span>
+              </div>
+            </div>
+            {/* Priority */}
+            <div className="space-y-2 w-full">
+              <Label htmlFor="task-priority">Priority</Label>
+              <select
+                id="task-priority"
+                value={priority}
+                onChange={(event) =>
+                  setPriority(event.target.value as PlannerPriority)
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="task-priority">Priority</Label>
-            <select
-              id="task-priority"
-              value={priority}
-              onChange={(event) =>
-                setPriority(event.target.value as PlannerPriority)
-              }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div className="space-y-2">
+          {/* Notes */}
+          <div className="space-y-2 mt-4">
             <Label htmlFor="task-notes">Notes</Label>
-            <Input
+            <textarea
               id="task-notes"
               placeholder="Link, context, or definition of done"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
+              className="min-h-20 w-full resize-y rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
