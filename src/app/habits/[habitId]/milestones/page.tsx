@@ -16,6 +16,7 @@ export default async function HabitMilestonesPage({
       habitId={habitId}
       habitName={data.habit.name}
       initialGoal={data.habit.goal}
+      category={data.habit.category}
       initialMilestones={data.milestones}
     />
   );

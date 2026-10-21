@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getInitialData } from "@/app/actions/habit.actions";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { getCategory } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,57 +40,71 @@ export default async function HabitsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {habits.map((habit) => {
-            const cat = getCategory(habit.category);
-            return (
-              <Link
-                key={habit.id}
-                href={`/habits/${habit.id}/milestones`}
-                className="group"
-              >
-                <Card className="transition-colors hover:border-foreground/20 hover:bg-accent/50">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {habit.emoji && (
-                          <span className="text-2xl shrink-0">
-                            {habit.emoji}
-                          </span>
-                        )}
-                        <CardTitle className="truncate text-base">
-                          {habit.name}
-                        </CardTitle>
-                      </div>
-                      <span
-                        className="h-3 w-3 shrink-0 rounded-full mt-1.5"
-                        style={{ backgroundColor: cat.color }}
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px]"
-                      style={{
-                        color: cat.color,
-                        backgroundColor: cat.color + "18",
-                        borderColor: cat.color + "30",
-                        borderWidth: 1,
-                      }}
-                    >
-                      {cat.label}
-                    </Badge>
-                    {habit.goal && (
-                      <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {habit.goal}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-160 border-collapse text-left text-sm">
+              <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-5 py-3">Habit</th>
+                  <th scope="col" className="px-5 py-3">Category</th>
+                  <th scope="col" className="px-5 py-3">Goal</th>
+                  <th scope="col" className="px-5 py-3 text-right">Milestones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {habits.map((habit) => {
+                  const cat = getCategory(habit.category);
+                  return (
+                    <tr key={habit.id} className="transition-colors hover:bg-muted/30">
+                      <th scope="row" className="px-5 py-4 font-medium">
+                        <Link
+                          href={`/habits/${habit.id}/milestones`}
+                          className="flex min-w-0 items-center gap-3 hover:underline"
+                        >
+                          {habit.emoji && (
+                            <span className="shrink-0 text-xl" aria-hidden="true">
+                              {habit.emoji}
+                            </span>
+                          )}
+                          <span className="truncate">{habit.name}</span>
+                        </Link>
+                      </th>
+                      <td className="px-5 py-4">
+                        <span
+                          className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium"
+                          style={{
+                            color: cat.color,
+                            backgroundColor: `${cat.color}18`,
+                            borderColor: `${cat.color}30`,
+                          }}
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: cat.color }}
+                            aria-hidden="true"
+                          />
+                          {cat.label}
+                        </span>
+                      </td>
+                      <td className="max-w-xl px-5 py-4 text-muted-foreground">
+                        <span className="line-clamp-2">
+                          {habit.goal || "No goal set"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <Link
+                          href={`/habits/${habit.id}/milestones`}
+                          className="font-medium text-foreground underline-offset-4 hover:underline"
+                        >
+                          Manage <span aria-hidden="true">→</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

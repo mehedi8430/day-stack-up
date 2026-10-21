@@ -15,7 +15,6 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { HabitMilestone, MilestoneStatus } from "@/lib/types";
+import { getCategory, type HabitMilestone, type MilestoneStatus } from "@/lib/types";
 import * as actions from "@/app/actions/milestone.actions";
 import { emptyMilestone, MilestoneForm } from "./milestone-form";
 import { MilestoneRow } from "./milestone-row";
@@ -37,11 +36,13 @@ export function MilestoneManager({
   habitId,
   habitName,
   initialGoal,
+  category,
   initialMilestones,
 }: {
   habitId: string;
   habitName: string;
   initialGoal: string;
+  category: string;
   initialMilestones: HabitMilestone[];
 }) {
   const [goal] = React.useState(initialGoal);
@@ -51,6 +52,18 @@ export function MilestoneManager({
   >(null);
   const [viewing, setViewing] = React.useState<HabitMilestone | null>(null);
   const [toDelete, setToDelete] = React.useState<HabitMilestone | null>(null);
+  const habitCategory = getCategory(category);
+  const progress = milestones.length
+    ? Math.floor(
+        (milestones.reduce((total, milestone) => {
+          if (milestone.status === "done") return total + 1;
+          if (milestone.status === "in_progress") return total + 0.5;
+          return total;
+        }, 0) /
+          milestones.length) *
+          100,
+      )
+    : 0;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -106,80 +119,83 @@ export function MilestoneManager({
   };
 
   return (
-    <div className="space-y-6 p-4 sm:px-8 sm:py-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <BackButton fallbackHref="/">Go back</BackButton>
-          <h1 className="text-2xl font-bold tracking-tight">{habitName}</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage the milestones behind this habit.
-          </p>
+    <main className="space-y-10 px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
+      <header className="space-y-3">
+        <BackButton fallbackHref="/">Go back</BackButton>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Milestones
+        </p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Big goals, broken into small wins.
+          </h1>
+          <Button onClick={() => setForm(emptyMilestone)}>
+            <Plus className="h-4 w-4" />
+            Add milestone
+          </Button>
         </div>
-        <Button onClick={() => setForm(emptyMilestone)}>
-          <Plus className="h-4 w-4" />
-          Add milestone
-        </Button>
-      </div>
-      <section className="rounded-lg border bg-card p-4 sm:p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Goal
-          </p>
-          {goal ? (
-            <p className="mt-1 text-lg">{goal}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Goal is not set yet. Go to the{" "}
-              <Link
-                href="/"
-                className="font-medium text-foreground underline underline-offset-4"
-              >
-                habit calendar
-              </Link>{" "}
-              and edit this habit to set a goal.
+      </header>
+      <section className="w-full rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+        <div className="mb-5 flex items-start gap-3">
+          <span
+            className="mt-1.5 h-3 w-3 shrink-0 rounded-[3px]"
+            style={{ backgroundColor: habitCategory.color }}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold leading-tight">
+              {goal || habitName}
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Milestones under the habit &quot;{habitName}&quot; · {habitCategory.label}
             </p>
-          )}
+          </div>
         </div>
-      </section>
-      <section className="overflow-hidden rounded-lg border bg-card">
-        <div className="overflow-x-auto">
-          <div className="min-w-[860px]">
-            <div className="grid grid-cols-[2rem_minmax(10rem,1.2fr)_9rem_9rem_minmax(14rem,1fr)_minmax(14rem,1fr)_5rem_5rem] items-center gap-x-4 bg-muted/60 px-0 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span />
-              <span className="px-3">Milestone</span>
-              <span className="">Start date</span>
-              <span className="">Target date</span>
-              <span className="px-3">Details</span>
-              <span className="px-3">Resources</span>
-              <span className="px-2">Status</span>
-              <span className="px-2">Actions</span>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={milestones.map((milestone) => milestone.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-1">
+              {milestones.map((milestone) => (
+                <MilestoneRow
+                  key={milestone.id}
+                  milestone={milestone}
+                  onEdit={() => setForm(milestone)}
+                  onDelete={() => setToDelete(milestone)}
+                  onStatus={(status) => updateStatus(milestone, status)}
+                  onView={() => setViewing(milestone)}
+                />
+              ))}
             </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={milestones.map((milestone) => milestone.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {milestones.map((milestone) => (
-                  <MilestoneRow
-                    key={milestone.id}
-                    milestone={milestone}
-                    onEdit={() => setForm(milestone)}
-                    onDelete={() => setToDelete(milestone)}
-                    onStatus={(status) => updateStatus(milestone, status)}
-                    onView={() => setViewing(milestone)}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-            {milestones.length === 0 && (
-              <div className="border-t px-6 py-12 text-center text-sm text-muted-foreground">
-                No milestones yet. Add the first milestone for this habit.
-              </div>
-            )}
+          </SortableContext>
+        </DndContext>
+        {milestones.length === 0 && (
+          <div className="rounded-lg border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+            No milestones yet. Add the first milestone for this habit.
+          </div>
+        )}
+        <div className="mt-5">
+          <div
+            className="h-2 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-label="Milestone progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <div
+              className="h-full rounded-full bg-foreground transition-[width] duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <span className="font-medium text-muted-foreground">Progress</span>
+            <span className="font-semibold tabular-nums">{progress}%</span>
           </div>
         </div>
         <Dialog open={!!form} onOpenChange={(open) => !open && setForm(null)}>
@@ -241,6 +257,6 @@ export function MilestoneManager({
           }}
         />
       </section>
-    </div>
+    </main>
   );
 }
