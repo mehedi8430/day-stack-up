@@ -26,7 +26,7 @@ export function MilestoneViewDialog({
   if (!milestone) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2 pr-6">
             {milestone.title}
