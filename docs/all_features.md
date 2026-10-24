@@ -14,11 +14,11 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Multi-user isolation** — RLS policies on every table guarantee each user only sees their own data
 
 ### 2. Habit Calendar (home `/`)
-- **Monthly grid view** — habits as rows, days as columns, with sticky first/last columns
+- **Range grid view** — switch between Week (Saturday–Friday, defaulting to the previous complete week), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "Last week" jump; habits are rows and days are columns with sticky first/last columns
+- **Range progress bar** — overall completion for the visible range, with the percentage-point change versus the previous equivalent period and the achieved percentage
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
-- **Month navigation** (previous / next) plus a "Today" button that jumps back to the current month
-- **Per-habit done counter** — shows how many days in the visible month were completed (`X/days`)
+- **Per-habit done counter** — shows how many days in the visible range were completed (`X/days`)
 - **Today highlighting** — today's column and header are visually highlighted
 - **Responsive layout** — column widths adapt to mobile and desktop
 - **Empty state** — friendly prompt to add the first habit when there are none
