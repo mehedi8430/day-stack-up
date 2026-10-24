@@ -130,3 +130,13 @@ Before finalizing a task, confirm:
 
 ## One important note for future agents
 This project already contains feature documentation and design notes in `docs/` and migration history in `prisma/migrations/`. Read those when a change touches product behavior or a prior design decision. Do not assume the current code is the only source of truth. Note that the dated files under `docs/superpowers/` are historical records: where they conflict with the current code (for example, the Prisma migration design predates moving runtime queries to the Prisma Client), the code and `docs/all_features.md` take precedence.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
