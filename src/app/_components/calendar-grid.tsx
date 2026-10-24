@@ -14,12 +14,29 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { format, addMonths, subMonths, isToday } from "date-fns";
+import {
+  format,
+  addDays,
+  addMonths,
+  addWeeks,
+  subDays,
+  subMonths,
+  subWeeks,
+  startOfDay,
+  startOfWeek,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isToday,
+  min,
+} from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { useHabitStore } from "@/stores/habit.store";
-import { getMonthDays, toKey } from "@/lib/date";
+import { getMonthDays, monthlyAverageScore, toKey } from "@/lib/date";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HabitForm } from "@/app/_components/habit-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -29,6 +46,46 @@ import { CompletionRow } from "@/app/actions/habit.actions";
 import { toast } from "sonner";
 import { NotesDialog } from "@/app/_components/notes-dialog";
 import { SortableRow } from "@/app/_components/sortable-row";
+
+type CalendarView = "week" | "month" | "last15";
+
+function getWeekDays(weekStart: Date): Date[] {
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+}
+
+function getRollingDays(end: Date, count: number): Date[] {
+  const endDay = startOfDay(end);
+  return eachDayOfInterval({
+    start: subDays(endDay, count - 1),
+    end: endDay,
+  });
+}
+
+function getMonthProgressRange(monthCursor: Date, today: Date) {
+  const monthStart = startOfMonth(monthCursor);
+  const monthEnd = endOfMonth(monthCursor);
+  const currentMonthStart = startOfMonth(today);
+
+  if (monthStart > currentMonthStart) {
+    return { current: [], previous: [], isFuture: true };
+  }
+
+  const isCurrentMonth = isSameMonth(monthCursor, today);
+  const currentEnd = isCurrentMonth ? min([today, monthEnd]) : monthEnd;
+  const current = eachDayOfInterval({ start: monthStart, end: currentEnd });
+
+  const previousStart = startOfMonth(subMonths(monthStart, 1));
+  const previousMonthEnd = endOfMonth(previousStart);
+  const previousEnd = isCurrentMonth
+    ? min([addDays(previousStart, current.length - 1), previousMonthEnd])
+    : previousMonthEnd;
+
+  return {
+    current,
+    previous: eachDayOfInterval({ start: previousStart, end: previousEnd }),
+    isFuture: false,
+  };
+}
 
 interface CalendarGridProps {
   initialHabits: Habit[];
@@ -53,7 +110,17 @@ export function CalendarGrid({
     }
   }, [initialized, initialize, initialHabits, initialCompletions]);
 
+  const [view, setView] = React.useState<CalendarView>("month");
   const [cursor, setCursor] = React.useState<Date>(new Date());
+  const [today] = React.useState<Date>(() => startOfDay(new Date()));
+  const latestWeekStart = React.useMemo(
+    () => subWeeks(startOfWeek(today, { weekStartsOn: 6 }), 1),
+    [today],
+  );
+  const [weekStart, setWeekStart] = React.useState<Date>(
+    () => latestWeekStart,
+  );
+  const [rollingEnd, setRollingEnd] = React.useState<Date>(() => today);
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Habit | null>(null);
   const [toDelete, setToDelete] = React.useState<Habit | null>(null);
@@ -73,15 +140,112 @@ export function CalendarGrid({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  const days = React.useMemo(
-    () => getMonthDays(cursor.getFullYear(), cursor.getMonth()),
-    [cursor],
-  );
+  const range = React.useMemo(() => {
+    if (view === "week") {
+      const weekDays = getWeekDays(weekStart);
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 6 });
+
+      if (weekStart.getTime() > currentWeekStart.getTime()) {
+        return {
+          days: weekDays,
+          progressDays: [],
+          previousDays: [],
+          isFuture: true,
+        };
+      }
+
+      const isCurrentWeek =
+        weekStart.getTime() === currentWeekStart.getTime();
+      const progressDays = isCurrentWeek
+        ? weekDays.filter((day) => day <= today)
+        : weekDays;
+      const previousWeekDays = getWeekDays(subWeeks(weekStart, 1));
+
+      return {
+        days: weekDays,
+        progressDays,
+        previousDays: isCurrentWeek
+          ? previousWeekDays.slice(0, progressDays.length)
+          : previousWeekDays,
+        isFuture: false,
+      };
+    }
+
+    if (view === "last15") {
+      const rollingDays = getRollingDays(rollingEnd, 15);
+      const progressDays = rollingDays.filter((day) => day <= today);
+
+      if (progressDays.length === 0) {
+        return {
+          days: rollingDays,
+          progressDays: [],
+          previousDays: [],
+          isFuture: true,
+        };
+      }
+
+      return {
+        days: rollingDays,
+        progressDays,
+        previousDays: getRollingDays(
+          subDays(rollingDays[0], 1),
+          progressDays.length,
+        ),
+        isFuture: false,
+      };
+    }
+
+    const monthProgress = getMonthProgressRange(cursor, today);
+    return {
+      days: getMonthDays(cursor.getFullYear(), cursor.getMonth()),
+      progressDays: monthProgress.current,
+      previousDays: monthProgress.previous,
+      isFuture: monthProgress.isFuture,
+    };
+  }, [view, cursor, weekStart, rollingEnd, today]);
+
+  const { days, progressDays, previousDays, isFuture } = range;
 
   const sortedHabits = React.useMemo(
     () => [...habits].sort((a, b) => a.order - b.order),
     [habits],
   );
+
+  const achievedRate = monthlyAverageScore(
+    completions,
+    sortedHabits,
+    progressDays,
+  );
+  const previousRate = monthlyAverageScore(
+    completions,
+    sortedHabits,
+    previousDays,
+  );
+  const achieved = Math.round(achievedRate);
+  const change = Math.round(achievedRate - previousRate);
+
+  const comparisonLabel =
+    view === "week"
+      ? "the week before"
+      : view === "last15"
+        ? "the previous 15 days"
+        : "the month before";
+
+  const trendLabel = isFuture
+    ? "Not started yet"
+    : change > 0
+      ? `↑ ${change}% from ${comparisonLabel}`
+      : change < 0
+        ? `↓ ${Math.abs(change)}% from ${comparisonLabel}`
+        : `No change from ${comparisonLabel}`;
+
+  const trendClassName = isFuture
+    ? "text-muted-foreground"
+    : change > 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : change < 0
+        ? "text-red-600 dark:text-red-400"
+        : "text-muted-foreground";
 
   const habitCol = isMobile ? 180 : 340;
   const dayCol = isMobile ? 40 : 48;
@@ -106,40 +270,91 @@ export function CalendarGrid({
     setFormOpen(true);
   };
 
+  const handlePreviousRange = () => {
+    if (view === "month") setCursor((c) => subMonths(c, 1));
+    else if (view === "week") setWeekStart((start) => subWeeks(start, 1));
+    else setRollingEnd((end) => subDays(end, 15));
+  };
+
+  const handleNextRange = () => {
+    if (view === "month") setCursor((c) => addMonths(c, 1));
+    else if (view === "week") setWeekStart((start) => addWeeks(start, 1));
+    else setRollingEnd((end) => addDays(end, 15));
+  };
+
+  const handleResetRange = () => {
+    if (view === "month") setCursor(new Date());
+    else if (view === "week") setWeekStart(latestWeekStart);
+    else setRollingEnd(today);
+  };
+
   const monthLabel = format(cursor, "MMMM yyyy");
+  const weekEnd = addDays(weekStart, 6);
+  const weekLabel = `${format(weekStart, "MMM d")} – ${format(
+    weekEnd,
+    "MMM d, yyyy",
+  )}`;
+  const rollingLabel =
+    view === "last15" && days.length > 0
+      ? `${format(days[0], "MMM d")} – ${format(
+          days[days.length - 1],
+          "MMM d, yyyy",
+        )}`
+      : "";
+  const rangeLabel =
+    view === "month"
+      ? monthLabel
+      : view === "week"
+        ? weekLabel
+        : rollingLabel;
+  const rangeNoun =
+    view === "month" ? "month" : view === "week" ? "week" : "15 days";
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCursor((c) => subMonths(c, 1))}
-              aria-label="Previous month"
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs
+              value={view}
+              onValueChange={(value) => setView(value as CalendarView)}
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="min-w-32 text-center text-xl font-bold sm:min-w-40">
-              {monthLabel}
-            </h2>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCursor((c) => addMonths(c, 1))}
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCursor(new Date())}
-              className="ml-1"
-            >
-              Today
-            </Button>
+              <TabsList>
+                <TabsTrigger value="week">Week</TabsTrigger>
+                <TabsTrigger value="month">Month</TabsTrigger>
+                <TabsTrigger value="last15">Last 15</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handlePreviousRange}
+                aria-label={`Previous ${rangeNoun}`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="min-w-40 whitespace-nowrap text-center text-lg font-bold sm:min-w-52 sm:text-xl">
+                {rangeLabel}
+              </h2>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleNextRange}
+                aria-label={`Next ${rangeNoun}`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetRange}
+                className="ml-1"
+              >
+                {view === "week" ? "Last week" : "Today"}
+              </Button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/planner">
@@ -154,6 +369,40 @@ export function CalendarGrid({
             </Button>
           </div>
         </div>
+
+        {sortedHabits.length > 0 && (
+          <div className="rounded-lg border bg-card px-4 py-3">
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="Habit completion for the selected range"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={achieved}
+              title={
+                view === "month"
+                  ? "Based on days elapsed in the selected month"
+                  : undefined
+              }
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${achieved}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[11px] leading-tight sm:text-xs">
+              <span
+                className={cn("font-medium", trendClassName)}
+                title="Percentage-point change compared with the previous period"
+              >
+                {trendLabel}
+              </span>
+              <span className="font-semibold text-foreground">
+                {achieved}% achieved
+              </span>
+            </div>
+          </div>
+        )}
 
         {sortedHabits.length === 0 ? (
           <EmptyState onAdd={openAdd} />
