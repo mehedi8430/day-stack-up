@@ -1,4 +1,5 @@
 import { CalendarGrid } from "@/app/_components/calendar-grid";
+import { HomeGreeting } from "@/app/_components/home-greeting";
 import { getInitialData } from "@/app/actions/habit.actions";
 
 export default async function HomePage() {
@@ -6,13 +7,10 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Habit Calendar</h1>
-        <p className="text-sm text-muted-foreground">
-          Click a cell to mark a habit done for the day. Drag the handle to
-          reorder.
-        </p>
-      </div>
+      <HomeGreeting
+        initialHabits={data.habits}
+        initialCompletions={data.completions}
+      />
       <CalendarGrid initialHabits={data.habits} initialCompletions={data.completions} />
     </div>
   );
