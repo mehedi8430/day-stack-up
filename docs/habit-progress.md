@@ -284,9 +284,9 @@ Core:
 - `src/app/_components/habit-form.tsx` — Weekly target select (add + edit).
 - `src/app/progress/page.tsx` — passes schedules to the client shell.
 - `src/app/progress/_components/*` — UI updates described in §8.
-- `src/app/page.tsx` + `src/app/_components/calendar-grid.tsx` — the home
-  range bar consumes `getInitialData().schedules` and `computeRangeRate`
-  (see §5.5).
+- `src/app/page.tsx` + `src/app/_components/calendar-grid.tsx` — home calendar
+  state shell; the range bar lives in `calendar-progress-bar.tsx`, with
+  range/date helpers in `calendar-utils.ts` (see §5.5).
 - `scripts/habit-progress.test.mjs` — Node built-in test runner suite (see
   §12); no new dev dependencies.
 
