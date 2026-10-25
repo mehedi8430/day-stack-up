@@ -6,7 +6,12 @@ const eslintConfig = defineConfig([
   ...coreWebVitals,
   ...typescript,
   {
-    ignores: [".next/**", "node_modules/**", ".kilo/**"],
+    ignores: [
+      ".next/**",
+      ".next-root-owned-cache/**",
+      "node_modules/**",
+      ".kilo/**",
+    ],
   },
 ]);
 

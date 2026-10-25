@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useHabitStore } from "@/stores/habit.store";
-import { Habit, CATEGORIES } from "@/lib/types";
+import { Habit, CATEGORIES, getWeeklyTargetLabel } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,8 @@ interface HabitFormProps {
   habit?: Habit | null;
 }
 
+const WEEKLY_TARGET_DAYS = [7, 6, 5, 4, 3, 2, 1] as const;
+
 function HabitFormFields({
   habit,
   close,
@@ -44,6 +46,9 @@ function HabitFormFields({
     habit?.category ?? CATEGORIES[0].id,
   );
   const [goal, setGoal] = React.useState(habit?.goal ?? "");
+  const [weeklyTarget, setWeeklyTarget] = React.useState(
+    String(habit?.weeklyTarget ?? 7),
+  );
   const [saving, setSaving] = React.useState(false);
 
   const handleSave = async () => {
@@ -51,14 +56,21 @@ function HabitFormFields({
     if (!trimmed) return;
     setSaving(true);
     try {
+      const target = Number(weeklyTarget);
       if (habit) {
         await updateHabit(habit.id, {
           name: trimmed,
           category,
           goal: goal.trim(),
+          weeklyTarget: target,
         });
       } else {
-        await addHabit({ name: trimmed, category, goal: goal.trim() });
+        await addHabit({
+          name: trimmed,
+          category,
+          goal: goal.trim(),
+          weeklyTarget: target,
+        });
       }
       close();
     } catch (err) {
@@ -105,6 +117,30 @@ function HabitFormFields({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="habit-weekly-target">Weekly target</Label>
+          <Select
+            value={weeklyTarget}
+            onValueChange={setWeeklyTarget}
+          >
+            <SelectTrigger id="habit-weekly-target">
+              <SelectValue placeholder="Select a target" />
+            </SelectTrigger>
+            <SelectContent>
+              {WEEKLY_TARGET_DAYS.map((days) => (
+                <SelectItem key={days} value={String(days)}>
+                  {getWeeklyTargetLabel(days)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Daily habits use Every day. Choose fewer days for weekly goals
+            such as exercising 5 days a week. Changing the target starts from
+            today; past progress keeps the previous target.
+          </p>
         </div>
 
         <div className="space-y-2">

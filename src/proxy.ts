@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedPage =
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname === "/analytics" ||
+    request.nextUrl.pathname === "/progress" ||
     request.nextUrl.pathname === "/habits" ||
     request.nextUrl.pathname.startsWith("/habits/");
 

@@ -19,16 +19,20 @@ export async function getInitialData() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { user: null, habits: [], completions: [] };
+    return { user: null, habits: [], completions: [], schedules: [] };
   }
 
-  const [habits, completions] = await Promise.all([
+  const [habits, completions, schedules] = await Promise.all([
     prisma.habit.findMany({
       where: { userId: user.id },
       orderBy: { sortOrder: "asc" },
     }),
     prisma.completion.findMany({
       where: { userId: user.id },
+    }),
+    prisma.habitSchedule.findMany({
+      where: { userId: user.id },
+      orderBy: [{ habitId: "asc" }, { startsOn: "asc" }],
     }),
   ]);
 
@@ -43,21 +47,53 @@ export async function getInitialData() {
       category: h.category,
       order: h.sortOrder,
       createdAt: h.createdAt.toISOString(),
+      weeklyTarget: h.weeklyTarget,
     })),
     completions: completions.map((c) => ({
       habit_id: c.habitId,
       date: c.date.toISOString().split("T")[0],
       completed: c.completed,
     })),
+    schedules: schedules.map((s) => ({
+      habit_id: s.habitId,
+      starts_on: s.startsOn.toISOString().split("T")[0],
+      weekly_target: s.weeklyTarget,
+    })),
   };
+}
+
+/**
+ * Strict server-side validation for mutable weekly targets. Unlike the UI
+ * (which only offers valid options), API-level callers can send anything.
+ */
+function parseWeeklyTarget(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > 7) return null;
+  return n;
+}
+
+/** Current date (UTC calendar day) used to start a new target period. */
+function todayUtcDateKey(): Date {
+  return new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+}
+
+/** Anchors a timestamptz to its UTC calendar day (Prisma `@db.Date` input). */
+function toUtcDateKey(value: Date): Date {
+  return new Date(value.toISOString().slice(0, 10) + "T00:00:00.000Z");
 }
 
 export async function addHabit(data: {
   name: string;
   category: string;
   goal: string;
+  weeklyTarget: number;
 }): Promise<{ success: true; habit: Habit } | { error: string }> {
   const user = await requireUser();
+
+  const weeklyTarget = parseWeeklyTarget(data.weeklyTarget);
+  if (weeklyTarget === null) {
+    return { error: "Weekly target must be between 1 and 7 days." };
+  }
 
   const lastHabit = await prisma.habit.findFirst({
     where: { userId: user.id },
@@ -67,17 +103,34 @@ export async function addHabit(data: {
 
   const nextOrder = lastHabit ? lastHabit.sortOrder + 1 : 0;
 
-  const created = await prisma.habit.create({
-    data: {
-      userId: user.id,
-      name: data.name,
-      category: data.category,
-      goal: data.goal,
-      sortOrder: nextOrder,
-    },
+  // The habit and its first (effective-dated) schedule row are written
+  // atomically so a habit can never exist without schedule history.
+  const created = await prisma.$transaction(async (tx) => {
+    const habit = await tx.habit.create({
+      data: {
+        userId: user.id,
+        name: data.name,
+        category: data.category,
+        goal: data.goal,
+        sortOrder: nextOrder,
+        weeklyTarget,
+      },
+    });
+
+    await tx.habitSchedule.create({
+      data: {
+        userId: user.id,
+        habitId: habit.id,
+        startsOn: toUtcDateKey(habit.createdAt),
+        weeklyTarget,
+      },
+    });
+
+    return habit;
   });
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return {
     success: true,
@@ -90,26 +143,69 @@ export async function addHabit(data: {
       category: created.category,
       order: created.sortOrder,
       createdAt: created.createdAt.toISOString(),
+      weeklyTarget: created.weeklyTarget,
     },
   };
 }
 
 export async function updateHabit(
   id: string,
-  data: { name: string; category: string; goal: string }
-) {
+  data: { name: string; category: string; goal: string; weeklyTarget: number }
+): Promise<{ success: true } | { error: string }> {
   const user = await requireUser();
 
-  await prisma.habit.update({
+  const weeklyTarget = parseWeeklyTarget(data.weeklyTarget);
+  if (weeklyTarget === null) {
+    return { error: "Weekly target must be between 1 and 7 days." };
+  }
+
+  const existing = await prisma.habit.findFirst({
     where: { id, userId: user.id },
-    data: {
-      name: data.name,
-      category: data.category,
-      goal: data.goal,
-    },
+    select: { weeklyTarget: true },
+  });
+
+  if (!existing) {
+    return { error: "Habit not found." };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.habit.update({
+      where: { id, userId: user.id },
+      data: {
+        name: data.name,
+        category: data.category,
+        goal: data.goal,
+        weeklyTarget,
+      },
+    });
+
+    // Only target changes create history. The new target starts today; all
+    // dates before it keep the previous row, preserving past progress. A row
+    // for today already exists after multiple edits on the same day, so it is
+    // updated in place to keep the unique (habit_id, starts_on) invariant.
+    if (existing.weeklyTarget !== weeklyTarget) {
+      const startsOn = todayUtcDateKey();
+      const todayRow = await tx.habitSchedule.findUnique({
+        where: {
+          habitId_startsOn: { habitId: id, startsOn },
+        },
+      });
+
+      if (todayRow) {
+        await tx.habitSchedule.update({
+          where: { id: todayRow.id },
+          data: { weeklyTarget },
+        });
+      } else {
+        await tx.habitSchedule.create({
+          data: { userId: user.id, habitId: id, startsOn, weeklyTarget },
+        });
+      }
+    }
   });
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -122,6 +218,7 @@ export async function deleteHabit(id: string) {
   });
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -139,6 +236,7 @@ export async function reorderHabits(ids: string[]) {
   await Promise.all(updates);
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -178,6 +276,7 @@ export async function toggleCompletion(habitId: string, date: string) {
   }
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -225,6 +324,7 @@ export async function setCompletion(
   }
 
   revalidatePath("/");
+  revalidatePath("/progress");
   revalidatePath("/analytics");
   return { success: true };
 }

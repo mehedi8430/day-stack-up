@@ -15,7 +15,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 
 ### 2. Habit Calendar (home `/`)
 - **Range grid view** — switch between Week (Saturday–Friday, defaulting to the previous complete week), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "Last week" jump; habits are rows and days are columns with sticky first/last columns
-- **Range progress bar** — overall completion for the visible range, with the percentage-point change versus the previous equivalent period and the achieved percentage
+- **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
 - **Per-habit done counter** — shows how many days in the visible range were completed (`X/days`)
@@ -24,9 +24,9 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Empty state** — friendly prompt to add the first habit when there are none
 
 ### 3. Habit Management (CRUD)
-- **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), and an optional written **goal**
-- **Edit habit** — update name, category, and goal from the calendar row
-- **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history
+- **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), an optional written **goal**, and a **weekly target** (*Every day* = 7, or 1–6 days per week for goals like "exercise 5 days a week")
+- **Edit habit** — update name, category, goal, and weekly target from the calendar row; changing the target is recorded in `habit_schedules` effective today so historical progress keeps the previous target
+- **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history and schedule rows
 - Default emoji `📋` for new habits
 
 ### 4. Habit Notes
@@ -74,7 +74,22 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
        - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or week
 - Empty state when no habits exist yet
 
-### 8. UI / UX
+### 8. Habit Progress (`/progress`)
+- **Week / Month reporting periods** — weeks run **Monday–Sunday**; previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
+- **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
+- **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
+- **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
+- **Target-based math** — weekly progress is `completed occurrences / weekly target × 100`; monthly targets are proportional (`weeklyTarget/7 × eligible days`, trimmed by the habit's creation date and replayed across target changes via `habit_schedules` history)
+- **Full-period goal view** — current periods always show progress against the full-period target (weeks show the full weekly target; a month shows its whole proportional target), so users can see how far they are toward the goal; comparisons use full-period goals on both sides (documented on the page)
+- **Overachievement** — percentages can exceed 100% (e.g. 7 completions for a 5-days/week target = 140%); progress bars fill at most to 100% while labels show the real value
+- **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same; overachievement maps to Legendary
+- **N/A handling** — future periods, habit-not-yet-created ranges, and zero targets show `N/A` instead of `0%`
+- **Data flow** — reads habits, completions, and schedule rows through `getInitialData` (all user-scoped); `habit_schedules` is the one new table, added with RLS/CHECK constraints and a backfill for existing habits (`docs/habit-progress.md` §3); migration validated locally, application to the remote database pending (`npm run db:deploy`)
+- **Loading, empty, and error states** — route-level skeleton, no-habits prompt, and retryable error boundary
+- **Tests** — `npm run test` runs `scripts/habit-progress.test.mjs` (Node's built-in runner) covering targets, schedules history, proportionality, overachievement, N/A rules, and unchanged level thresholds
+- Full behavior, formulas, worked examples, and file map: `docs/habit-progress.md`
+
+### 9. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
 - **Optimistic updates** — instant UI feedback with rollback on error (Zustand store)
 - **Toast notifications** (Sonner) for success/error feedback
@@ -82,7 +97,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **shadcn/ui components** (Radix primitives) styled with Tailwind CSS v4
 - Responsive, accessible dialogs, form validation, and aria labels throughout
 
-### 9. Data Layer (Prisma schema + migrations)
+### 10. Data Layer (Prisma schema + migrations)
 - **Schema source of truth** — `prisma/schema.prisma`; migration history lives in `prisma/migrations/` (the old `supabase/migrations/` was removed)
 - **Runtime data access** — the **Prisma Client** (`@prisma/client` with the `@prisma/adapter-pg` driver adapter) is used inside the server actions and `src/lib/auth.ts`. Supabase is used only for authentication.
 - Tables:
@@ -121,6 +136,7 @@ src/
 │   ├── habits/      # Milestone hub and per-habit milestone manager
 │   ├── planner/     # Weekly planner (week strip + day view)
 │   ├── analytics/   # Analytics dashboard
+│   ├── progress/    # Weekly/monthly habit progress and period comparison
 │   ├── actions/     # Server actions for habits, completions, planner & milestones
 │   └── ...          # Habit calendar (home), global layout
 ├── components/      # UI components (header, UI kit)

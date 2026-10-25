@@ -17,9 +17,13 @@ model Habit {
   goal      String   @default("")
   notes     String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// Days per week this habit targets (1-7). 7 means "every day" and is the
+  /// default for all pre-existing habits.
+  weeklyTarget Int @default(7) @map("weekly_target")
 
   completions Completion[]
   topics      HabitTopic[]
+  schedules   HabitSchedule[]
 
   @@index([userId], map: "idx_habits_user_id")
   @@index([userId, sortOrder], map: "idx_habits_user_order")
@@ -83,5 +87,26 @@ model HabitTopic {
 
   @@index([habitId, sortOrder], map: "idx_habit_topics_habit_order")
   @@map("habit_topics")
+  @@schema("public")
+}
+
+/// Effective-dated weekly-target history for a habit. The row with the
+/// greatest `starts_on` <= a given date is that date's target. The first row
+/// is anchored to the habit's creation date, so historical progress stays
+/// accurate when the target changes later.
+model HabitSchedule {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  habitId      String   @map("habit_id") @db.Uuid
+  startsOn     DateTime @map("starts_on") @db.Date
+  weeklyTarget Int      @map("weekly_target")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, startsOn], map: "habit_schedules_habit_id_starts_on_key")
+  @@index([userId], map: "idx_habit_schedules_user_id")
+  @@index([habitId], map: "idx_habit_schedules_habit_id")
+  @@map("habit_schedules")
   @@schema("public")
 }
