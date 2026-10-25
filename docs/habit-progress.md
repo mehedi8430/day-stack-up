@@ -25,7 +25,9 @@ between the weekly and monthly views, so both views behave identically.
 
 ## 2. Entry point and access
 
-- The page lives at `/progress`.
+- The page lives at `/progress`. Its on-page title is **"The Day Stack"**
+  (the inspirational display name; the navigation link still says "Progress"
+  for orientation).
 - It is opened from the **home page header's right side** ("Progress" button,
   below the global navigation). It is intentionally **not** in the main
   navigation or the mobile menu.

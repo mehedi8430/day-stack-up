@@ -169,7 +169,7 @@ export function HabitProgress({
     <div className="space-y-6">
       <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">Habit Progress</h1>
+          <h1 className="text-2xl font-bold tracking-tight">The Day Stack</h1>
           <p className="text-sm text-muted-foreground">
             You stack your days; the days stack your life. Here&apos;s how far
             each habit has climbed toward its weekly goal.
