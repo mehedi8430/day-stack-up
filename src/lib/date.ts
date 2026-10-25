@@ -73,15 +73,30 @@ export function yearlyCompletionRatio(
   return total === 0 ? 0 : (done / total) * 100;
 }
 
-export function getLevel(score: number): {
+export interface AchievementLevel {
   label: string;
   color: string;
-} {
-  if (score >= 90) return { label: "Legendary", color: "#eab308" };
-  if (score >= 75) return { label: "Elite", color: "#a855f7" };
-  if (score >= 60) return { label: "Advanced", color: "#3b82f6" };
-  if (score >= 40) return { label: "Intermediate", color: "#22c55e" };
-  return { label: "Beginner", color: "#9ca3af" };
+  minScore: number;
+  rank: number;
+}
+
+/**
+ * The app's achievement/OKR thresholds. Keep these as the single source of
+ * truth for level labels, colors, and ordering.
+ */
+export const ACHIEVEMENT_LEVELS: AchievementLevel[] = [
+  { label: "Legendary", color: "#eab308", minScore: 90, rank: 4 },
+  { label: "Elite", color: "#a855f7", minScore: 75, rank: 3 },
+  { label: "Advanced", color: "#3b82f6", minScore: 60, rank: 2 },
+  { label: "Intermediate", color: "#22c55e", minScore: 40, rank: 1 },
+  { label: "Beginner", color: "#9ca3af", minScore: 0, rank: 0 },
+];
+
+export function getLevel(score: number): AchievementLevel {
+  return (
+    ACHIEVEMENT_LEVELS.find((level) => score >= level.minScore) ??
+    ACHIEVEMENT_LEVELS[ACHIEVEMENT_LEVELS.length - 1]
+  );
 }
 
 export interface StreakInfo {

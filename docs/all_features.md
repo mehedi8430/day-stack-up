@@ -74,7 +74,18 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
        - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or week
 - Empty state when no habits exist yet
 
-### 8. UI / UX
+### 8. Habit Progress (`/progress`)
+- **Week / Month reporting periods** — weeks run **Monday–Sunday**; previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
+- **Overall summary** — completion %, completed vs expected scheduled days, achievement level, and change compared with the previous period
+- **Per-habit breakdown** — completion %, completed/expected days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
+- **Fair in-progress comparisons** — the current week/month excludes future dates and compares only the equivalent elapsed dates in the previous period (e.g. the first 25 days of each month)
+- **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same
+- **N/A handling** — periods with no eligible scheduled days show `N/A` instead of `0%`
+- **Reuses existing data** — reads habits and completions through `getInitialData`; no new tables, columns, or dependencies
+- **Loading, empty, and error states** — route-level skeleton, no-habits prompt, and retryable error boundary
+- **Current data-model limitation** — the schema has no per-habit frequency or archive fields, so every habit is treated as scheduled daily from its `createdAt` date. Deleted habits and their completions are removed together. Adding frequency/archive support would require effective-dated schedule storage for exact historical recalculations.
+
+### 9. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
 - **Optimistic updates** — instant UI feedback with rollback on error (Zustand store)
 - **Toast notifications** (Sonner) for success/error feedback
@@ -82,7 +93,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **shadcn/ui components** (Radix primitives) styled with Tailwind CSS v4
 - Responsive, accessible dialogs, form validation, and aria labels throughout
 
-### 9. Data Layer (Prisma schema + migrations)
+### 10. Data Layer (Prisma schema + migrations)
 - **Schema source of truth** — `prisma/schema.prisma`; migration history lives in `prisma/migrations/` (the old `supabase/migrations/` was removed)
 - **Runtime data access** — the **Prisma Client** (`@prisma/client` with the `@prisma/adapter-pg` driver adapter) is used inside the server actions and `src/lib/auth.ts`. Supabase is used only for authentication.
 - Tables:
@@ -121,6 +132,7 @@ src/
 │   ├── habits/      # Milestone hub and per-habit milestone manager
 │   ├── planner/     # Weekly planner (week strip + day view)
 │   ├── analytics/   # Analytics dashboard
+│   ├── progress/    # Weekly/monthly habit progress and period comparison
 │   ├── actions/     # Server actions for habits, completions, planner & milestones
 │   └── ...          # Habit calendar (home), global layout
 ├── components/      # UI components (header, UI kit)

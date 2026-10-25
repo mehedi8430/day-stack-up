@@ -13,6 +13,7 @@ import {
   ClipboardList,
   ListTodo,
   Menu,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -54,6 +55,7 @@ export function AppHeader({ isAuthorized }: { isAuthorized: boolean }) {
     { href: "/", label: "Calendar", icon: CalendarDays },
     { href: "/habits", label: "Milestones", icon: ClipboardList },
     { href: "/planner", label: "Planner", icon: ListTodo },
+    { href: "/progress", label: "Progress", icon: TrendingUp },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
   ];
 
