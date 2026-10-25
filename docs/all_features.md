@@ -24,9 +24,9 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Empty state** — friendly prompt to add the first habit when there are none
 
 ### 3. Habit Management (CRUD)
-- **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), and an optional written **goal**
-- **Edit habit** — update name, category, and goal from the calendar row
-- **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history
+- **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), an optional written **goal**, and a **weekly target** (*Every day* = 7, or 1–6 days per week for goals like "exercise 5 days a week")
+- **Edit habit** — update name, category, goal, and weekly target from the calendar row; changing the target is recorded in `habit_schedules` effective today so historical progress keeps the previous target
+- **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history and schedule rows
 - Default emoji `📋` for new habits
 
 ### 4. Habit Notes
@@ -76,14 +76,17 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 
 ### 8. Habit Progress (`/progress`)
 - **Week / Month reporting periods** — weeks run **Monday–Sunday**; previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
-- **Overall summary** — completion %, completed vs expected scheduled days, achievement level, and change compared with the previous period
-- **Per-habit breakdown** — completion %, completed/expected days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
-- **Fair in-progress comparisons** — the current week/month excludes future dates and compares only the equivalent elapsed dates in the previous period (e.g. the first 25 days of each month)
-- **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same
-- **N/A handling** — periods with no eligible scheduled days show `N/A` instead of `0%`
-- **Reuses existing data** — reads habits and completions through `getInitialData`; no new tables, columns, or dependencies
+- **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
+- **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
+- **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
+- **Target-based math** — weekly progress is `completed occurrences / weekly target × 100`; monthly targets are proportional (`weeklyTarget/7 × eligible days`, trimmed by the habit's creation date and replayed across target changes via `habit_schedules` history)
+- **Full-period goal view** — current periods always show progress against the full-period target (weeks show the full weekly target; a month shows its whole proportional target), so users can see how far they are toward the goal; comparisons use full-period goals on both sides (documented on the page)
+- **Overachievement** — percentages can exceed 100% (e.g. 7 completions for a 5-days/week target = 140%); progress bars fill at most to 100% while labels show the real value
+- **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same; overachievement maps to Legendary
+- **N/A handling** — future periods, habit-not-yet-created ranges, and zero targets show `N/A` instead of `0%`
+- **Data flow** — reads habits, completions, and schedule rows through `getInitialData` (all user-scoped); `habit_schedules` is the one new table, added with RLS/CHECK constraints and a backfill for existing habits (`docs/habit-progress.md` §3); migration validated locally, application to the remote database pending (`npm run db:deploy`)
 - **Loading, empty, and error states** — route-level skeleton, no-habits prompt, and retryable error boundary
-- **Current data-model limitation** — the schema has no per-habit frequency or archive fields, so every habit is treated as scheduled daily from its `createdAt` date. Deleted habits and their completions are removed together. Adding frequency/archive support would require effective-dated schedule storage for exact historical recalculations.
+- **Tests** — `npm run test` runs `scripts/habit-progress.test.mjs` (Node's built-in runner) covering targets, schedules history, proportionality, overachievement, N/A rules, and unchanged level thresholds
 - Full behavior, formulas, worked examples, and file map: `docs/habit-progress.md`
 
 ### 9. UI / UX

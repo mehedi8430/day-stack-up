@@ -153,8 +153,9 @@ export function ProgressBar({
   color?: string;
   label: string;
 }) {
-  const value =
-    percentage === null ? 0 : Math.min(100, Math.max(0, percentage));
+  // The bar itself fills to at most 100%; overachievement stays visible in
+  // the value text and in the surrounding percentage labels.
+  const render = percentage === null ? 0 : Math.min(100, Math.max(0, percentage));
 
   return (
     <div
@@ -163,9 +164,9 @@ export function ProgressBar({
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={percentage === null ? undefined : Math.round(value)}
+      aria-valuenow={percentage === null ? undefined : Math.round(render)}
       aria-valuetext={
-        percentage === null ? "Not applicable" : `${Math.round(value)}%`
+        percentage === null ? "Not applicable" : `${Math.round(percentage)}%`
       }
     >
       <div
@@ -174,7 +175,7 @@ export function ProgressBar({
           !color && "bg-primary",
         )}
         style={{
-          width: `${value}%`,
+          width: `${render}%`,
           ...(color ? { backgroundColor: color } : {}),
         }}
       />

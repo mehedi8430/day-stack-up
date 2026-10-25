@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatTargetCount } from "@/lib/habit-progress";
 import type {
   MetricComparison,
   PeriodMetric,
@@ -39,7 +40,7 @@ export function ProgressSummary({
   const comparisonContext = period.isFuture
     ? "Comparison starts when the period begins."
     : period.isCurrent
-      ? "Compared with the same elapsed days in the previous period."
+      ? "Compared with the complete previous period (full-period goals)."
       : `Compared with the ${previousLabel}.`;
 
   return (
@@ -53,9 +54,9 @@ export function ProgressSummary({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            {overall.expected === 0
-              ? "No eligible habit-days in this period"
-              : `${overall.completed} of ${overall.expected} scheduled habit-days`}
+            {overall.target === 0
+              ? "No target habit-days in this period"
+              : `${overall.completed} of ${formatTargetCount(overall.target)} target habit-days`}
           </p>
           <ProgressBar
             percentage={overall.percentage}
@@ -90,14 +91,14 @@ export function ProgressSummary({
         <CardHeader className="pb-2">
           <CardDescription>Completed days</CardDescription>
           <CardTitle className="text-3xl">
-            {overall.expected === 0 ? "N/A" : overall.completed}
+            {overall.target === 0 ? "N/A" : overall.completed}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            {overall.expected === 0
-              ? "No eligible days"
-              : `out of ${overall.expected} scheduled days`}
+            {overall.target === 0
+              ? "No target days"
+              : `out of ${formatTargetCount(overall.target)} target days`}
           </p>
           <p className="mt-2 text-xs">
             {comparison.completedDelta === null ? (
@@ -129,9 +130,9 @@ export function ProgressSummary({
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            {previous.expected === 0
+            {previous.target === 0
               ? "No data for the previous period"
-              : `Previous: ${formatPercentage(previous.percentage)} (${previous.completed}/${previous.expected} days)`}
+              : `Previous: ${formatPercentage(previous.percentage)} (${previous.completed}/${formatTargetCount(previous.target)} days)`}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
             {comparisonContext}

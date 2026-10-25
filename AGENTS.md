@@ -37,6 +37,7 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
 - Planner and analytics read their own tables through the Prisma client and compute aggregates server-side; analytics reuses the habit and planner server actions rather than querying directly.
 - The daily planner stores concrete per-date tasks in `daily_planner_tasks`; the week strip on the planner page is a client-side grouping of those tasks by date.
 - Notes are stored on the `habits` table, not on individual completion rows.
+- Each habit has a weekly target (1–7 days/week, 7 = daily). Current target lives on `habits.weekly_target`; changes are versioned effective-dated in `habit_schedules` and progress math replays that history — see `docs/habit-progress.md`.
 - Mood/behavior/analytics rely on server-side computed data, not ad hoc client-only logic.
 
 ## Important architecture patterns

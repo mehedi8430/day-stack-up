@@ -1,17 +1,22 @@
 # Habit Progress (`/progress`)
 
-Status: implemented on branch `feat/habit-progress` (feature commit `93644e9`,
-home-header link placement `b9bd1ac`).
+Status: implemented on branch `feat/habit-progress`. The original v1 (daily-only
+model, commits `93644e9`, `b9bd1ac`, `7223586`) was superseded by the
+weekly-target model documented here (migration
+`20261025120000_habit_weekly_targets`).
 Last updated: October 25, 2026.
 
 ## 1. Overview
 
-Habit Progress is a read-only reporting page that shows how well each habit is
-being kept for a selected week or month, compared with the directly preceding
-period. It answers four questions for every habit:
+Habit Progress is a read-only reporting page that shows each habit's progress
+toward its **weekly target** for a selected week or month, compared with the
+directly preceding period. Every habit has a target of N days per week
+(1–7); `7` is "every day" and is the default. The page answers four questions
+for every habit:
 
-1. What percentage of scheduled days were completed in the selected period?
-2. How many days were completed versus how many were expected (`5/7`)?
+1. What percentage of the period **target** was completed
+   (`completed occurrences / target × 100`)?
+2. How many days were completed versus the period target (`3/5`, `5/22.1`)?
 3. Did performance improve, decline, or stay flat versus the previous period?
 4. What achievement level does the habit hold, and did that level change?
 
@@ -28,21 +33,64 @@ between the weekly and monthly views, so both views behave identically.
   - `src/proxy.ts` redirects unauthenticated visits to `/login`.
   - `src/app/progress/page.tsx` also redirects when `getInitialData()` reports
     no authenticated user.
-- The page is dynamic (server-rendered on demand) and read-only; all habit and
-  completion mutations continue to live on the calendar.
+- The page is dynamic (server-rendered on demand) and read-only; habit and
+  completion mutations stay on the calendar. The habit form's **Weekly target**
+  select lives there too (see §5.3).
 
-## 3. Data reuse (no new schema or dependencies)
+## 3. Data model
 
-- Habits come from `prisma.habit.findMany({ where: { userId } })` and
-  completions from `prisma.completion.findMany({ where: { userId } })` via the
-  existing `getInitialData()` server action. Every read is scoped to the
-  authenticated user; there are no new tables, columns, or packages.
-- Completion rows are unique per habit/day in Postgres
-  (`completions_habit_id_date_key`), and rows with `completed = false` are
-  dropped when building the client-side lookup. Duplicated completions can
-  never inflate a count.
-- The completion lookup uses the existing `habitId__yyyy-mm-dd` key format, so
-  it matches what the Zustand store and calendar already use.
+### 3.1 Weekly target on `habits`
+
+`habits.weekly_target INTEGER NOT NULL DEFAULT 7` with a CHECK constraint
+(`BETWEEN 1 AND 7`) holds the habit's current target. "Daily" is target 7 —
+there is no separate frequency enum, so existing daily habits needed no
+reconfiguration.
+
+### 3.2 Effective-dated history `habit_schedules`
+
+Target changes must not rewrite history, so every target lives in
+`habit_schedules`:
+
+| Column | Meaning |
+| --- | --- |
+| `id` | UUID PK |
+| `user_id` | FK `auth.users(id)` ON DELETE CASCADE; RLS-scoped like the other tables |
+| `habit_id` | FK `habits(id)` ON DELETE CASCADE |
+| `starts_on` | DATE, inclusive first day the target applies; `UNIQUE (habit_id, starts_on)` |
+| `weekly_target` | the target for that span, `CHECK 1–7` |
+| `created_at` | row bookkeeping |
+
+The row with the greatest `starts_on ≤ date` is that date's target. Editing a
+habit's target inserts (or same-day upserts) one row effective **today**; all
+dates before it keep the previous row.
+
+### 3.3 Migration and safe defaults
+
+`prisma/migrations/20261025120000_habit_weekly_targets/migration.sql`:
+
+- adds `habits.weekly_target` (default 7) + CHECK constraint,
+- creates `habit_schedules` with FKs, CHECK, unique and user indexes,
+- **backfills one schedule row per existing habit** at
+  `starts_on = DATE(created_at)` with target 7 — every pre-existing habit
+  becomes a daily habit, completion data is untouched, and projected numbers
+  for daily habits are identical to the old model,
+- enables RLS with the standard four owner-scoped policies.
+
+Deployment note: the migration was validated locally (Docker Postgres,
+upgrade path over seeded data; CHECK + RLS verified). **It is committed but
+not yet applied to the remote Supabase database** — run `npm run db:deploy`
+when ready.
+
+### 3.4 Reads and writes
+
+- `getInitialData()` (server action) additionally returns the user's
+  `schedules` (`{ habit_id, starts_on, weekly_target }`) and each habit's
+  `weeklyTarget`; all reads stay scoped to the authenticated user.
+- `addHabit()` writes the habit and its first schedule row (anchored to the
+  habit's creation date) in one transaction.
+- `updateHabit()` skips schedule writes when the target is unchanged; on a
+  change it upserts the row for today.
+- `deleteHabit()` cascades to completions **and** schedules.
 
 ## 4. Period model
 
@@ -55,119 +103,107 @@ describes the period being viewed. Weeks run **Monday–Sunday**
 | `view` | `"week"` or `"month"` |
 | `start` | First calendar day of the period |
 | `end` | Last calendar day of the period, including future days |
-| `effectiveEnd` | Last day included in calculations (`today` for the current period) |
-| `totalDays` | Calendar length of the whole period (7, or 28–31) |
-| `elapsedDays` | Days actually included in calculations; `0` for a future period |
+| `effectiveEnd` | Last day completions are counted (`today` for the current period); targets use the full period instead |
+| `totalDays` | Calendar length (7, or 28–31) |
+| `elapsedDays` | Days through the effective end; `0` for a future period |
 | `isCurrent` | `today` falls inside the period |
 | `isFuture` | The period starts after today |
 
-Navigation behavior:
+Navigation behavior (unchanged from v1):
 
-- Previous/next step one week or one month at a time.
-- Forward navigation is disabled once the selected period is the current one,
-  so future periods cannot be opened.
-- "This week" / "This month" appears when viewing an earlier period and resets
-  to the current one.
-- The period label is `Oct 19 – Oct 25, 2026` (weeks) or `MMMM yyyy` (months)
-  and is announced through `aria-live`.
+- Previous/next step one week or one month at a time; forward navigation is
+  disabled at the current period.
+- "This week" / "This month" resets the cursor.
+- The period label is `Oct 19 – Oct 25, 2026` (weeks) or `MMMM yyyy` (months),
+  announced through `aria-live`.
 
-## 5. Expected-day (eligibility) rules
+## 5. Targets and eligibility
 
-A date is **eligible** for a habit when:
+### 5.1 Per-date target share
 
-1. It falls inside the period's calculated range
-   (`start ≤ date ≤ effectiveEnd`), and
-2. The habit was already active on that date.
+For each calendar date the habit resolves its effective weekly target from
+schedule history (`resolveWeeklyTarget`) and contributes
+`weeklyTarget / 7` to the period target. No target shares are lost to
+rounding inside the math: the *displayed* target is rounded for people
+(`formatTargetCount`), while percentages use the raw sum.
 
-### Schedule model (current limitation, handled explicitly)
+### 5.2 Eligibility
 
-The current `habits` table has **no frequency, schedule, or archive columns**;
-the only lifecycle boundary is `createdAt`, and deleting a habit removes it and
-its completions (cascade). The implementation therefore treats every habit as
-scheduled **daily from its creation date onward**, per the existing data
-model:
+A date contributes share only when the habit already existed
+(`isHabitEligibleOn`, `date ≥ DATE(created_at)` as a date-only comparison, so
+server and client agree across timezones). Dates before creation contribute
+nothing. Future dates after creation **do** contribute — they are part of the
+goal the user is progressing toward.
 
-```ts
-// src/lib/habit-progress.ts
-export function isHabitScheduledOn(habit, date) {
-  const createdOn = habit.createdAt.slice(0, 10);   // date-only key
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(createdOn)) return true;
-  return toKey(date) >= createdOn;
-}
-```
+### 5.3 Choosing a target
 
-- `createdAt` is compared as a **date-only string**, not as a local `Date`.
-  This keeps server and browser renders identical regardless of timezone and
-  matches how completion date keys are produced.
-- Dates before `createdAt` are excluded from both the numerator and the
-  denominator.
-- Because schedule history does not exist in the schema, historical results are
-  exact only under the daily model. If a frequency or archive field is added
-  later, `isHabitScheduledOn()` is the single predicate to extend, and
-  effective-dated schedule storage would be needed for exact historical
-  recalculations. This limitation is documented rather than hidden.
+The calendar's habit form (also used for editing) has a **Weekly target**
+select: *Every day* (7, default) or *1–6 days / week*, e.g. "exercise
+5 days a week". Changing the target starts today; past progress keeps the
+previous target (shown in the helper text). Progress cards display the target
+next to the category (`Fitness · 5 days / week`).
 
-### Core formulas
+### 5.4 Core formulas
 
 ```
-expected  = number of eligible scheduled dates in the period
-completed = number of eligible scheduled dates with a completion
-percentage   = expected === 0 ? N/A : (completed / expected) × 100
+target     = sum over eligible dates of (resolved weeklyTarget / 7)
+completed  = eligible dates with a completion, counted once per date
+             (rows are unique per habit/day; false rows are dropped)
+percentage = (completed / target) × 100     – may exceed 100
+level      = getLevel(percentage)           – OKR thresholds unchanged
 ```
 
-- If `expected == 0`, the percentage, level, and any comparison against the
-  period are reported as **N/A**, never `0%`.
-- Percentages and per-habit counts are computed per date, not from aggregates,
-  so nothing depends on a habit's total history only existing "now".
+- **Current periods use the full-period target** (target spans the whole
+  week/month, including days after today), so the percentage reads as "how far
+  toward the goal". Completed days still count only through today.
+- Weekly: a habit that exists all week with target 5 has target `5` — exactly
+  `completed occurrences / weekly target × 100`. Created mid-week, its target
+  is proportional (`5 × 5/7` for the eligible days).
+- Monthly: target = `weeklyTarget/7 × eligible days in the month`
+  (e.g. 5 days/week across October = `5/7 × 31 ≈ 22.1`), trimmed to the
+  creation date and replayed across mid-month target changes.
+- `target == 0` (future/not-created period, corrupt zero target) → percentage
+  and level render **N/A**, never a misleading `0%`. Malformed/out-of-range
+  schedule values fall back to 7 (`sanitizeWeeklyTarget`); a true 0 survives
+  as N/A.
+- Overachievement: more completions than the allocated share (7 done for a
+  target of 5) yields a percentage **above 100%** (e.g. 140% → Legendary).
+  Progress bars fill at most to 100%; the surrounding text shows the real
+  percentage and `aria-valuetext` announces it uncapped.
 
 ## 6. Comparison with the previous period
 
-`getPreviousProgressPeriod(current)` produces the comparison period:
-
-- **Week:** the immediately preceding Monday–Sunday week.
-- **Month:** the immediately preceding calendar month.
-- **In-progress current period:** the previous period is clipped to the *same
-  number of elapsed calendar days*. A month on day 25 is compared with the
-  first 25 days of the previous month; a week on Wednesday is compared with the
-  previous Monday–Wednesday.
-- **Completed historical period:** the full previous period is used.
-- If the previous month is shorter than the current elapsed span (March 30/31
-  versus February), the previous period is clamped to its real length and the
-  UI notes that all of its days were used. Percentages remain the fair basis
-  for the comparison; completed-day deltas are always shown with both periods'
-  `completed/expected` values so the different lengths stay visible.
-
-Per-habit and overall comparisons then derive (`compareMetrics`):
+`getPreviousProgressPeriod(current)` returns the immediately preceding
+Monday–Sunday week or calendar month **at full length**. v2 compares
+**goal with goal**: each period is measured against its own full-period
+target, so the previous period is no longer clipped to the current period's
+elapsed days (that clipping belonged to the daily-pace model of v1). The page
+copy states this explicitly for in-progress periods
+("Comparing full-period goals…"), because a mid-week percentage naturally
+trails a completed period.
 
 | Metric | Rule |
 | --- | --- |
-| `percentageDelta` | `current.percentage − previous.percentage`; `N/A` when either side has no eligible days |
-| `completedDelta` | `current.completed − previous.completed`; `N/A` when either `expected` is `0` |
-| `trend` | `↑` when the percentage improves, `↓` when it declines, `→` when unchanged; `N/A` when undeducible |
-| `completedTrend` | Same logic applied to the completed-day delta |
-| `levelTrend` | Compares achievement levels by rank; `↑` improved, `↓` declined, `→` unchanged, `N/A` when either level is missing |
+| `percentageDelta` | `current.percentage − previous.percentage`; N/A when either side has no target |
+| `completedDelta` | `current.completed − previous.completed`; N/A when either target is 0 |
+| `trend` | `↑` improves, `↓` declines, `→` unchanged, `N/A` otherwise |
+| `completedTrend` | same logic on the day count |
+| `levelTrend` | compares levels by rank; N/A when either level is missing |
 
 Display rules:
 
-- Percentages render rounded to the nearest whole number.
-- Percentage-point changes show one decimal (e.g. `+14.3 pts`) so small real
-  changes are not lost by whole-number rounding; direction is derived from the
-  same one-decimal value, so the arrow and the shown number always agree.
-- Completed-day changes show signed whole days (`+2 days`, `-1 day`, `0 days`).
-- The current period is labelled **In progress** with
-  `Day X of Y included · future dates excluded`; historical periods are
-  labelled **Complete period**.
-- The eligibility rules (`isHabitScheduledOn`) are applied identically in both
-  periods, so a habit created mid-way is compared fairly:
-  e.g. created Oct 20 of the current week (19–25) → expected = 6, and the
-  previous week's expected value is `0`, which renders the comparison as `N/A`.
+- Percentages round to the nearest whole number; point changes show one
+  decimal (`+14.3 pts`), consistent with the derived directions.
+- Day deltas show signed whole days (`+2 days`, `−1 day`).
+- Targets render via `formatTargetCount`: whole numbers stay whole
+  (`5`, `31`), fractional targets get one decimal (`22.1`, `7.9`).
+- The current period banner shows `Day X of Y · progress is measured against
+  the full period target, including days after today.`
 
 ## 7. Achievement levels
 
-Levels reuse the **existing** OKR thresholds from `src/lib/date.ts`; nothing
-new was invented. `getLevel()` was refactored onto a single `ACHIEVEMENT_LEVELS`
-table that adds `minScore` and `rank` (used for the legend and level-change
-comparison) without changing any threshold or color:
+Unchanged from v1 and the app's existing OKR thresholds
+(`src/lib/date.ts → ACHIEVEMENT_LEVELS`, asserted by tests):
 
 | Level | Score range | Color |
 | --- | --- | --- |
@@ -177,125 +213,137 @@ comparison) without changing any threshold or color:
 | Intermediate | 40–59% | `#22c55e` |
 | Beginner | 0–39% | `#9ca3af` |
 
-- Levels and level changes appear both on the overall summary and on every
-  habit card ("Level: ↑ Improved (was Intermediate)" etc.).
-- A legend under the habit list displays the exact thresholds.
+Applied to the raw goal percentage, so overachievement maps to Legendary.
+Level badges and changes appear on the summary and every habit card; the
+legend lists the exact thresholds.
 
 ## 8. UI structure
 
 `src/app/progress/_components/`:
 
-- `habit-progress.tsx` — client shell: state (`view`, `cursor`), period + row
-  calculations, navigation, period banner, and the habit grid/empty state.
-- `progress-summary.tsx` — four overall cards: completion %, achievement
-  level, completed days, and change versus the previous period (plus a note
-  that in-progress comparisons use the equivalent elapsed span).
-- `habit-progress-card.tsx` — one card per habit: current %, `completed of
-  expected scheduled days`, category-colored progress bar, previous period
-  (`Previous week (same span)` when clipped), change, and level movement.
-- `progress-ui.tsx` — shared primitives: `LevelBadge`, `LevelChange`,
-  `ProgressBar`, `TrendValue`, percentage/day formatters, and `LevelLegend`.
+- `habit-progress.tsx` — client shell: state (`view`, `cursor`), schedule
+  timeline memo, period + row calculations, navigation, period banner
+  (status/date detail + full-period comparison note), habit grid, and empty
+  state.
+- `progress-summary.tsx` — four overall cards: overall completion vs pooled
+  target, achievement level, completed days (`out of 22.1 target days`), and
+  change versus the previous period.
+- `habit-progress-card.tsx` — per habit: current %, completed vs
+  `formatTargetCount(target)` target days, category-colored progress bar,
+  target label next to the category, the previous period block, change, and
+  level movement.
+- `progress-ui.tsx` — `LevelBadge`, `LevelChange`, `ProgressBar` (rendering
+  capped at 100%, value text uncapped), `TrendValue`, formatters, and the
+  `LevelLegend`.
 
-Presentation notes:
-
-- Identical to the rest of the app: Tailwind v4 + shadcn/ui cards, buttons, and
-  tabs, light/dark aware colors, `text-emerald/red` trend colors, and
-  `sm:`/`lg:`/`xl:` responsive grids (4-up summary on large screens, 1-up
-  habit cards on mobile, 2-up on `lg`+).
-- Accessibility: labelled progress bars (`role="progressbar"` with
-  `aria-valuenow` or `N/A` text), `aria-live` period label, meaningful
-  `aria-label`s on the previous/next controls, and `sr-only` loading text.
+Presentation notes (unchanged in spirit): Tailwind v4 + shadcn/ui, light/dark
+aware, responsive `sm/lg/xl` grids, labelled progress bars, `aria-live` period
+label, screen-reader-friendly loading text.
 
 ## 9. Loading, empty, and error states
 
-- `loading.tsx` — route-level skeleton matching the page layout, with
-  `aria-busy` and a screen-reader-friendly "Loading habit progress…" message.
-- Empty state — when the user has no habits, the page shows the title plus a
-  prompt with a "Go to the calendar" button.
+- `loading.tsx` — route-level skeleton with `aria-busy` and
+  "Loading habit progress…".
+- Empty state — no habits → prompt with a "Go to the calendar" button.
 - `error.tsx` — client error boundary (Next 16 `retry` prop) with "Try again"
-  and a link back to the calendar; the error is logged to the console.
+  and a calendar link; the error is logged.
 
 ## 10. Files
 
-New:
+Core:
 
-- `src/lib/habit-progress.ts` — pure period/eligibility/comparison logic
-  (`getProgressPeriod`, `getPreviousProgressPeriod`,
-  `isHabitScheduledOn`, `computeHabitPeriodMetric`, `summarizeMetrics`,
-  `compareMetrics`, `buildCompletionMap`).
-- `src/app/progress/page.tsx`
-- `src/app/progress/loading.tsx`
-- `src/app/progress/error.tsx`
-- `src/app/progress/_components/habit-progress.tsx`
-- `src/app/progress/_components/progress-summary.tsx`
-- `src/app/progress/_components/habit-progress-card.tsx`
-- `src/app/progress/_components/progress-ui.tsx`
+- `prisma/schema.prisma` — `habits.weekly_target`, new `HabitSchedule` model.
+- `prisma/migrations/20261025120000_habit_weekly_targets/` — DDL, CHECKs,
+  FKs, RLS, backfill (see §3.3).
+- `src/lib/habit-progress.ts` — pure target model:
+  `sanitizeWeeklyTarget`, `buildScheduleTimelines`, `resolveWeeklyTarget`,
+  `isHabitEligibleOn`, `getProgressPeriod`, `getPreviousProgressPeriod`,
+  `computeHabitPeriodMetric`, `summarizeMetrics`, `compareMetrics`,
+  `buildCompletionMap`, `formatTargetCount`.
+- `src/app/actions/habit.actions.ts` — `getInitialData` (+schedules,
+  `weeklyTarget`), transactional `addHabit`/`updateHabit` schedule writes,
+  `/progress` revalidation for habit/completion mutations, strict
+  `parseWeeklyTarget` validation.
+- `src/lib/types.ts` — `Habit.weeklyTarget`, `getWeeklyTargetLabel()`.
+- `src/stores/habit.store.ts` — targets flow through add/update.
+- `src/app/_components/habit-form.tsx` — Weekly target select (add + edit).
+- `src/app/progress/page.tsx` — passes schedules to the client shell.
+- `src/app/progress/_components/*` — UI updates described in §8.
+- `scripts/habit-progress.test.mjs` — Node built-in test runner suite (see
+  §12); no new dev dependencies.
 
-Modified:
-
-- `src/lib/date.ts` — `getLevel()` refactored onto `ACHIEVEMENT_LEVELS`
-  (same thresholds, colors, and labels; adds `minScore` and `rank`).
-- `src/app/_components/home-greeting.tsx` — adds the home-header Progress link.
-- `src/components/app-header.tsx` — Progress intentionally **not** in the nav.
-- `src/proxy.ts` — protects `/progress`.
-- `eslint.config.mjs` — ignores the generated `.next-root-owned-cache` folder
-  so `npm run lint` validates source rather than build artifacts.
-- `docs/all_features.md`, `README.md` — feature list and structure entries.
+From v1 (unchanged in role): `src/app/progress/{loading,error}.tsx`,
+home-header Progress link, proxy protection, level legend/thresholds.
 
 ## 11. Worked examples
 
-Current date: Oct 25, 2026 (a Sunday).
+Current date: Oct 25, 2026 (a Sunday). Week = Mon–Sun.
 
-1. **Current week viewed on Thursday (Oct 22)**
-   - Period: Mon Oct 19 – Sun Oct 25, marked *In progress* (day 4 of 7).
-   - Daily habit created Oct 1 → expected = Oct 19–22 = `4` days.
-   - 2 completions → `2/4` = **50%**, and the previous period is
-     Mon Oct 12 – Wed Oct 15 (the equivalent 4 days), not the full previous
-     week.
+1. **"5 days per week" habit, viewed Thursday Oct 22 (current week)**
+   - Week Oct 19–25; today Oct 22.
+   - Target = full week `5` (share `5/7` a day × 7).
+   - 3 completions (Mon–Wed) → `3/5` = **60% → Advanced**; completed still
+     counts only through Thursday.
+   - Previous week (Oct 12–18) is taken at full length; if it also had target
+     5, its goal is `5` too.
 
-2. **Current week viewed on Sunday (Oct 25)**
-   - Period: Oct 19 – Oct 25 (7 of 7 days included) → the previous comparison
-     week is the full Oct 12–18.
+2. **Daily habit, same Thursday**
+   - Target 7 → `3/7 ≈ 43% → Intermediate`. Identical denominators to v1's
+     full-past-week case; only the access check (created before) gates it.
 
-3. **Current month on Oct 15**
-   - Current range: Oct 1–15 (15 eligible days), previous range:
-     Sep 1–15 — *not* the full 30-day September.
+3. **Target change mid-week (5×/week since Oct 21, daily before)**
+   - Days Oct 19–20 contribute share `1` each, Oct 21–25 contribute `5/7` →
+     week target `2 + 25/7 ≈ 5.57`; historical days keep the old target.
 
-4. **Short previous month**
-   - Viewing March with today Mar 31: current = Mar 1–31, previous is clamped
-     to Feb 1–28, and the UI notes the shorter previous month.
+4. **Monthly "5 days per week" across October (created Sep 1)**
+   - Target `5/7 × 31 ≈ 22.1`; 10 completions → ≈ 45% toward the month goal.
 
-5. **Zero eligible days**
-   - Habit created Nov 1 viewed against an October month → `expected = 0`,
-     `50 → N/A`, level `N/A`, comparisons `N/A` — never a misleading `0%`.
+5. **Created Oct 21, viewed monthly**
+   - Eligible days Oct 21–31 = 11 → target `5/7 × 11 ≈ 7.9`; earlier dates are
+     trimmed by the creation gate.
+
+6. **Overachievement (viewed Sunday)**
+   - Target 5, 7 completions → `140% → Legendary`; the bar renders at 100%,
+     the label shows 140%.
+
+7. **N/A rules**
+   - Future week/month → target 0 → N/A everywhere (banner: "Not started").
+   - Habit created after the viewed period or a zero target → N/A.
+   - Comparisons N/A when either side has no target.
 
 ## 12. Validation performed
 
-- `npm run lint` — passes (after adding the generated-cache ignore).
+- **Committed test suite** `scripts/habit-progress.test.mjs`
+  (`npm run test`, Node's built-in runner — no new dependencies): 20 tests
+  covering schedule-history resolution, full-period weekly targets, daily
+  habits, mid-week/mid-month target changes, monthly proportionality with
+  creation trimming, overachievement >100%, future/zero-target N/A rules,
+  previous-period semantics, comparison deltas, pooled summaries, target
+  formatting, and unchanged level thresholds. All pass.
+- **Migration validated locally** (Docker Postgres): applied over seeded
+  habits/completions — `weekly_target` defaulted to 7, one schedule row per
+  habit anchored at `DATE(created_at)`, CHECK constraint rejects out-of-range
+  targets, four RLS policies present, `prisma migrate status` clean. Not yet
+  applied to remote Supabase (user runs `npm run db:deploy` when ready).
+- `npm run lint` — passes.
 - `npx tsc --noEmit` — passes.
 - `npm run build` (`prisma generate && next build`) — passes; `/progress`
-  appears as a dynamic route in the build output.
-- A throwaway assertion script (not committed) exercised the pure functions:
-  Monday week boundaries, full/part comparisons, previous-month clipping,
-  short-month clamping, mid-period creation, duplicate/junk completions,
-  zero-eligible N/A, pooled summaries, trend direction, and unchanged level
-  thresholds. All assertions passed.
-- The repo has no committed test suite; lint, type checking, and build are the
-  project's standard validation path (`AGENTS.md`).
+  builds as a dynamic route.
 
 ## 13. Known limitations and future work
 
-- **Schedule history:** the schema stores no frequency or schedule changes, so
-  only the daily-from-creation model exists. Adding frequency/weekly targets or
-  archive dates requires extending `isHabitScheduledOn()` and persisting
-  effective-dated schedules to keep historical comparisons exact.
-- **Deactivated habits:** there is no "archived" state; habits are deleted
-  entirely (with completions). If a soft-deactivate state is added, the same
-  lifecycle predicate should exclude post-archived dates.
-- **State in URL:** period selection is client state; deep links to a specific
-  week/month (e.g. `?view=month&from=2026-09-01`) would be a natural future
-  enhancement if sharing a view is needed.
-- The progress page reads all of the user's completion rows once via
-  `getInitialData()`, matching the existing analytics pattern; if completions
-  grow large the same pagination/windowing strategy that analytics would need
-  can be introduced there and reused.
+- **No weekday-specific scheduling:** the target model counts any day; a
+  target of 5 accepts completion on any 7 share-allocated days rather than
+  enforcing "Mon/Wed/Fri only". Adding specific weekdays would be a schedule
+  model extension on top of `habit_schedules` (extra column + upsert path +
+  form UI), deliberately out of scope for this round.
+- **No archive state:** habits are deleted entirely (with completions and
+  schedules). A soft "archived on" date would use the same eligibility
+  predicate to stop shares after that date.
+- **State in URL:** period selection remains client state; deep links
+  (`?view=month&from=2026-09-01`) remain a natural enhancement.
+- **Read scale:** the page still reads all of the user's completions via
+  `getInitialData()` (matching analytics); windowing would be shared with
+  analytics if ever needed.
+- **Same-day edits collapse:** multiple target changes on one day upsert the
+  single row for that day (unique constraint), keeping the last edit.

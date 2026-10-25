@@ -1,4 +1,3 @@
-import { getCategory, type Habit } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -6,7 +5,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { MetricComparison, PeriodMetric } from "@/lib/habit-progress";
+import { getCategory, getWeeklyTargetLabel, type Habit } from "@/lib/types";
+import {
+  formatTargetCount,
+  type MetricComparison,
+  type PeriodMetric,
+} from "@/lib/habit-progress";
 import {
   formatDayDelta,
   formatPercentage,
@@ -58,6 +62,10 @@ export function HabitProgressCard({
                 aria-hidden="true"
               />
               {category.label}
+              <span aria-hidden="true">·</span>
+              <span className="whitespace-nowrap">
+                {getWeeklyTargetLabel(habit.weeklyTarget)}
+              </span>
             </CardDescription>
           </div>
           <LevelBadge level={current.level} />
@@ -71,9 +79,9 @@ export function HabitProgressCard({
               {formatPercentage(current.percentage)}
             </p>
             <p className="text-sm text-muted-foreground">
-              {current.expected === 0
-                ? "No scheduled days"
-                : `${current.completed} of ${current.expected} scheduled days`}
+              {current.target === 0
+                ? "No target days in this period"
+                : `${current.completed} of ${formatTargetCount(current.target)} target days`}
             </p>
           </div>
           <div className="mt-2">
@@ -94,9 +102,9 @@ export function HabitProgressCard({
               {formatPercentage(previous.percentage)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {previous.expected === 0
-                ? "No eligible days"
-                : `${previous.completed}/${previous.expected} days`}
+              {previous.target === 0
+                ? "No target days"
+                : `${previous.completed}/${formatTargetCount(previous.target)} days`}
             </p>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="text-muted-foreground">Level</span>

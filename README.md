@@ -15,13 +15,13 @@ A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Su
 - **Email & password authentication** — sign up, log in, and log out, with protected routes that redirect unauthenticated visitors to the login page.
 - **Multi-user by design** — every query is scoped to the signed-in user, and Postgres Row Level Security is enabled on all tables as defense-in-depth.
 - **Calendar grid** — month view with one-click completion toggles for every habit, plus a per-month done counter.
-- **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal.
+- **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal, plus a **weekly target** (every day or N days per week, e.g. "exercise 5 days a week"); target changes are versioned so historical progress keeps the old target.
 - **Drag-and-drop ordering** — rearrange habits into the order that works for you.
 - **Habit notes** — click any habit's name to attach free-form notes.
 - **Milestones** — break each habit into tracked milestones with start/target dates, details, resources, and progress statuses.
 - **Daily planner** — plan each day with time-blocked tasks (start time, duration, priority, notes, and a planned → in-progress → done → skipped workflow), plus a weekly strip (Saturday-start) for a whole-week overview.
 - **Analytics dashboard** — completion rates, per-habit and daily-score charts, time worked from planner tasks, current and best streaks, and a GitHub-style yearly heatmap.
-- **Habit progress** — weekly (Monday–Sunday) and monthly completion per habit, with level badges, previous-period comparisons, and fair in-progress calculations.
+- **Habit progress** — weekly (Monday–Sunday) and monthly progress toward each habit's weekly target, with proportional monthly targets, overachievement (>100%), level badges, and previous-period comparisons.
 - **Dark & light mode** — switch themes from the header.
 
 ## Tech Stack
@@ -128,5 +128,6 @@ prisma/
 | `npm run db:status`   | Show migration status (`prisma migrate status`)              |
 | `npm run db:studio`   | Open Prisma Studio (`prisma studio`)                         |
 | `npm run db:validate` | Validate `prisma/schema.prisma`                              |
+| `npm run test`        | Run progress calculation tests (Node's built-in runner)      |
 
 The production build runs `prisma generate` first, so the generated client exists on a fresh install (such as Vercel) before Next.js compiles.

@@ -7,6 +7,8 @@ export interface Habit {
   category: string;
   order: number;
   createdAt: string; // ISO date
+  /** Days per week this habit targets (1-7). 7 = every day. */
+  weeklyTarget: number;
 }
 
 export type MilestoneStatus = "planned" | "in_progress" | "done" | "skipped";
@@ -33,4 +35,10 @@ export const CATEGORIES = [
 
 export function getCategory(id: string) {
   return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1];
+}
+
+/** Human label for a habit's weekly target (1-7). 7 = every day. */
+export function getWeeklyTargetLabel(weeklyTarget: number): string {
+  const days = Math.min(7, Math.max(1, Math.round(weeklyTarget) || 7));
+  return days === 7 ? "Every day" : `${days} days / week`;
 }

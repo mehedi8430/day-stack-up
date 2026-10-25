@@ -14,6 +14,7 @@ export default async function ProgressPage() {
       <HabitProgress
         initialHabits={data.habits}
         initialCompletions={data.completions}
+        initialSchedules={data.schedules}
       />
     </div>
   );

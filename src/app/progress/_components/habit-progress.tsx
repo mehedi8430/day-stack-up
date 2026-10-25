@@ -17,11 +17,13 @@ import type { Habit } from "@/lib/types";
 import type { CompletionRow } from "@/app/actions/habit.actions";
 import {
   buildCompletionMap,
+  buildScheduleTimelines,
   compareMetrics,
   computeHabitPeriodMetric,
   getPreviousProgressPeriod,
   getProgressPeriod,
   summarizeMetrics,
+  type HabitScheduleRow,
   type ProgressPeriodView,
 } from "@/lib/habit-progress";
 import { cn } from "@/lib/utils";
@@ -32,11 +34,13 @@ import { LevelLegend } from "./progress-ui";
 interface HabitProgressProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
+  initialSchedules: HabitScheduleRow[];
 }
 
 export function HabitProgress({
   initialHabits,
   initialCompletions,
+  initialSchedules,
 }: HabitProgressProps) {
   const [view, setView] = React.useState<ProgressPeriodView>("week");
   const [cursor, setCursor] = React.useState<Date>(() => new Date());
@@ -45,6 +49,11 @@ export function HabitProgress({
   const completions = React.useMemo(
     () => buildCompletionMap(initialCompletions),
     [initialCompletions],
+  );
+
+  const schedules = React.useMemo(
+    () => buildScheduleTimelines(initialSchedules),
+    [initialSchedules],
   );
 
   const sortedHabits = React.useMemo(
@@ -70,9 +79,15 @@ export function HabitProgress({
   const rows = React.useMemo(
     () =>
       sortedHabits.map((habit) => {
-        const current = computeHabitPeriodMetric(habit, completions, period);
+        const current = computeHabitPeriodMetric(
+          habit,
+          schedules,
+          completions,
+          period,
+        );
         const previous = computeHabitPeriodMetric(
           habit,
+          schedules,
           completions,
           previousPeriod,
         );
@@ -83,7 +98,7 @@ export function HabitProgress({
           comparison: compareMetrics(current, previous),
         };
       }),
-    [sortedHabits, completions, period, previousPeriod],
+    [sortedHabits, schedules, completions, period, previousPeriod],
   );
 
   const overall = React.useMemo(
@@ -102,9 +117,7 @@ export function HabitProgress({
   const periodNoun = view;
   const previousLabel =
     view === "week" ? "previous week" : "previous month";
-  const previousCardLabel = period.isCurrent
-    ? `Previous ${periodNoun} (same span)`
-    : `Previous ${periodNoun}`;
+  const previousCardLabel = `Previous ${periodNoun}`;
 
   const periodLabel =
     view === "week"
@@ -123,27 +136,17 @@ export function HabitProgress({
   const periodDetail = period.isFuture
     ? "No dates included yet."
     : period.isCurrent
-      ? `Day ${period.elapsedDays} of ${period.totalDays} included · future dates excluded.`
+      ? `Day ${period.elapsedDays} of ${period.totalDays} · progress is measured against the full period target, including days after today.`
       : `${period.totalDays} days included.`;
-
-  const previousIsShorter =
-    period.isCurrent && previousPeriod.elapsedDays < period.elapsedDays;
 
   const comparisonWindow = period.isFuture
     ? "This period has not started yet."
     : period.isCurrent
-      ? `Comparing ${format(period.start, "MMM d")}–${format(
+      ? `Comparing full-period goals: this ${periodNoun} (through ${format(
           period.effectiveEnd,
           "MMM d",
-        )} with ${format(previousPeriod.start, "MMM d")}–${format(
-          previousPeriod.effectiveEnd,
-          "MMM d",
-        )}, the equivalent elapsed days.${
-          previousIsShorter
-            ? " The previous month ended first, so all of its days are used."
-            : ""
-        }`
-      : `Comparing the complete ${periodNoun} with the previous ${periodNoun}.`;
+        )}) against the complete previous ${periodNoun}, which kept the same target.`
+      : `Comparing the complete ${periodNoun} with the previous ${periodNoun}. Both periods are measured against their full-period targets.`;
 
   const handlePrevious = () => {
     setCursor((current) =>
@@ -168,8 +171,8 @@ export function HabitProgress({
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Habit Progress</h1>
           <p className="text-sm text-muted-foreground">
-            Weekly and monthly completion for every habit, compared with the
-            previous period.
+            Weekly and monthly progress for each habit, measured against its
+            target and compared with the previous period.
           </p>
         </div>
 
