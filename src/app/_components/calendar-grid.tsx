@@ -60,11 +60,11 @@ export default function CalendarGrid({
     }
   }, [initialized, initialize, initialHabits, initialCompletions]);
 
-  const [view, setView] = React.useState<CalendarView>("month");
+  const [view, setView] = React.useState<CalendarView>("week");
   const [cursor, setCursor] = React.useState<Date>(new Date());
   const [today] = React.useState<Date>(() => startOfDay(new Date()));
   const latestWeekStart = React.useMemo(
-    () => subWeeks(startOfWeek(today, { weekStartsOn: 6 }), 1),
+    () => startOfWeek(today, { weekStartsOn: 6 }),
     [today],
   );
   const [weekStart, setWeekStart] = React.useState<Date>(() => latestWeekStart);
