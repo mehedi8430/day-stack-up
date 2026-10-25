@@ -173,6 +173,18 @@ level      = getLevel(percentage)           – OKR thresholds unchanged
   Progress bars fill at most to 100%; the surrounding text shows the real
   percentage and `aria-valuetext` announces it uncapped.
 
+### 5.5 Shared use on the home calendar
+
+The home calendar's overall range bar (`CalendarGrid`) uses `computeRangeRate`
+with the same target/eligibility/history rules, applied to the **elapsed days
+of the selected range** (week, month, or last 15 days) rather than the full
+period. That keeps the bar a "how far so far" pace indicator while fixing the
+old daily-only math: a 5-days/week habit is no longer counted as due seven
+days a week, and days before a habit existed no longer drag the percentage
+down. Percentages can exceed 100%; the bar fills to 100% while
+`aria-valuetext` carries the raw value. The per-habit `X/days` cell counters
+remain raw completion counts for the visible range.
+
 ## 6. Comparison with the previous period
 
 `getPreviousProgressPeriod(current)` returns the immediately preceding
@@ -261,7 +273,8 @@ Core:
   `sanitizeWeeklyTarget`, `buildScheduleTimelines`, `resolveWeeklyTarget`,
   `isHabitEligibleOn`, `getProgressPeriod`, `getPreviousProgressPeriod`,
   `computeHabitPeriodMetric`, `summarizeMetrics`, `compareMetrics`,
-  `buildCompletionMap`, `formatTargetCount`.
+  `computeRangeRate` (calendar bar), `buildCompletionMap`,
+  `formatTargetCount`.
 - `src/app/actions/habit.actions.ts` — `getInitialData` (+schedules,
   `weeklyTarget`), transactional `addHabit`/`updateHabit` schedule writes,
   `/progress` revalidation for habit/completion mutations, strict
@@ -271,6 +284,9 @@ Core:
 - `src/app/_components/habit-form.tsx` — Weekly target select (add + edit).
 - `src/app/progress/page.tsx` — passes schedules to the client shell.
 - `src/app/progress/_components/*` — UI updates described in §8.
+- `src/app/page.tsx` + `src/app/_components/calendar-grid.tsx` — the home
+  range bar consumes `getInitialData().schedules` and `computeRangeRate`
+  (see §5.5).
 - `scripts/habit-progress.test.mjs` — Node built-in test runner suite (see
   §12); no new dev dependencies.
 
@@ -316,12 +332,13 @@ Current date: Oct 25, 2026 (a Sunday). Week = Mon–Sun.
 ## 12. Validation performed
 
 - **Committed test suite** `scripts/habit-progress.test.mjs`
-  (`npm run test`, Node's built-in runner — no new dependencies): 20 tests
+  (`npm run test`, Node's built-in runner — no new dependencies): 24 tests
   covering schedule-history resolution, full-period weekly targets, daily
   habits, mid-week/mid-month target changes, monthly proportionality with
   creation trimming, overachievement >100%, future/zero-target N/A rules,
   previous-period semantics, comparison deltas, pooled summaries, target
-  formatting, and unchanged level thresholds. All pass.
+  formatting, calendar range rates (weekly weighting, creation trimming,
+  schedule replay, empty range), and unchanged level thresholds. All pass.
 - **Migration validated locally** (Docker Postgres): applied over seeded
   habits/completions — `weekly_target` defaulted to 7, one schedule row per
   habit anchored at `DATE(created_at)`, CHECK constraint rejects out-of-range

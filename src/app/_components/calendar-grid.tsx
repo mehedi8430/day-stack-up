@@ -34,7 +34,12 @@ import {
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { useHabitStore } from "@/stores/habit.store";
-import { getMonthDays, monthlyAverageScore, toKey } from "@/lib/date";
+import { getMonthDays, toKey } from "@/lib/date";
+import {
+  buildScheduleTimelines,
+  computeRangeRate,
+  type HabitScheduleRow,
+} from "@/lib/habit-progress";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -90,11 +95,13 @@ function getMonthProgressRange(monthCursor: Date, today: Date) {
 interface CalendarGridProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
+  initialSchedules: HabitScheduleRow[];
 }
 
 export function CalendarGrid({
   initialHabits,
   initialCompletions,
+  initialSchedules,
 }: CalendarGridProps) {
   const habits = useHabitStore((s) => s.habits);
   const completions = useHabitStore((s) => s.completions);
@@ -117,9 +124,7 @@ export function CalendarGrid({
     () => subWeeks(startOfWeek(today, { weekStartsOn: 6 }), 1),
     [today],
   );
-  const [weekStart, setWeekStart] = React.useState<Date>(
-    () => latestWeekStart,
-  );
+  const [weekStart, setWeekStart] = React.useState<Date>(() => latestWeekStart);
   const [rollingEnd, setRollingEnd] = React.useState<Date>(() => today);
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Habit | null>(null);
@@ -154,8 +159,7 @@ export function CalendarGrid({
         };
       }
 
-      const isCurrentWeek =
-        weekStart.getTime() === currentWeekStart.getTime();
+      const isCurrentWeek = weekStart.getTime() === currentWeekStart.getTime();
       const progressDays = isCurrentWeek
         ? weekDays.filter((day) => day <= today)
         : weekDays;
@@ -211,18 +215,31 @@ export function CalendarGrid({
     [habits],
   );
 
-  const achievedRate = monthlyAverageScore(
-    completions,
+  // Schedule history is server data (refreshed by revalidation); the store
+  // does not need it for optimistic habit edits.
+  const schedules = React.useMemo(
+    () => buildScheduleTimelines(initialSchedules),
+    [initialSchedules],
+  );
+
+  // Target-aware achieved-so-far rate: weekly targets weight each habit-day,
+  // creation dates trim ineligible days, and schedule history is honoured.
+  const achievedRate = computeRangeRate(
     sortedHabits,
+    schedules,
+    completions,
     progressDays,
   );
-  const previousRate = monthlyAverageScore(
-    completions,
+  const previousRate = computeRangeRate(
     sortedHabits,
+    schedules,
+    completions,
     previousDays,
   );
-  const achieved = Math.round(achievedRate);
-  const change = Math.round(achievedRate - previousRate);
+  const achieved = Math.round(achievedRate.percentage ?? 0);
+  const change = Math.round(
+    (achievedRate.percentage ?? 0) - (previousRate.percentage ?? 0),
+  );
 
   const comparisonLabel =
     view === "week"
@@ -302,17 +319,14 @@ export function CalendarGrid({
         )}`
       : "";
   const rangeLabel =
-    view === "month"
-      ? monthLabel
-      : view === "week"
-        ? weekLabel
-        : rollingLabel;
+    view === "month" ? monthLabel : view === "week" ? weekLabel : rollingLabel;
   const rangeNoun =
     view === "month" ? "month" : view === "week" ? "week" : "15 days";
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
+        {/* Calendar Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Tabs
@@ -356,6 +370,7 @@ export function CalendarGrid({
               </Button>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             <Link href="/planner">
               <Button variant="outline" className="gap-2 px-2.5 sm:px-4">
@@ -370,6 +385,7 @@ export function CalendarGrid({
           </div>
         </div>
 
+        {/* Progress Bar */}
         {sortedHabits.length > 0 && (
           <div className="rounded-lg border bg-card px-4 py-3">
             <div
@@ -378,16 +394,13 @@ export function CalendarGrid({
               aria-label="Habit completion for the selected range"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={achieved}
-              title={
-                view === "month"
-                  ? "Based on days elapsed in the selected month"
-                  : undefined
-              }
+              aria-valuenow={Math.min(100, Math.max(0, achieved))}
+              aria-valuetext={`${achieved}%`}
+              title="Weighted by each habit's weekly target, creation date, and schedule history"
             >
               <div
                 className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${achieved}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, achieved))}%` }}
               />
             </div>
             <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[11px] leading-tight sm:text-xs">

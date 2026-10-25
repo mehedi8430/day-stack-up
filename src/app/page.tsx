@@ -11,7 +11,11 @@ export default async function HomePage() {
         initialHabits={data.habits}
         initialCompletions={data.completions}
       />
-      <CalendarGrid initialHabits={data.habits} initialCompletions={data.completions} />
+      <CalendarGrid
+        initialHabits={data.habits}
+        initialCompletions={data.completions}
+        initialSchedules={data.schedules}
+      />
     </div>
   );
 }

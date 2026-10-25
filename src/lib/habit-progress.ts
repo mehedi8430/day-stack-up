@@ -317,6 +317,50 @@ export function summarizeMetrics(metrics: PeriodMetric[]): PeriodMetric {
   };
 }
 
+export interface RangeRateMetric {
+  completed: number;
+  target: number;
+  /** Raw percentage vs the target, or null when nothing is eligible. */
+  percentage: number | null;
+}
+
+/**
+ * Target-aware achieved-so-far rate for an arbitrary list of dates. The home
+ * calendar's progress bar uses this over its elapsed/visible range so it
+ * respects each habit's weekly target, creation date, and schedule history
+ * instead of assuming every habit is due every day.
+ *
+ * Callers pass the dates that count as "so far" (elapsed days for the current
+ * range, the full range for past periods); future days are not weighted.
+ */
+export function computeRangeRate(
+  habits: ProgressHabit[],
+  timelines: ScheduleTimelines,
+  completions: CompletionMap,
+  days: Date[],
+): RangeRateMetric {
+  let completed = 0;
+  let target = 0;
+
+  for (const habit of habits) {
+    for (const day of days) {
+      if (!isHabitEligibleOn(habit, day)) continue;
+
+      const key = toKey(day);
+      if (completions[completionKey(habit.id, key)] === true) {
+        completed += 1;
+      }
+      target += resolveWeeklyTarget(habit, timelines, key) / DAYS_PER_WEEK;
+    }
+  }
+
+  return {
+    completed,
+    target,
+    percentage: target <= 0 ? null : (completed / target) * 100,
+  };
+}
+
 /**
  * Formats a possibly fractional target count: 31 -> "31", 22.142857 -> "22.1".
  */

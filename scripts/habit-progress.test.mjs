@@ -25,6 +25,7 @@ const {
   buildScheduleTimelines,
   compareMetrics,
   computeHabitPeriodMetric,
+  computeRangeRate,
   formatTargetCount,
   getPreviousProgressPeriod,
   getProgressPeriod,
@@ -359,6 +360,75 @@ test("formatTargetCount shows whole numbers and one decimal", () => {
   assert.equal(formatTargetCount(31), "31");
   assert.equal(formatTargetCount((5 / 7) * 31), "22.1");
   assert.equal(formatTargetCount((5 / 7) * 11), "7.9");
+});
+
+test("calendar range rate weights habits by their weekly targets", () => {
+  const days = [ymd(Y, 10, 24), ymd(Y, 10, 25)];
+  const daily = { ...baseHabit, id: "daily", createdAt: "2026-01-01T09:00:00.000Z", weeklyTarget: 7 };
+  const weekly = { ...baseHabit, id: "weekly", createdAt: "2026-01-01T09:00:00.000Z", weeklyTarget: 5 };
+  const timelines = buildScheduleTimelines([
+    scheduleRow("daily", "2026-01-01", 7),
+    scheduleRow("weekly", "2026-01-01", 5),
+  ]);
+  const completions = buildCompletionMap([
+    { habit_id: "daily", date: "2026-10-24", completed: true },
+    { habit_id: "daily", date: "2026-10-25", completed: true },
+    { habit_id: "weekly", date: "2026-10-24", completed: true },
+    { habit_id: "weekly", date: "2026-10-25", completed: false }, // ignored
+  ]);
+
+  const rate = computeRangeRate([daily, weekly], timelines, completions, days);
+  assert.equal(rate.completed, 3);
+  assert.ok(Math.abs(rate.target - (2 + (5 / 7) * 2)) < 1e-9);
+  assert.ok(Math.abs(rate.percentage - 87.5) < 1e-6);
+});
+
+test("calendar range rate trims days before a habit existed", () => {
+  const days = [ymd(Y, 10, 21), ymd(Y, 10, 22), ymd(Y, 10, 23), ymd(Y, 10, 24), ymd(Y, 10, 25)];
+  const habit = { ...baseHabit, createdAt: "2026-10-24T09:00:00.000Z" }; // created in range
+  const completions = buildCompletionMap([
+    { habit_id: "h1", date: "2026-10-21", completed: true }, // before creation: ignored
+    { habit_id: "h1", date: "2026-10-24", completed: true },
+  ]);
+
+  const rate = computeRangeRate(
+    [habit],
+    buildScheduleTimelines([scheduleRow("h1", "2026-10-24", 5)]),
+    completions,
+    days,
+  );
+
+  assert.equal(rate.completed, 1); // pre-creation row never inflates the count
+  assert.ok(Math.abs(rate.target - (5 / 7) * 2) < 1e-9); // only Oct 24-25 are eligible
+  assert.ok(Math.abs(rate.percentage - 70) < 1e-6);
+});
+
+test("calendar range rate replays schedule history and allows overachievement", () => {
+  const days = [ymd(Y, 10, 21), ymd(Y, 10, 22), ymd(Y, 10, 23), ymd(Y, 10, 24), ymd(Y, 10, 25)];
+  const habit = { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" };
+  const timelines = buildScheduleTimelines([
+    scheduleRow("h1", "2026-01-01", 7),
+    scheduleRow("h1", "2026-10-24", 5),
+  ]);
+  const completions = completionsFor("h1", [day(21), day(22), day(23), day(24), day(25)]);
+
+  const rate = computeRangeRate([habit], timelines, completions, days);
+
+  // Oct 21-23 at share 1, Oct 24-25 at 5/7.
+  assert.equal(rate.completed, 5);
+  assert.ok(Math.abs(rate.target - (3 + (5 / 7) * 2)) < 1e-9);
+  assert.ok(Math.abs(rate.percentage - (35 / 31) * 100) < 1e-6);
+  assert.ok(rate.percentage > 100);
+});
+
+test("calendar range rate is N/A for an empty range", () => {
+  const rate = computeRangeRate(
+    [{ ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" }],
+    buildScheduleTimelines([]),
+    buildCompletionMap([]),
+    [],
+  );
+  assert.deepEqual(rate, { completed: 0, target: 0, percentage: null });
 });
 
 test("achievement thresholds are preserved", async () => {

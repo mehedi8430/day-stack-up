@@ -15,7 +15,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 
 ### 2. Habit Calendar (home `/`)
 - **Range grid view** — switch between Week (Saturday–Friday, defaulting to the previous complete week), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "Last week" jump; habits are rows and days are columns with sticky first/last columns
-- **Range progress bar** — overall completion for the visible range, with the percentage-point change versus the previous equivalent period and the achieved percentage
+- **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
 - **Per-habit done counter** — shows how many days in the visible range were completed (`X/days`)
