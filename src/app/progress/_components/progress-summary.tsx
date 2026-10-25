@@ -44,15 +44,17 @@ export function ProgressSummary({
       : `Compared with the ${previousLabel}.`;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Overall completion</CardDescription>
-          <CardTitle className="text-3xl">
+    <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <Card className="rounded-2xl shadow-sm transition-shadow hover:shadow-md">
+        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">
+            Overall completion
+          </CardDescription>
+          <CardTitle className="pt-1 text-3xl tracking-tight">
             {formatPercentage(overall.percentage)}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
           <p className="text-xs text-muted-foreground">
             {overall.target === 0
               ? "No target habit-days in this period"
@@ -65,14 +67,16 @@ export function ProgressSummary({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Achievement level</CardDescription>
-          <CardTitle>
+      <Card className="rounded-2xl shadow-sm transition-shadow hover:shadow-md">
+        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">
+            Achievement level
+          </CardDescription>
+          <CardTitle className="pt-2">
             <LevelBadge level={overall.level} className="text-lg" />
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
           <p className="text-xs text-muted-foreground">
             Based on the existing OKR score thresholds.
           </p>
@@ -87,14 +91,16 @@ export function ProgressSummary({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Completed days</CardDescription>
-          <CardTitle className="text-3xl">
+      <Card className="rounded-2xl shadow-sm transition-shadow hover:shadow-md">
+        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">
+            Completed days
+          </CardDescription>
+          <CardTitle className="pt-1 text-3xl tracking-tight">
             {overall.target === 0 ? "N/A" : overall.completed}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
           <p className="text-xs text-muted-foreground">
             {overall.target === 0
               ? "No target days"
@@ -119,16 +125,18 @@ export function ProgressSummary({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Change vs previous</CardDescription>
-          <CardTitle className="text-2xl">
+      <Card className="rounded-2xl shadow-sm transition-shadow hover:shadow-md">
+        <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">
+            Change vs previous
+          </CardDescription>
+          <CardTitle className="pt-1 text-2xl tracking-tight">
             <TrendValue direction={comparison.trend}>
               {formatPercentagePoints(comparison.percentageDelta)}
             </TrendValue>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
           <p className="text-xs text-muted-foreground">
             {previous.target === 0
               ? "No data for the previous period"

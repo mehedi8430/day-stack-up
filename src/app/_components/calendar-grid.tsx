@@ -98,7 +98,7 @@ interface CalendarGridProps {
   initialSchedules: HabitScheduleRow[];
 }
 
-export function CalendarGrid({
+export default function CalendarGrid({
   initialHabits,
   initialCompletions,
   initialSchedules,

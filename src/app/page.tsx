@@ -1,6 +1,6 @@
-import { CalendarGrid } from "@/app/_components/calendar-grid";
 import { HomeGreeting } from "@/app/_components/home-greeting";
 import { getInitialData } from "@/app/actions/habit.actions";
+import CalendarGrid from "./_components/calendar-grid";
 
 export default async function HomePage() {
   const data = await getInitialData();

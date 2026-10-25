@@ -10,7 +10,12 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Habit } from "@/lib/types";
@@ -166,46 +171,65 @@ export function HabitProgress({
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">The Day Stack</h1>
-          <p className="text-sm text-muted-foreground">
-            You stack your days; the days stack your life. Here&apos;s how far
-            each habit has climbed toward its weekly goal.
+    <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
+      <header className="relative isolate overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/[0.07] via-card to-emerald-500/[0.08] px-5 py-6 shadow-sm sm:px-8 sm:py-9">
+        <div
+          className="pointer-events-none absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"
+          aria-hidden="true"
+        />
+        <div className="max-w-3xl">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
+            YOUR MOMENTUM, AT A GLANCE
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Progress, one day at a time.
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            You stack your days; the days stack your life. Celebrate what&apos;s
+            working and keep building the habits that move you forward.
           </p>
         </div>
+      </header>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <section
+        className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4"
+        aria-label="Progress period controls"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Tabs
             value={view}
             onValueChange={(value) => setView(value as ProgressPeriodView)}
+            className="w-full sm:w-auto"
           >
-            <TabsList>
-              <TabsTrigger value="week">Week</TabsTrigger>
-              <TabsTrigger value="month">Month</TabsTrigger>
+            <TabsList className="grid h-11 w-full grid-cols-2 sm:w-auto">
+              <TabsTrigger value="week" className="px-5">
+                Week
+              </TabsTrigger>
+              <TabsTrigger value="month" className="px-5">
+                Month
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
             <Button
               variant="outline"
               size="icon"
+              className="h-10 w-10 shrink-0"
               onClick={handlePrevious}
               aria-label={`Previous ${periodNoun}`}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div
-              className="min-w-44 text-center sm:min-w-52"
+              className="min-w-0 flex-1 text-center sm:min-w-48 sm:flex-initial"
               aria-live="polite"
             >
-              <h2 className="whitespace-nowrap text-lg font-bold">
-                {periodLabel}
-              </h2>
+              <h2 className="text-sm font-bold sm:text-base">{periodLabel}</h2>
               <p
                 className={cn(
-                  "text-xs",
+                  "mt-0.5 text-xs",
                   period.isCurrent
                     ? "font-medium text-amber-600 dark:text-amber-400"
                     : "text-muted-foreground",
@@ -217,6 +241,7 @@ export function HabitProgress({
             <Button
               variant="outline"
               size="icon"
+              className="h-10 w-10 shrink-0"
               onClick={handleNext}
               disabled={atLatest}
               aria-label={`Next ${periodNoun}`}
@@ -227,39 +252,51 @@ export function HabitProgress({
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-
           {!period.isCurrent && (
-            <Button variant="ghost" size="sm" onClick={handleReset}>
-              This {periodNoun}
-            </Button>
+            <div className="flex justify-end sm:pl-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-10"
+                onClick={handleReset}
+              >
+                This {periodNoun}
+              </Button>
+            </div>
           )}
         </div>
-      </header>
+      </section>
 
       {sortedHabits.length === 0 ? (
         <EmptyState />
       ) : (
         <>
-          <div className="rounded-lg border bg-muted/30 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
-              <span
-                className={cn(
-                  "font-semibold",
-                  period.isCurrent
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-foreground",
-                )}
-              >
-                {periodStatus}
-              </span>
-              <span className="text-muted-foreground" aria-hidden="true">
-                ·
-              </span>
-              <span className="text-muted-foreground">{periodDetail}</span>
+          <div className="flex gap-3 rounded-2xl border border-primary/10 bg-primary/[0.035] px-4 py-3.5 sm:px-5">
+            <CalendarDays
+              className="mt-0.5 h-4 w-4 shrink-0 text-primary/70"
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                <span
+                  className={cn(
+                    "font-semibold",
+                    period.isCurrent
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-foreground",
+                  )}
+                >
+                  {periodStatus}
+                </span>
+                <span className="text-muted-foreground" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-muted-foreground">{periodDetail}</span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {comparisonWindow}
+              </p>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {comparisonWindow}
-            </p>
           </div>
 
           <ProgressSummary
@@ -270,14 +307,15 @@ export function HabitProgress({
             previousLabel={previousLabel}
           />
 
-          <section className="space-y-3">
+          <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">
-                  Habit breakdown
+                <h2 className="text-xl font-semibold tracking-tight">
+                  Your habits
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Selected {periodNoun} versus the previous {periodNoun}.
+                  Every check-in is a step forward. Here&apos;s how each habit
+                  is doing.
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -310,15 +348,17 @@ export function HabitProgress({
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
-      <div className="mb-4 text-6xl">📈</div>
-      <h3 className="text-lg font-semibold">No habits to show yet</h3>
-      <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-        Add habits on the calendar and mark them done to unlock weekly and
-        monthly progress.
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed bg-muted/20 px-5 py-14 text-center sm:py-20">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border bg-background text-primary shadow-sm">
+        <CalendarDays className="h-7 w-7" aria-hidden="true" />
+      </div>
+      <h3 className="text-xl font-semibold">Your progress story starts here</h3>
+      <p className="mb-6 mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+        Choose a few habits that matter to you. Each small win will show up here
+        and add to your momentum.
       </p>
-      <Button asChild>
-        <Link href="/">Go to the calendar</Link>
+      <Button asChild className="h-11 px-5">
+        <Link href="/">Explore your calendar</Link>
       </Button>
     </div>
   );
