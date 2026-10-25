@@ -171,8 +171,8 @@ export function HabitProgress({
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Habit Progress</h1>
           <p className="text-sm text-muted-foreground">
-            Weekly and monthly progress for each habit, measured against its
-            target and compared with the previous period.
+            You stack your days; the days stack your life. Here&apos;s how far
+            each habit has climbed toward its weekly goal.
           </p>
         </div>
 
