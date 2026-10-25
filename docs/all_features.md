@@ -84,6 +84,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Reuses existing data** — reads habits and completions through `getInitialData`; no new tables, columns, or dependencies
 - **Loading, empty, and error states** — route-level skeleton, no-habits prompt, and retryable error boundary
 - **Current data-model limitation** — the schema has no per-habit frequency or archive fields, so every habit is treated as scheduled daily from its `createdAt` date. Deleted habits and their completions are removed together. Adding frequency/archive support would require effective-dated schedule storage for exact historical recalculations.
+- Full behavior, formulas, worked examples, and file map: `docs/habit-progress.md`
 
 ### 9. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
