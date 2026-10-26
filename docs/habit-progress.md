@@ -258,8 +258,9 @@ label, screen-reader-friendly loading text.
 
 ## 9. Loading, empty, and error states
 
-- `loading.tsx` — route-level skeleton with `aria-busy` and
-  "Loading habit progress…".
+- `loading.tsx` — route-level branded loader with rotating progress-focused
+  copy, an indeterminate progress sweep, and an sr-only
+  "Loading habit progress" status label.
 - Empty state — no habits → prompt with a "Go to the calendar" button.
 - `error.tsx` — client error boundary (Next 16 `retry` prop) with "Try again"
   and a calendar link; the error is logged.

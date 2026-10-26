@@ -1,5 +1,16 @@
-import { AuthFormSkeleton } from "../_components/auth-form-skeleton";
+import { PageLoader } from "@/components/page-loader";
 
 export default function SignupLoading() {
-  return <AuthFormSkeleton label="Loading sign-up form..." />;
+  return (
+    <PageLoader
+      frame="contained"
+      messages={[
+        "Getting the sign-up form ready…",
+        "Preparing your fresh start…",
+        "One moment…",
+      ]}
+      label="Loading sign-up form"
+      hint="A moment while we set things up."
+    />
+  );
 }
