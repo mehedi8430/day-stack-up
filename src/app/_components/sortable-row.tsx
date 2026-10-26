@@ -9,9 +9,10 @@ import {
   Milestone,
   MoreVertical,
   Pencil,
+  StickyNote,
   Trash2,
 } from "lucide-react";
-import { getCategory, Habit } from "@/lib/types";
+import { getCategory, getWeeklyTargetLabel, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
@@ -86,14 +87,19 @@ export function SortableRow({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => onOpenNotes(habit)}
-          className="max-w-[120px] truncate text-left font-medium hover:underline sm:max-w-70"
-          title="Open notes"
+        <Link
+          href={`/progress?habit=${encodeURIComponent(habit.id)}`}
+          className="flex min-w-0 max-w-[120px] items-baseline text-left font-medium hover:underline sm:max-w-70"
+          title="View progress"
         >
-          {habit.name}
-        </button>
+          <span className="min-w-0 truncate">{habit.name}</span>
+          <span
+            className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground"
+            title={getWeeklyTargetLabel(habit.weeklyTarget)}
+          >
+            ({habit.weeklyTarget})
+          </span>
+        </Link>
         {/* <span
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: cat.color }}
@@ -114,6 +120,10 @@ export function SortableRow({
             <DropdownMenuItem onSelect={() => onEdit(habit)}>
               <Pencil className="h-3.5 w-3.5" />
               Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onOpenNotes(habit)}>
+              <StickyNote className="h-3.5 w-3.5" />
+              Notes
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={`/habits/${habit.id}/milestones`}>

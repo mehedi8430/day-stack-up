@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { shiftMonthWeek } from "@/lib/date";
-import type { Habit } from "@/lib/types";
+import { getWeeklyTargetLabel, type Habit } from "@/lib/types";
 import type { CompletionRow } from "@/app/actions/habit.actions";
 import {
   buildCompletionMap,
@@ -34,12 +34,14 @@ interface HabitProgressProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
   initialSchedules: HabitScheduleRow[];
+  initialHabitId?: string | null;
 }
 
 export function HabitProgress({
   initialHabits,
   initialCompletions,
   initialSchedules,
+  initialHabitId = null,
 }: HabitProgressProps) {
   const [view, setView] = React.useState<ProgressPeriodView>("week");
   const [cursor, setCursor] = React.useState<Date>(() => new Date());
@@ -59,6 +61,14 @@ export function HabitProgress({
     () => [...initialHabits].sort((a, b) => a.order - b.order),
     [initialHabits],
   );
+  const selectedHabit = React.useMemo(
+    () => sortedHabits.find((habit) => habit.id === initialHabitId) ?? null,
+    [initialHabitId, sortedHabits],
+  );
+  const visibleHabits = React.useMemo(
+    () => (selectedHabit ? [selectedHabit] : sortedHabits),
+    [selectedHabit, sortedHabits],
+  );
 
   const period = React.useMemo(
     () => getProgressPeriod(view, cursor, today),
@@ -77,7 +87,7 @@ export function HabitProgress({
 
   const rows = React.useMemo(
     () =>
-      sortedHabits.map((habit) => {
+      visibleHabits.map((habit) => {
         const current = computeHabitPeriodMetric(
           habit,
           schedules,
@@ -97,7 +107,7 @@ export function HabitProgress({
           comparison: compareMetrics(current, previous),
         };
       }),
-    [sortedHabits, schedules, completions, period, previousPeriod],
+    [visibleHabits, schedules, completions, period, previousPeriod],
   );
 
   const overall = React.useMemo(
@@ -186,6 +196,25 @@ export function HabitProgress({
         </div>
       </header>
 
+      {selectedHabit && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Viewing habit
+            </p>
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+              <p className="truncate font-semibold">{selectedHabit.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {getWeeklyTargetLabel(selectedHabit.weeklyTarget)}
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/progress">View all habits</Link>
+          </Button>
+        </section>
+      )}
+
       <section
         className="rounded-2xl border bg-card p-3 shadow-sm sm:p-4"
         aria-label="Progress period controls"
@@ -261,7 +290,7 @@ export function HabitProgress({
         </div>
       </section>
 
-      {sortedHabits.length === 0 ? (
+      {visibleHabits.length === 0 ? (
         <EmptyState />
       ) : (
         <>
@@ -305,16 +334,17 @@ export function HabitProgress({
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight">
-                  Your habits
+                  {selectedHabit ? "Habit progress" : "Your habits"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Every check-in is a step forward. Here&apos;s how each habit
-                  is doing.
+                  {selectedHabit
+                    ? "A focused look at how this habit is tracking."
+                    : "Every check-in is a step forward. Here's how each habit is doing."}
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                {sortedHabits.length}{" "}
-                {sortedHabits.length === 1 ? "habit" : "habits"}
+                {visibleHabits.length}{" "}
+                {visibleHabits.length === 1 ? "habit" : "habits"}
               </p>
             </div>
 

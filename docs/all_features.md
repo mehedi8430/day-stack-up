@@ -30,7 +30,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - Default emoji `📋` for new habits
 
 ### 4. Habit Notes
-- **Notes dialog** — open by clicking the habit's name in the calendar row
+- **Notes dialog** — open from the habit row's three-dot menu
 - View, add, and edit free-form notes per habit
 - Notes are stored on the `habits` table (migrated from per-completion notes)
 
@@ -78,6 +78,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 
 ### 8. Habit Progress (`/progress`)
 - **Week / Month reporting periods** — weeks are **month-anchored** (1–7, 8–14, 15–21, 22–28, 29–month end; the final week can be shorter); previous/next navigation moves one week bucket or month at a time, and forward navigation stops at the current period
+- **Direct habit view** — clicking a habit name in the calendar opens `/progress?habit=<id>`, with the summary and cards scoped to that habit and a link back to all habits
 - **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
 - **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
 - **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
