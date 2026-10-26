@@ -72,7 +72,7 @@ export function CalendarToolbar({
             <span className="hidden sm:inline">Daily Planner</span>
           </Button>
         </Link>
-        <Button onClick={onAddHabit} className="gap-2 px-2.5 sm:px-4">
+        <Button variant={"outline"} onClick={onAddHabit} className="gap-2 px-2.5 sm:px-4 hover:bg-gray-300 hover:text-gray-800">
           <Plus className="h-4 w-4" />{" "}
           <span className="hidden sm:inline">Add Habit</span>
         </Button>

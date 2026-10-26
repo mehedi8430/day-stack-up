@@ -16,9 +16,9 @@ export function CalendarProgressBar({
   const trendLabel = isFuture
     ? "Not started yet"
     : change > 0
-      ? `↑ ${change}% from ${comparisonLabel}`
+      ? `↑ up ${change}% from ${comparisonLabel}`
       : change < 0
-        ? `↓ ${Math.abs(change)}% from ${comparisonLabel}`
+        ? `↓ down ${Math.abs(change)}% from ${comparisonLabel}`
         : `No change from ${comparisonLabel}`;
 
   const trendClassName = isFuture
