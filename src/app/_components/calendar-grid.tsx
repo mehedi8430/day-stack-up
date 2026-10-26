@@ -4,15 +4,13 @@ import * as React from "react";
 import {
   addDays,
   addMonths,
-  addWeeks,
   startOfDay,
-  startOfWeek,
   subDays,
   subMonths,
-  subWeeks,
 } from "date-fns";
 import { Plus } from "lucide-react";
 import { useHabitStore } from "@/stores/habit.store";
+import { getMonthWeek, shiftMonthWeek } from "@/lib/date";
 import {
   buildScheduleTimelines,
   computeRangeRate,
@@ -64,7 +62,7 @@ export default function CalendarGrid({
   const [cursor, setCursor] = React.useState<Date>(new Date());
   const [today] = React.useState<Date>(() => startOfDay(new Date()));
   const latestWeekStart = React.useMemo(
-    () => startOfWeek(today, { weekStartsOn: 6 }),
+    () => getMonthWeek(today).start,
     [today],
   );
   const [weekStart, setWeekStart] = React.useState<Date>(() => latestWeekStart);
@@ -133,13 +131,15 @@ export default function CalendarGrid({
 
   const handlePreviousRange = () => {
     if (view === "month") setCursor((c) => subMonths(c, 1));
-    else if (view === "week") setWeekStart((start) => subWeeks(start, 1));
+    else if (view === "week")
+      setWeekStart((start) => shiftMonthWeek(start, -1));
     else setRollingEnd((end) => subDays(end, 15));
   };
 
   const handleNextRange = () => {
     if (view === "month") setCursor((c) => addMonths(c, 1));
-    else if (view === "week") setWeekStart((start) => addWeeks(start, 1));
+    else if (view === "week")
+      setWeekStart((start) => shiftMonthWeek(start, 1));
     else setRollingEnd((end) => addDays(end, 15));
   };
 

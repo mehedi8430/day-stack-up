@@ -21,7 +21,7 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
   - `src/app/actions/` — server actions for habits, completions, planner, and milestones
   - `src/app/api/auth/` — auth endpoints for login, logout, signup, and session
   - `src/app/habits/` — milestone hub and per-habit milestone management pages
-  - `src/app/planner/` — weekly planner screen (Saturday-start week strip + day view) and task UI
+  - `src/app/planner/` — weekly planner screen (month-anchored week strip + day view) and task UI
   - `src/app/analytics/` — analytics dashboard
   - `src/app/page.tsx` — main habit calendar landing page
 - `src/components/` — shared UI like header, back button, and UI primitives

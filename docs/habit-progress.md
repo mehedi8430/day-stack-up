@@ -97,8 +97,9 @@ when ready.
 ## 4. Period model
 
 `getProgressPeriod(view, cursor, today)` in `src/lib/habit-progress.ts`
-describes the period being viewed. Weeks run **Monday–Sunday**
-(`startOfWeek(..., { weekStartsOn: 1 })`); months are calendar months.
+describes the period being viewed. Weeks are **month-anchored** (1–7, 8–14,
+15–21, 22–28, 29–month end), so the final week of a month can be shorter than
+seven days; months are calendar months.
 
 | Field | Meaning |
 | --- | --- |
@@ -106,17 +107,18 @@ describes the period being viewed. Weeks run **Monday–Sunday**
 | `start` | First calendar day of the period |
 | `end` | Last calendar day of the period, including future days |
 | `effectiveEnd` | Last day completions are counted (`today` for the current period); targets use the full period instead |
-| `totalDays` | Calendar length (7, or 28–31) |
+| `totalDays` | Calendar length (1–7 for a week, or 28–31 for a month) |
 | `elapsedDays` | Days through the effective end; `0` for a future period |
 | `isCurrent` | `today` falls inside the period |
 | `isFuture` | The period starts after today |
 
-Navigation behavior (unchanged from v1):
+Navigation behavior:
 
-- Previous/next step one week or one month at a time; forward navigation is
-  disabled at the current period.
+- Previous/next step one month-anchored week bucket or one month at a time;
+  navigation crosses month boundaries without skipping a short final week.
+  Forward navigation is disabled at the current period.
 - "This week" / "This month" resets the cursor.
-- The period label is `Oct 19 – Oct 25, 2026` (weeks) or `MMMM yyyy` (months),
+- The period label is `Oct 22 – Oct 28, 2026` (weeks) or `MMMM yyyy` (months),
   announced through `aria-live`.
 
 ## 5. Targets and eligibility
@@ -188,7 +190,7 @@ remain raw completion counts for the visible range.
 ## 6. Comparison with the previous period
 
 `getPreviousProgressPeriod(current)` returns the immediately preceding
-Monday–Sunday week or calendar month **at full length**. v2 compares
+month-anchored week bucket or calendar month **at full length**. v2 compares
 **goal with goal**: each period is measured against its own full-period
 target, so the previous period is no longer clipped to the current period's
 elapsed days (that clipping belonged to the daily-pace model of v1). The page
@@ -295,22 +297,22 @@ home-header Progress link, proxy protection, level legend/thresholds.
 
 ## 11. Worked examples
 
-Current date: Oct 25, 2026 (a Sunday). Week = Mon–Sun.
+Current date: Oct 25, 2026 (a Sunday). Week = Oct 22–28.
 
-1. **"5 days per week" habit, viewed Thursday Oct 22 (current week)**
-   - Week Oct 19–25; today Oct 22.
+1. **"5 days per week" habit, viewed Saturday Oct 24 (current week)**
+   - Week Oct 22–28; today Oct 24.
    - Target = full week `5` (share `5/7` a day × 7).
-   - 3 completions (Mon–Wed) → `3/5` = **60% → Advanced**; completed still
-     counts only through Thursday.
-   - Previous week (Oct 12–18) is taken at full length; if it also had target
+   - 3 completions (Oct 22–24) → `3/5` = **60% → Advanced**; completed still
+     counts only through Saturday.
+   - Previous week (Oct 15–21) is taken at full length; if it also had target
      5, its goal is `5` too.
 
-2. **Daily habit, same Thursday**
+2. **Daily habit, same Saturday**
    - Target 7 → `3/7 ≈ 43% → Intermediate`. Identical denominators to v1's
      full-past-week case; only the access check (created before) gates it.
 
-3. **Target change mid-week (5×/week since Oct 21, daily before)**
-   - Days Oct 19–20 contribute share `1` each, Oct 21–25 contribute `5/7` →
+3. **Target change mid-week (5×/week since Oct 24, daily before)**
+   - Days Oct 22–23 contribute share `1` each, Oct 24–28 contribute `5/7` →
      week target `2 + 25/7 ≈ 5.57`; historical days keep the old target.
 
 4. **Monthly "5 days per week" across October (created Sep 1)**
@@ -320,7 +322,7 @@ Current date: Oct 25, 2026 (a Sunday). Week = Mon–Sun.
    - Eligible days Oct 21–31 = 11 → target `5/7 × 11 ≈ 7.9`; earlier dates are
      trimmed by the creation gate.
 
-6. **Overachievement (viewed Sunday)**
+6. **Overachievement (completed week)**
    - Target 5, 7 completions → `140% → Legendary`; the bar renders at 100%,
      the label shows 140%.
 
@@ -332,9 +334,10 @@ Current date: Oct 25, 2026 (a Sunday). Week = Mon–Sun.
 ## 12. Validation performed
 
 - **Committed test suite** `scripts/habit-progress.test.mjs`
-  (`npm run test`, Node's built-in runner — no new dependencies): 24 tests
-  covering schedule-history resolution, full-period weekly targets, daily
-  habits, mid-week/mid-month target changes, monthly proportionality with
+  (`npm run test`, Node's built-in runner — no new dependencies): 26 tests
+  covering month-anchored week buckets and navigation, schedule-history
+  resolution, full-period weekly targets, daily habits, mid-week/mid-month
+  target changes, monthly proportionality with
   creation trimming, overachievement >100%, future/zero-target N/A rules,
   previous-period semantics, comparison deltas, pooled summaries, target
   formatting, calendar range rates (weekly weighting, creation trimming,

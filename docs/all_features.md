@@ -14,7 +14,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Multi-user isolation** — RLS policies on every table guarantee each user only sees their own data
 
 ### 2. Habit Calendar (home `/`)
-- **Range grid view** — switch between Week (Saturday–Friday, defaulting to the previous complete week), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "Last week" jump; habits are rows and days are columns with sticky first/last columns
+- **Range grid view** — switch between Week (month-anchored buckets: 1–7, 8–14, 15–21, 22–28, 29–month end; the final week can be shorter, and the current week is the default), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "This week" jump; habits are rows and days are columns with sticky first/last columns
 - **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
@@ -30,7 +30,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - Default emoji `📋` for new habits
 
 ### 4. Habit Notes
-- **Notes dialog** — open by clicking the habit's name in the calendar row
+- **Notes dialog** — open from the habit row's three-dot menu
 - View, add, and edit free-form notes per habit
 - Notes are stored on the `habits` table (migrated from per-completion notes)
 
@@ -53,10 +53,12 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Delete task** — confirmation dialog before removal
 - **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations)
 - Footer note reminding that time blocks are guidance
-- **Weekly planner strip** — a collapsible 7-day strip (weeks start **Saturday**:
-  Sat → Fri) opened from the "Weekly planner" button. Each day previews up to 3
-  of its tasks, has a per-day quick-add input, and can be clicked to open that
-  day below; includes week navigation (prev / next / this week)
+- **Weekly planner strip** — a collapsible strip for the month-anchored week
+  containing the selected date (1–7, 8–14, 15–21, 22–28, 29–month end; the
+  final week can be shorter) opened from the "Weekly planner" button. Each day
+  previews up to 3 of its tasks, has a per-day quick-add input, and can be
+  clicked to open that day below; includes week navigation (prev / next / this
+  week)
 
 ### 7. Analytics Dashboard (`/analytics`)
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
@@ -65,22 +67,30 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
   - **Level badge** — Beginner → Intermediate → Advanced → Elite → Legendary based on average score
   - Active habit count
   - Best/current streak (🔥)
-        - **Time Worked chart** — hours from completed/in-progress planner task durations; per-day, per-week (toggleable in month view), or per-month (year view); supports **Bar/Line view toggle** with Bar as default
+        - **Time Worked chart** — hours from completed/in-progress planner task durations; per-day, per-week (month-anchored buckets, toggleable in month view), or per-month (year view); supports **Bar/Line view toggle** with Bar as default
        - **Monthly Completion chart** (year view) — % of habits completed in each month
        - **Per-Habit Completion bar chart** — color-coded by category
        - **Daily Score line chart** — % of habits completed each day
        - **Streaks panel** — current (🔥) and best (🏆) streak for every habit
+       - **Habit Stability panel** — a habit selector displays one weekly
+         completion sparkline at a time, defaulting to the first habit, across
+         up to 12 completed Monday–Sunday weeks (excluding the current and
+         partial creation weeks). Stability labels use standard deviation:
+         High (≤1.25), Moderate (≤2.25), and Low (>2.25) completions per week;
+         new habits are marked Building and zero-activity habits are called out
+         separately.
        - **Yearly Heatmap** (GitHub-style) — completion density per day with tooltips and a less/more legend
-       - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or week
+       - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or month-anchored week
 - Empty state when no habits exist yet
 
 ### 8. Habit Progress (`/progress`)
-- **Week / Month reporting periods** — weeks run **Monday–Sunday**; previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
+- **Week / Month reporting periods** — weeks are **month-anchored** (1–7, 8–14, 15–21, 22–28, 29–month end; the final week can be shorter); previous/next navigation moves one week bucket or month at a time, and forward navigation stops at the current period
+- **Direct habit view** — clicking a habit name in the calendar opens `/progress?habit=<id>`, with the summary and cards scoped to that habit and a link back to all habits
 - **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
 - **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
 - **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
 - **Target-based math** — weekly progress is `completed occurrences / weekly target × 100`; monthly targets are proportional (`weeklyTarget/7 × eligible days`, trimmed by the habit's creation date and replayed across target changes via `habit_schedules` history)
-- **Full-period goal view** — current periods always show progress against the full-period target (weeks show the full weekly target; a month shows its whole proportional target), so users can see how far they are toward the goal; comparisons use full-period goals on both sides (documented on the page)
+- **Full-period goal view** — current periods always show progress against the full-period target (a full week shows the whole weekly target, a short final week shows its proportional share, and a month shows its whole proportional target), so users can see how far they are toward the goal; comparisons use full-period goals on both sides (documented on the page)
 - **Overachievement** — percentages can exceed 100% (e.g. 7 completions for a 5-days/week target = 140%); progress bars fill at most to 100% while labels show the real value
 - **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same; overachievement maps to Legendary
 - **N/A handling** — future periods, habit-not-yet-created ranges, and zero targets show `N/A` instead of `0%`

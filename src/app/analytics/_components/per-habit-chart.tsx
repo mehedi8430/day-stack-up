@@ -33,7 +33,7 @@ interface PerHabitChartProps {
 
 export function PerHabitChart({ data, dayCount }: PerHabitChartProps) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Per-Habit Completion</CardTitle>
         <CardDescription>

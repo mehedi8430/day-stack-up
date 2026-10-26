@@ -24,6 +24,7 @@ const {
   buildCompletionMap,
   buildScheduleTimelines,
   compareMetrics,
+  computeHabitStability,
   computeHabitPeriodMetric,
   computeRangeRate,
   formatTargetCount,
@@ -35,11 +36,15 @@ const {
   isHabitEligibleOn,
 } = await import("../src/lib/habit-progress.ts");
 
+const { getMonthWeek, getMonthWeekDays, shiftMonthWeek, toKey } = await import(
+  "../src/lib/date.ts"
+);
+
 // Local-noon dates keep every assertion independent of the test machine's
 // timezone: noon is far from any midnight boundary in every real zone.
 const ymd = (year, month, day) => new Date(year, month - 1, day, 12);
 const Y = 2026; // test year
-// Monday 2026-10-19 through Sunday 2026-10-25 (current week in the tests).
+// Current month-anchored week in the tests: Oct 15-21, 2026.
 const MON = 19, TUE = 20, WED = 21, SUN = 25;
 
 const baseHabit = {
@@ -49,6 +54,77 @@ const baseHabit = {
   createdAt: "2026-10-21T09:00:00.000Z",
   weeklyTarget: 5,
 };
+
+test("habit stability uses the last 12 completed weeks and measures variation", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    {
+      "h1__2026-10-12": true,
+      "h1__2026-10-13": true,
+      "h1__2026-10-14": true,
+      "h1__2026-10-15": true,
+      "h1__2026-10-19": true,
+      "h1__2026-10-20": true,
+      "h1__2026-10-21": true,
+      "h1__2026-10-22": true,
+      "h1__2026-10-23": true,
+      "h1__2026-10-24": true,
+    },
+    ymd(2026, 10, 26),
+  );
+
+  assert.equal(stability.weeklyCompletions.length, 12);
+  assert.deepEqual(stability.weeklyCompletions.slice(-2), [4, 6]);
+  assert.equal(stability.min, 0);
+  assert.equal(stability.max, 6);
+  assert.equal(stability.variation, 6);
+  assert.equal(stability.level, "moderate");
+});
+
+test("habit stability excludes partial creation weeks and waits for enough data", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-10-20T09:00:00.000Z" },
+    { "h1__2026-10-20": true },
+    ymd(2026, 10, 26),
+  );
+
+  assert.deepEqual(stability.weeklyCompletions, []);
+  assert.equal(stability.min, null);
+  assert.equal(stability.max, null);
+  assert.equal(stability.variation, null);
+  assert.equal(stability.level, "building");
+});
+
+test("habit stability is high for steady completion frequency", () => {
+  const completions = {};
+  for (let week = 0; week < 12; week += 1) {
+    for (let day = 0; day < 4; day += 1) {
+      const date = ymd(2026, 8, 3 + week * 7 + day);
+      completions[`h1__${toKey(date)}`] = true;
+    }
+  }
+
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    completions,
+    ymd(2026, 10, 26),
+  );
+
+  assert.deepEqual(stability.weeklyCompletions, Array(12).fill(4));
+  assert.equal(stability.variation, 0);
+  assert.equal(stability.level, "high");
+});
+
+test("habit stability does not label zero activity as high", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    {},
+    ymd(2026, 10, 26),
+  );
+
+  assert.equal(stability.level, "inactive");
+  assert.equal(stability.variation, 0);
+});
 
 const dailyHabit = { ...baseHabit, id: "h1", createdAt: "2026-01-01T09:00:00.000Z", weeklyTarget: 7 };
 
@@ -67,6 +143,52 @@ const day = (d) => d < 10 ? `2026-10-0${d}` : `2026-10-${d}`;
 
 test("DAYS_PER_WEEK backs the proportional share", () => {
   assert.equal(DAYS_PER_WEEK, 7);
+});
+
+test("month-anchored weeks start on the 1st and end at month end", () => {
+  const first = getMonthWeek(ymd(Y, 10, 1));
+  assert.equal(first.start.getDate(), 1);
+  assert.equal(first.end.getDate(), 7);
+  assert.equal(first.index, 1);
+  assert.equal(first.count, 5);
+
+  const fourth = getMonthWeek(ymd(Y, 10, 26));
+  assert.equal(fourth.start.getDate(), 22);
+  assert.equal(fourth.end.getDate(), 28);
+  assert.equal(fourth.index, 4);
+
+  const last = getMonthWeek(ymd(Y, 10, 29));
+  assert.equal(last.start.getDate(), 29);
+  assert.equal(last.end.getDate(), 31);
+  assert.equal(last.index, 5);
+  assert.equal(getMonthWeekDays(ymd(Y, 10, 29)).length, 3);
+
+  const feb = getMonthWeek(ymd(Y, 2, 22));
+  assert.equal(feb.count, 4);
+  assert.equal(feb.end.getDate(), 28);
+});
+
+test("shiftMonthWeek crosses months without skipping short weeks", () => {
+  const nextMonth = shiftMonthWeek(ymd(Y, 10, 29), 1);
+  assert.equal(nextMonth.getMonth(), 10); // November
+  assert.equal(nextMonth.getDate(), 1);
+
+  const previousMonth = shiftMonthWeek(ymd(Y, 11, 1), -1);
+  assert.equal(previousMonth.getMonth(), 9); // October
+  assert.equal(previousMonth.getDate(), 29);
+
+  const march = shiftMonthWeek(ymd(Y, 2, 22), 1);
+  assert.equal(march.getMonth(), 2); // March
+  assert.equal(march.getDate(), 1);
+
+  const february = shiftMonthWeek(ymd(Y, 3, 1), -1);
+  assert.equal(february.getMonth(), 1); // February
+  assert.equal(february.getDate(), 22);
+
+  const previousYear = shiftMonthWeek(ymd(Y, 1, 1), -1);
+  assert.equal(previousYear.getFullYear(), Y - 1);
+  assert.equal(previousYear.getMonth(), 11); // December
+  assert.equal(previousYear.getDate(), 29);
 });
 
 test("sanitizeWeeklyTarget defaults corrupt values to daily and keeps true zero", () => {
@@ -157,7 +279,7 @@ test("mid-week target changes are replayed from schedule history", () => {
   const today = ymd(Y, 10, WED);
   const period = getProgressPeriod("week", today, today);
 
-  // 7 until Oct 20 inclusive, 5 from Oct 21: shares 2*1 + 5*(5/7).
+  // Week Oct 15-21: 7 until Oct 20 inclusive, 5 from Oct 21.
   const metric = computeHabitPeriodMetric(
     { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" },
     buildScheduleTimelines([
@@ -169,8 +291,8 @@ test("mid-week target changes are replayed from schedule history", () => {
   );
 
   assert.equal(metric.completed, 3);
-  assert.ok(Math.abs(metric.target - (2 + (5 / 7) * 5)) < 1e-9);
-  assert.ok(Math.abs(metric.percentage - (3 / (2 + (5 / 7) * 5)) * 100) < 1e-6);
+  assert.ok(Math.abs(metric.target - (6 + 5 / 7)) < 1e-9);
+  assert.ok(Math.abs(metric.percentage - (3 / (6 + 5 / 7)) * 100) < 1e-6);
   assert.equal(metric.level.label, "Intermediate");
 });
 
@@ -233,14 +355,20 @@ test("a new target mid-month applies only from its start date", () => {
 });
 
 test("overachievement exceeds 100 percent and maps to the top level", () => {
-  const today = ymd(Y, 10, SUN);
-  const week = getProgressPeriod("week", today, today);
+  // A completed month-anchored week: Oct 22-28, 2026.
+  const week = getProgressPeriod("week", ymd(Y, 10, 22), ymd(Y, 11, 1));
 
   const metric = computeHabitPeriodMetric(
     { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" },
     buildScheduleTimelines([scheduleRow("h1", "2026-01-01", 5)]),
     completionsFor("h1", [
-      day(MON), day(TUE), day(WED), "2026-10-22", "2026-10-23", "2026-10-24", day(SUN),
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
     ]),
     week,
   );
@@ -284,8 +412,8 @@ test("future periods and zero targets render as N/A", () => {
     completionsFor("h1", []),
     getProgressPeriod("week", ymd(Y, 9, 28), today),
   );
-  // Week Sep 28 - Oct 4; created Oct 21 -> only days before creation remain,
-  // target sums to zero.
+  // Week Sep 22-28; created Oct 21 -> the whole week predates creation,
+  // so the target sums to zero.
   assert.equal(beforeCreation.target, 0);
   assert.equal(beforeCreation.percentage, null);
 });
@@ -295,8 +423,8 @@ test("getPreviousProgressPeriod keeps full length and zero stays N/A for future"
   const current = getProgressPeriod("week", today, today);
   const previous = getPreviousProgressPeriod(current);
 
-  assert.equal(previous.start.getDate(), 12); // Monday Oct 12
-  assert.equal(previous.end.getDate(), 18);
+  assert.equal(previous.start.getDate(), 8); // Week Oct 8-14
+  assert.equal(previous.end.getDate(), 14);
   assert.equal(previous.elapsedDays, 7);
   assert.equal(previous.isCurrent, false);
 
@@ -314,7 +442,7 @@ test("previous progress periods also compare completed counts", () => {
   const metric = computeHabitPeriodMetric(
     habit,
     timelines,
-    completionsFor("h1", ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]),
+    completionsFor("h1", ["2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]),
     previous,
   );
 

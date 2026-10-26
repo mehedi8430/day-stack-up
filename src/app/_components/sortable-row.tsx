@@ -1,13 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { isToday } from "date-fns";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
-import { getCategory, Habit } from "@/lib/types";
+import {
+  GripVertical,
+  Milestone,
+  MoreVertical,
+  Pencil,
+  StickyNote,
+  Trash2,
+} from "lucide-react";
+import { getCategory, getWeeklyTargetLabel, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -73,39 +87,59 @@ export function SortableRow({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => onOpenNotes(habit)}
-          className="max-w-[120px] truncate text-left font-medium hover:underline sm:max-w-60"
-          title="Open notes"
+        <Link
+          href={`/progress?habit=${encodeURIComponent(habit.id)}`}
+          className="flex min-w-0 max-w-[120px] items-baseline text-left font-medium hover:underline sm:max-w-70"
+          title="View progress"
         >
-          {habit.name}
-        </button>
-        <span
+          <span className="min-w-0 truncate">{habit.name}</span>
+          <span
+            className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground"
+            title={getWeeklyTargetLabel(habit.weeklyTarget)}
+          >
+            ({habit.weeklyTarget})
+          </span>
+        </Link>
+        {/* <span
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: cat.color }}
           title={cat.label}
-        />
-        <div className="ml-auto flex items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:[&:hover]:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onEdit(habit)}
-            aria-label="Edit habit"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive"
-            onClick={() => onDelete(habit)}
-            aria-label="Delete habit"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        /> */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto h-7 w-7 shrink-0"
+              aria-label={`Actions for ${habit.name}`}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={() => onEdit(habit)}>
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onOpenNotes(habit)}>
+              <StickyNote className="h-3.5 w-3.5" />
+              Notes
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/habits/${habit.id}/milestones`}>
+                <Milestone className="h-3.5 w-3.5" />
+                Milestones
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => onDelete(habit)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {days.map((d) => {

@@ -7,12 +7,15 @@ import {
   min,
   startOfDay,
   startOfMonth,
-  startOfWeek,
   subDays,
   subMonths,
-  subWeeks,
 } from "date-fns";
-import { getMonthDays } from "@/lib/date";
+import {
+  getMonthDays,
+  getMonthWeek,
+  getMonthWeekDays,
+  shiftMonthWeek,
+} from "@/lib/date";
 
 export type CalendarView = "week" | "month" | "last15";
 
@@ -27,10 +30,6 @@ export interface RangeLabels {
   rangeLabel: string;
   rangeNoun: string;
   comparisonLabel: string;
-}
-
-export function getWeekDays(weekStart: Date): Date[] {
-  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
 
 export function getRollingDays(end: Date, count: number): Date[] {
@@ -81,8 +80,8 @@ export function getCalendarRange({
   today: Date;
 }): CalendarRange {
   if (view === "week") {
-    const weekDays = getWeekDays(weekStart);
-    const currentWeekStart = startOfWeek(today, { weekStartsOn: 6 });
+    const weekDays = getMonthWeekDays(weekStart);
+    const currentWeekStart = getMonthWeek(today).start;
 
     if (weekStart.getTime() > currentWeekStart.getTime()) {
       return {
@@ -97,7 +96,7 @@ export function getCalendarRange({
     const progressDays = isCurrentWeek
       ? weekDays.filter((day) => day <= today)
       : weekDays;
-    const previousWeekDays = getWeekDays(subWeeks(weekStart, 1));
+    const previousWeekDays = getMonthWeekDays(shiftMonthWeek(weekStart, -1));
 
     return {
       days: weekDays,
@@ -154,9 +153,9 @@ export function getRangeLabels({
   days: Date[];
 }): RangeLabels {
   const monthLabel = format(cursor, "MMMM yyyy");
-  const weekEnd = addDays(weekStart, 6);
-  const weekLabel = `${format(weekStart, "MMM d")} – ${format(
-    weekEnd,
+  const week = getMonthWeek(weekStart);
+  const weekLabel = `${format(week.start, "MMM d")} – ${format(
+    week.end,
     "MMM d, yyyy",
   )}`;
   const rollingLabel =

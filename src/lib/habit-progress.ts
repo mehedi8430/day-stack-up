@@ -4,12 +4,14 @@ import {
   differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
+  startOfWeek,
   startOfDay,
   startOfMonth,
-  startOfWeek,
 } from "date-fns";
 import {
   getLevel,
+  getMonthWeek,
+  shiftMonthWeek,
   toKey,
   type AchievementLevel,
 } from "@/lib/date";
@@ -137,10 +139,88 @@ export interface MetricComparison {
 
 export type CompletionMap = Record<string, boolean>;
 
-const WEEK_OPTIONS = { weekStartsOn: 1 as const };
+export type HabitStabilityLevel =
+  | "high"
+  | "moderate"
+  | "low"
+  | "building"
+  | "inactive";
+
+export interface HabitStability {
+  weeklyCompletions: number[];
+  min: number | null;
+  max: number | null;
+  variation: number | null;
+  level: HabitStabilityLevel;
+}
 
 export function completionKey(habitId: string, dateKey: string): string {
   return `${habitId}__${dateKey}`;
+}
+
+/**
+ * Measures how much a habit's completion frequency varies across up to the
+ * last 12 fully completed Monday-to-Sunday weeks. Partial creation weeks and
+ * the current, incomplete week are excluded so each point is comparable.
+ */
+export function computeHabitStability(
+  habit: Pick<ProgressHabit, "id" | "createdAt">,
+  completions: CompletionMap,
+  today: Date,
+): HabitStability {
+  const currentWeekStart = startOfWeek(startOfDay(today), { weekStartsOn: 1 });
+  const createdOn = habit.createdAt.slice(0, 10);
+  const weeklyCompletions: number[] = [];
+
+  for (let weekIndex = 11; weekIndex >= 0; weekIndex -= 1) {
+    const weekStart = addDays(currentWeekStart, -7 * (weekIndex + 1));
+    const weekStartKey = toKey(weekStart);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(createdOn) && weekStartKey <= createdOn) {
+      continue;
+    }
+
+    const weekEnd = addDays(weekStart, 6);
+    let completed = 0;
+    for (const day of eachDayOfInterval({ start: weekStart, end: weekEnd })) {
+      if (completions[completionKey(habit.id, toKey(day))]) completed += 1;
+    }
+    weeklyCompletions.push(completed);
+  }
+
+  if (weeklyCompletions.length === 0) {
+    return {
+      weeklyCompletions,
+      min: null,
+      max: null,
+      variation: null,
+      level: "building",
+    };
+  }
+
+  const min = Math.min(...weeklyCompletions);
+  const max = Math.max(...weeklyCompletions);
+  const variation = max - min;
+  const mean =
+    weeklyCompletions.reduce((sum, count) => sum + count, 0) /
+    weeklyCompletions.length;
+  const standardDeviation = Math.sqrt(
+    weeklyCompletions.reduce(
+      (sum, count) => sum + (count - mean) ** 2,
+      0,
+    ) / weeklyCompletions.length,
+  );
+  const level =
+    weeklyCompletions.length < 4
+      ? "building"
+      : mean === 0
+        ? "inactive"
+      : standardDeviation <= 1.25
+        ? "high"
+        : standardDeviation <= 2.25
+          ? "moderate"
+          : "low";
+
+  return { weeklyCompletions, min, max, variation, level };
 }
 
 /**
@@ -160,7 +240,8 @@ export function buildCompletionMap(
 }
 
 /**
- * Returns the selected week (Monday-Sunday) or calendar month.
+ * Returns the selected month-anchored week (1–7, 8–14, …, 29–month end) or
+ * calendar month.
  *
  * The current period keeps `effectiveEnd === today` for the completed count,
  * while its target spans the whole period so users always see progress
@@ -172,11 +253,9 @@ export function getProgressPeriod(
   today: Date,
 ): ProgressPeriod {
   const todayDay = startOfDay(today);
-  const start =
-    view === "week"
-      ? startOfWeek(cursor, WEEK_OPTIONS)
-      : startOfMonth(cursor);
-  const end = view === "week" ? addDays(start, 6) : endOfMonth(start);
+  const week = view === "week" ? getMonthWeek(cursor) : null;
+  const start = week ? week.start : startOfMonth(cursor);
+  const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
   const isFuture = start.getTime() > todayDay.getTime();
   const isCurrent = !isFuture && todayDay.getTime() <= end.getTime();
@@ -207,12 +286,12 @@ export function getProgressPeriod(
 export function getPreviousProgressPeriod(
   current: ProgressPeriod,
 ): ProgressPeriod {
-  const start =
+  const week =
     current.view === "week"
-      ? addDays(current.start, -7)
-      : startOfMonth(addMonths(current.start, -1));
-  const end =
-    current.view === "week" ? addDays(start, 6) : endOfMonth(start);
+      ? getMonthWeek(shiftMonthWeek(current.start, -1))
+      : null;
+  const start = week ? week.start : startOfMonth(addMonths(current.start, -1));
+  const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
   const elapsedDays = current.isFuture ? 0 : totalDays;
 

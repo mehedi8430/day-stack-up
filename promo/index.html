@@ -315,7 +315,7 @@ function s3(t) {
 }
 
 /* ---------- S4 PLANNER ---------- */
-var WEEK = [{ d: 'Sa', n: 17, today: true }, { d: 'Su', n: 18 }, { d: 'Mo', n: 19 }, { d: 'Tu', n: 20 }, { d: 'We', n: 21 }, { d: 'Th', n: 22 }, { d: 'Fr', n: 23 }];
+var WEEK = [{ d: 'Th', n: 15, today: true }, { d: 'Fr', n: 16 }, { d: 'Sa', n: 17 }, { d: 'Su', n: 18 }, { d: 'Mo', n: 19 }, { d: 'Tu', n: 20 }, { d: 'We', n: 21 }];
 var PILL = {
   planned: 'color:#52525b;border:1px solid var(--border);',
   inprog: 'color:#1d4ed8;border:1px solid #bfdbfe;background:#eff6ff;',
@@ -324,7 +324,7 @@ var PILL = {
 function pill(lbl, kind) { return '<span style="display:inline-block;padding:5px 14px;border-radius:999px;font-size:14px;font-weight:500;' + PILL[kind] + '">' + lbl + '</span>'; }
 function buildS4() {
   var wk = Q('s4week'); wk.innerHTML = '';
-  wk.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">This week</div><div class="abs" style="left:26px;top:50px;font-size:14px;color:var(--muted2);">Saturday start</div>');
+  wk.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">This week</div><div class="abs" style="left:26px;top:50px;font-size:14px;color:var(--muted2);">Month-anchored</div>');
   for (var i = 0; i < 7; i++) {
     var chip = WEEK[i];
     var x = 26 + i * 62;
@@ -334,7 +334,7 @@ function buildS4() {
   }
   wk.insertAdjacentHTML('beforeend', '<div class="abs" id="s4wksum" style="left:26px;top:316px;font-size:15px;color:var(--muted);"><span class="bigNum" style="font-weight:600;color:#09090b;">18</span> planned this week &middot; <span class="bigNum" style="font-weight:600;color:#09090b;">12</span> done</div>');
   var dv = Q('s4day'); dv.innerHTML = '';
-  dv.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">Saturday, Oct 17</div>');
+  dv.insertAdjacentHTML('beforeend', '<div class="abs" style="left:26px;top:22px;font-size:17px;font-weight:600;color:var(--ink);">Thursday, Oct 15</div>');
   var TASKS = [
     { t: '07:00', name: 'Morning run', dur: '30m', cat: '#ef4444', base: 'done' },
     { t: '09:30', name: 'Deep work &mdash; Q3 report', dur: '2h', cat: '#3b82f6', base: 'switch' },
