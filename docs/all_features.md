@@ -95,7 +95,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same; overachievement maps to Legendary
 - **N/A handling** — future periods, habit-not-yet-created ranges, and zero targets show `N/A` instead of `0%`
 - **Data flow** — reads habits, completions, and schedule rows through `getInitialData` (all user-scoped); `habit_schedules` is the one new table, added with RLS/CHECK constraints and a backfill for existing habits (`docs/habit-progress.md` §3); migration validated locally, application to the remote database pending (`npm run db:deploy`)
-- **Loading, empty, and error states** — route-level skeleton, no-habits prompt, and retryable error boundary
+- **Loading, empty, and error states** — route-level branded loader, no-habits prompt, and retryable error boundary
 - **Tests** — `npm run test` runs `scripts/habit-progress.test.mjs` (Node's built-in runner) covering targets, schedules history, proportionality, overachievement, N/A rules, and unchanged level thresholds
 - Full behavior, formulas, worked examples, and file map: `docs/habit-progress.md`
 
