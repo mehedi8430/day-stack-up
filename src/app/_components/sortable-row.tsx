@@ -1,9 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { isToday } from "date-fns";
-import { GripVertical, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+  GripVertical,
+  Milestone,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { getCategory, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
@@ -103,10 +110,16 @@ export function SortableRow({
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-36">
+          <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onSelect={() => onEdit(habit)}>
               <Pencil className="h-3.5 w-3.5" />
               Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/habits/${habit.id}/milestones`}>
+                <Milestone className="h-3.5 w-3.5" />
+                Manage milestones
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => onDelete(habit)}
