@@ -3,11 +3,17 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { isToday } from "date-fns";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
+import { GripVertical, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { getCategory, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -86,26 +92,31 @@ export function SortableRow({
           style={{ backgroundColor: cat.color }}
           title={cat.label}
         />
-        <div className="ml-auto flex items-center gap-0.5 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:[&:hover]:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onEdit(habit)}
-            aria-label="Edit habit"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive"
-            onClick={() => onDelete(habit)}
-            aria-label="Delete habit"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto h-7 w-7 shrink-0"
+              aria-label={`Actions for ${habit.name}`}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuItem onSelect={() => onEdit(habit)}>
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => onDelete(habit)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {days.map((d) => {
