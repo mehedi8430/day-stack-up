@@ -72,6 +72,13 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
        - **Per-Habit Completion bar chart** — color-coded by category
        - **Daily Score line chart** — % of habits completed each day
        - **Streaks panel** — current (🔥) and best (🏆) streak for every habit
+       - **Habit Stability panel** — a habit selector displays one weekly
+         completion sparkline at a time, defaulting to the first habit, across
+         up to 12 completed Monday–Sunday weeks (excluding the current and
+         partial creation weeks). Stability labels use standard deviation:
+         High (≤1.25), Moderate (≤2.25), and Low (>2.25) completions per week;
+         new habits are marked Building and zero-activity habits are called out
+         separately.
        - **Yearly Heatmap** (GitHub-style) — completion density per day with tooltips and a less/more legend
        - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or month-anchored week
 - Empty state when no habits exist yet

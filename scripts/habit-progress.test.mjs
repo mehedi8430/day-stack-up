@@ -24,6 +24,7 @@ const {
   buildCompletionMap,
   buildScheduleTimelines,
   compareMetrics,
+  computeHabitStability,
   computeHabitPeriodMetric,
   computeRangeRate,
   formatTargetCount,
@@ -35,7 +36,7 @@ const {
   isHabitEligibleOn,
 } = await import("../src/lib/habit-progress.ts");
 
-const { getMonthWeek, getMonthWeekDays, shiftMonthWeek } = await import(
+const { getMonthWeek, getMonthWeekDays, shiftMonthWeek, toKey } = await import(
   "../src/lib/date.ts"
 );
 
@@ -53,6 +54,77 @@ const baseHabit = {
   createdAt: "2026-10-21T09:00:00.000Z",
   weeklyTarget: 5,
 };
+
+test("habit stability uses the last 12 completed weeks and measures variation", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    {
+      "h1__2026-10-12": true,
+      "h1__2026-10-13": true,
+      "h1__2026-10-14": true,
+      "h1__2026-10-15": true,
+      "h1__2026-10-19": true,
+      "h1__2026-10-20": true,
+      "h1__2026-10-21": true,
+      "h1__2026-10-22": true,
+      "h1__2026-10-23": true,
+      "h1__2026-10-24": true,
+    },
+    ymd(2026, 10, 26),
+  );
+
+  assert.equal(stability.weeklyCompletions.length, 12);
+  assert.deepEqual(stability.weeklyCompletions.slice(-2), [4, 6]);
+  assert.equal(stability.min, 0);
+  assert.equal(stability.max, 6);
+  assert.equal(stability.variation, 6);
+  assert.equal(stability.level, "moderate");
+});
+
+test("habit stability excludes partial creation weeks and waits for enough data", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-10-20T09:00:00.000Z" },
+    { "h1__2026-10-20": true },
+    ymd(2026, 10, 26),
+  );
+
+  assert.deepEqual(stability.weeklyCompletions, []);
+  assert.equal(stability.min, null);
+  assert.equal(stability.max, null);
+  assert.equal(stability.variation, null);
+  assert.equal(stability.level, "building");
+});
+
+test("habit stability is high for steady completion frequency", () => {
+  const completions = {};
+  for (let week = 0; week < 12; week += 1) {
+    for (let day = 0; day < 4; day += 1) {
+      const date = ymd(2026, 8, 3 + week * 7 + day);
+      completions[`h1__${toKey(date)}`] = true;
+    }
+  }
+
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    completions,
+    ymd(2026, 10, 26),
+  );
+
+  assert.deepEqual(stability.weeklyCompletions, Array(12).fill(4));
+  assert.equal(stability.variation, 0);
+  assert.equal(stability.level, "high");
+});
+
+test("habit stability does not label zero activity as high", () => {
+  const stability = computeHabitStability(
+    { id: "h1", createdAt: "2026-01-01T09:00:00.000Z" },
+    {},
+    ymd(2026, 10, 26),
+  );
+
+  assert.equal(stability.level, "inactive");
+  assert.equal(stability.variation, 0);
+});
 
 const dailyHabit = { ...baseHabit, id: "h1", createdAt: "2026-01-01T09:00:00.000Z", weeklyTarget: 7 };
 

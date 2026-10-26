@@ -28,6 +28,8 @@ import { PerHabitChart, PerHabitPoint } from "./per-habit-chart";
 import { DailyScoreChart, DailyScorePoint } from "./daily-score-chart";
 import { StreaksPanel, StreakRow } from "./streaks-panel";
 import { Heatmap, HeatCell } from "./heatmap";
+import { HabitStabilityPanel } from "./habit-stability-panel";
+import { computeHabitStability } from "@/lib/habit-progress";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
@@ -142,6 +144,15 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
   }));
   const yearBestStreak = Math.max(0, ...yearStreaks.map((s) => s.best));
 
+  const habitStability = React.useMemo(
+    () =>
+      sortedHabits.map((habit) => ({
+        habit,
+        stability: computeHabitStability(habit, completions, new Date()),
+      })),
+    [sortedHabits, completions],
+  );
+
   const heatCells: HeatCell[] = yearDays.map((d) => {
     const done = sortedHabits.filter(
       (h) => completions[`${h.id}__${toKey(d)}`]
@@ -202,8 +213,13 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
         <MonthlyCompletionChart yearCursor={yearCursor} data={monthlyChartData} />
       )}
 
-      {view !== "year" && (
-        <PerHabitChart data={perHabitData} dayCount={days.length} />
+      {view !== "year" ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <PerHabitChart data={perHabitData} dayCount={days.length} />
+          <HabitStabilityPanel rows={habitStability} />
+        </div>
+      ) : (
+        <HabitStabilityPanel rows={habitStability} />
       )}
 
       {view !== "year" && <DailyScoreChart data={dailyData} />}
