@@ -1,4 +1,6 @@
 import {
+  addDays,
+  addMonths,
   format,
   startOfMonth,
   endOfMonth,
@@ -9,6 +11,70 @@ import {
 
 export function toKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
+}
+
+export interface MonthWeek {
+  /** First day of the week bucket (1st, 8th, 15th, 22nd, or 29th). */
+  start: Date;
+  /** Last day of the bucket, clamped to the end of the month. */
+  end: Date;
+  /** 1-based index within the month. */
+  index: number;
+  /** Number of week buckets in the month (4 or 5). */
+  count: number;
+}
+
+/**
+ * Weeks are anchored to the month: the first week always starts on the 1st,
+ * and each following week starts seven days later (1–7, 8–14, 15–21, 22–28,
+ * 29–end). The final week can be shorter than seven days.
+ */
+export function getMonthWeek(date: Date): MonthWeek {
+  const monthStart = startOfMonth(date);
+  const monthEnd = endOfMonth(date);
+  const index = Math.floor((date.getDate() - 1) / 7) + 1;
+  const start = addDays(monthStart, (index - 1) * 7);
+  const candidateEnd = addDays(start, 6);
+  const end = candidateEnd > monthEnd ? monthEnd : candidateEnd;
+
+  return {
+    start,
+    end,
+    index,
+    count: Math.ceil(monthEnd.getDate() / 7),
+  };
+}
+
+/** Every calendar day in the month-anchored week containing `date`. */
+export function getMonthWeekDays(date: Date): Date[] {
+  const { start, end } = getMonthWeek(date);
+  return eachDayOfInterval({ start, end });
+}
+
+/**
+ * Moves `offset` month-anchored weeks from `date`, crossing month boundaries
+ * one bucket at a time so the short week at the end of a month is never
+ * skipped.
+ */
+export function shiftMonthWeek(date: Date, offset: number): Date {
+  let week = getMonthWeek(date);
+  const step = offset >= 0 ? 1 : -1;
+
+  for (let i = 0; i < Math.abs(offset); i++) {
+    if (step > 0) {
+      week =
+        week.index < week.count
+          ? getMonthWeek(addDays(week.start, 7))
+          : getMonthWeek(startOfMonth(addMonths(week.start, 1)));
+    } else {
+      week =
+        week.index > 1
+          ? getMonthWeek(addDays(week.start, -7))
+          : getMonthWeek(endOfMonth(addMonths(week.start, -1)));
+    }
+  }
+
+  return week.start;
 }
 
 export function getMonthDays(year: number, month: number): Date[] {

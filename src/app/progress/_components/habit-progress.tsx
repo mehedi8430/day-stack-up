@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  addMonths,
-  addWeeks,
-  format,
-  startOfDay,
-  subMonths,
-  subWeeks,
-} from "date-fns";
+import { addMonths, format, startOfDay, subMonths } from "date-fns";
 import {
   CalendarDays,
   ChevronLeft,
@@ -18,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { shiftMonthWeek } from "@/lib/date";
 import type { Habit } from "@/lib/types";
 import type { CompletionRow } from "@/app/actions/habit.actions";
 import {
@@ -155,14 +149,14 @@ export function HabitProgress({
 
   const handlePrevious = () => {
     setCursor((current) =>
-      view === "week" ? subWeeks(current, 1) : subMonths(current, 1),
+      view === "week" ? shiftMonthWeek(current, -1) : subMonths(current, 1),
     );
   };
 
   const handleNext = () => {
     if (atLatest) return;
     setCursor((current) =>
-      view === "week" ? addWeeks(current, 1) : addMonths(current, 1),
+      view === "week" ? shiftMonthWeek(current, 1) : addMonths(current, 1),
     );
   };
 

@@ -1,15 +1,15 @@
 import {
-  addDays,
   addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   startOfDay,
   startOfMonth,
-  startOfWeek,
 } from "date-fns";
 import {
   getLevel,
+  getMonthWeek,
+  shiftMonthWeek,
   toKey,
   type AchievementLevel,
 } from "@/lib/date";
@@ -137,8 +137,6 @@ export interface MetricComparison {
 
 export type CompletionMap = Record<string, boolean>;
 
-const WEEK_OPTIONS = { weekStartsOn: 1 as const };
-
 export function completionKey(habitId: string, dateKey: string): string {
   return `${habitId}__${dateKey}`;
 }
@@ -160,7 +158,8 @@ export function buildCompletionMap(
 }
 
 /**
- * Returns the selected week (Monday-Sunday) or calendar month.
+ * Returns the selected month-anchored week (1–7, 8–14, …, 29–month end) or
+ * calendar month.
  *
  * The current period keeps `effectiveEnd === today` for the completed count,
  * while its target spans the whole period so users always see progress
@@ -172,11 +171,9 @@ export function getProgressPeriod(
   today: Date,
 ): ProgressPeriod {
   const todayDay = startOfDay(today);
-  const start =
-    view === "week"
-      ? startOfWeek(cursor, WEEK_OPTIONS)
-      : startOfMonth(cursor);
-  const end = view === "week" ? addDays(start, 6) : endOfMonth(start);
+  const week = view === "week" ? getMonthWeek(cursor) : null;
+  const start = week ? week.start : startOfMonth(cursor);
+  const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
   const isFuture = start.getTime() > todayDay.getTime();
   const isCurrent = !isFuture && todayDay.getTime() <= end.getTime();
@@ -207,12 +204,12 @@ export function getProgressPeriod(
 export function getPreviousProgressPeriod(
   current: ProgressPeriod,
 ): ProgressPeriod {
-  const start =
+  const week =
     current.view === "week"
-      ? addDays(current.start, -7)
-      : startOfMonth(addMonths(current.start, -1));
-  const end =
-    current.view === "week" ? addDays(start, 6) : endOfMonth(start);
+      ? getMonthWeek(shiftMonthWeek(current.start, -1))
+      : null;
+  const start = week ? week.start : startOfMonth(addMonths(current.start, -1));
+  const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
   const elapsedDays = current.isFuture ? 0 : totalDays;
 

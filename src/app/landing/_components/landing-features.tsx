@@ -16,7 +16,7 @@ const FEATURES = [
   {
     icon: ListTodo,
     title: "Daily planner",
-    body: "Time-block each day with tasks that move through planned, in progress and done. A Saturday-start week strip keeps the whole week in view.",
+    body: "Time-block each day with tasks that move through planned, in progress and done. A week strip anchored to the month keeps the whole week in view.",
     visual: "planner",
   },
   {

@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { addDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getMonthWeekDays } from "@/lib/date";
 import { sortPlannerTasks } from "@/lib/planner-utils";
 import { usePlannerStore } from "@/stores/planner.store";
 import { DayTasksDialog } from "./day-tasks-dialog";
 import { runPlannerAction } from "./planner-feedback";
 
-const weekdayLabels = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
 const MAX_PREVIEW = 3;
 
 function dateKey(date: Date): string {
@@ -30,8 +30,8 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
   if (!weekStart) return null;
 
   const start = parseISO(`${weekStart}T12:00:00`);
-  const end = addDays(start, 6);
-  const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  const days = getMonthWeekDays(start);
+  const end = days[days.length - 1] ?? start;
 
   const selectDateFromStrip = (date: string) => {
     runPlannerAction(selectDate(date), {
@@ -115,7 +115,7 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
         className={`flex gap-2 overflow-x-auto pb-1 ${isLoading ? "opacity-60" : ""}`}
         aria-busy={isLoading}
       >
-        {days.map((day, index) => {
+        {days.map((day) => {
           const key = dateKey(day);
           const selected = key === selectedDate;
           const isToday = key === today;
@@ -145,7 +145,7 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {weekdayLabels[index]}
+                    {format(day, "EEE")}
                   </p>
                   <p
                     className={`text-lg font-bold ${isToday ? "text-primary" : ""}`}

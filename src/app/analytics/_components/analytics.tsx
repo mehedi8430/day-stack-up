@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { format, isToday, subDays } from "date-fns";
+import { format } from "date-fns";
 import {
   getMonthDays,
+  getMonthWeekDays,
   getYearDays,
   getMonthBuckets,
   toKey,
@@ -55,10 +56,7 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
     () => getMonthDays(cursor.getFullYear(), cursor.getMonth()),
     [cursor]
   );
-  const weekDays = React.useMemo(() => {
-    const end = isToday(cursor) ? new Date() : cursor;
-    return Array.from({ length: 7 }, (_, i) => subDays(end, 6 - i));
-  }, [cursor]);
+  const weekDays = React.useMemo(() => getMonthWeekDays(cursor), [cursor]);
 
   const days = view === "month" ? monthDays : weekDays;
 

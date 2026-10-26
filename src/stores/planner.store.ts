@@ -1,9 +1,9 @@
 "use client";
 
-import { addDays, parseISO, startOfWeek } from "date-fns";
+import { addDays, parseISO } from "date-fns";
 import { create } from "zustand";
 import * as actions from "@/app/actions/planner.actions";
-import { toKey } from "@/lib/date";
+import { getMonthWeek, shiftMonthWeek, toKey } from "@/lib/date";
 import type {
   PlannerPriority,
   PlannerStatus,
@@ -22,9 +22,7 @@ function nextPosition(tasks: PlannerTask[], date: string): number {
 }
 
 function weekStartOf(date: string): string {
-  return toKey(
-    startOfWeek(parseISO(`${date}T12:00:00`), { weekStartsOn: 6 })
-  );
+  return toKey(getMonthWeek(parseISO(`${date}T12:00:00`)).start);
 }
 
 let weekRequestId = 0;
@@ -122,14 +120,16 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
   loadWeek: async (weekStart) => {
     const requestId = ++weekRequestId;
     set({ isLoading: true });
-    const weekEnd = toKey(addDays(parseISO(`${weekStart}T12:00:00`), 6));
+    const week = getMonthWeek(parseISO(`${weekStart}T12:00:00`));
+    const start = toKey(week.start);
+    const end = toKey(week.end);
     try {
-      const { tasks } = await actions.getPlannerTasksBetween(weekStart, weekEnd);
+      const { tasks } = await actions.getPlannerTasksBetween(start, end);
       if (requestId !== weekRequestId) return;
-      set({ tasks, loadedWeekStart: weekStart });
+      set({ tasks, loadedWeekStart: start });
     } catch (error) {
       if (requestId === weekRequestId) {
-        set({ tasks: [], loadedWeekStart: weekStart });
+        set({ tasks: [], loadedWeekStart: start });
       }
       throw error;
     } finally {
@@ -156,7 +156,7 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
 
   changeWeek: async (offset) => {
     const nextDate = toKey(
-      addDays(parseISO(`${get().selectedDate}T12:00:00`), offset * 7)
+      shiftMonthWeek(parseISO(`${get().selectedDate}T12:00:00`), offset)
     );
     await get().selectDate(nextDate);
   },

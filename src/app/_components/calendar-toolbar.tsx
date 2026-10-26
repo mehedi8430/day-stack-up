@@ -60,7 +60,7 @@ export function CalendarToolbar({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={onReset} className="ml-1">
-            {view === "week" ? "Last week" : "Today"}
+            {view === "week" ? "This week" : "Today"}
           </Button>
         </div>
       </div>
