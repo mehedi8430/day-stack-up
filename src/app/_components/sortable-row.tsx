@@ -89,16 +89,16 @@ export function SortableRow({
         <button
           type="button"
           onClick={() => onOpenNotes(habit)}
-          className="max-w-[120px] truncate text-left font-medium hover:underline sm:max-w-60"
+          className="max-w-[120px] truncate text-left font-medium hover:underline sm:max-w-70"
           title="Open notes"
         >
           {habit.name}
         </button>
-        <span
+        {/* <span
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: cat.color }}
           title={cat.label}
-        />
+        /> */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -118,7 +118,7 @@ export function SortableRow({
             <DropdownMenuItem asChild>
               <Link href={`/habits/${habit.id}/milestones`}>
                 <Milestone className="h-3.5 w-3.5" />
-                Manage milestones
+                Milestones
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
