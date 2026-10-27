@@ -18,6 +18,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { chartTooltipStyle } from "./chart-common";
+import { formatTargetCount } from "@/lib/habit-progress";
 
 export interface PerHabitPoint {
   name: string;
@@ -37,7 +38,7 @@ export function PerHabitChart({ data, dayCount }: PerHabitChartProps) {
       <CardHeader>
         <CardTitle>Per-Habit Completion</CardTitle>
         <CardDescription>
-          How many days each habit was completed this month
+          Completions compared with each habit&apos;s target for this period
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -55,7 +56,7 @@ export function PerHabitChart({ data, dayCount }: PerHabitChartProps) {
               />
               <XAxis
                 type="number"
-                domain={[0, dayCount]}
+                domain={[0, Math.max(dayCount, ...data.map((point) => point.days))]}
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
               />
@@ -69,7 +70,7 @@ export function PerHabitChart({ data, dayCount }: PerHabitChartProps) {
               <RTooltip
                 contentStyle={chartTooltipStyle}
                 formatter={(value, _n, item) => [
-                  `${Number(value)} / ${item?.payload?.total} days`,
+                  `${Number(value)} / ${formatTargetCount(Number(item?.payload?.total ?? 0))} target days`,
                   "Completed",
                 ]}
               />

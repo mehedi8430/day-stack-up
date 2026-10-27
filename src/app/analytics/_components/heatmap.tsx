@@ -7,6 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { formatTargetCount } from "@/lib/habit-progress";
 
 const HEATMAP_LEVELS = [
   "rgba(22,163,74,0.12)",
@@ -57,7 +58,7 @@ export function Heatmap({ year, cells }: HeatmapProps) {
                 {week.map((cell) => (
                   <div
                     key={cell.date}
-                    title={`${cell.label}: ${cell.done}/${cell.total} done`}
+                    title={`${cell.label}: ${cell.done}/${formatTargetCount(cell.total)} target days completed`}
                     className="h-3.5 w-3.5 rounded-sm"
                     style={{ backgroundColor: heatColor(cell.ratio) }}
                   />
