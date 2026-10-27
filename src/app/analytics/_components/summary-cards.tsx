@@ -7,19 +7,16 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import type { AchievementLevel } from "@/lib/date";
+import { LevelBadge } from "@/app/progress/_components/progress-ui";
 import { AnalyticsView } from "./analytics-types";
-
-interface Level {
-  label: string;
-  color: string;
-}
 
 interface SummaryCardsProps {
   view: AnalyticsView;
-  completion: number;
+  completion: number | null;
   bestStreak: number;
   habitCount: number;
-  level: Level;
+  level: AchievementLevel | null;
 }
 
 export function SummaryCards({
@@ -34,13 +31,23 @@ export function SummaryCards({
       <Card>
         <CardHeader className="pb-2">
           <CardDescription>
-            {view === "year" ? "Yearly Completion" : "Monthly Completion"}
+            {view === "year"
+              ? "Yearly Completion"
+              : view === "week"
+                ? "Weekly Completion"
+                : "Monthly Completion"}
           </CardDescription>
-          <CardTitle className="text-3xl">{completion}%</CardTitle>
+          <CardTitle className="text-3xl">
+            {completion === null ? "N/A" : `${completion}%`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            of all possible habit-days
+            {view === "year"
+              ? "of yearly target habit-days"
+              : view === "week"
+                ? "of weekly target habit-days"
+                : "of monthly target habit-days"}
           </p>
         </CardContent>
       </Card>
@@ -49,17 +56,16 @@ export function SummaryCards({
         <CardHeader className="pb-2">
           <CardDescription>Level Badge</CardDescription>
           <CardTitle className="flex items-center gap-2 text-2xl">
-            <span
-              className="rounded-md px-2 py-1 text-lg font-bold text-white"
-              style={{ backgroundColor: level.color }}
-            >
-              {level.label}
-            </span>
+            <LevelBadge level={level} className="text-lg" />
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            based on {view === "year" ? "yearly" : "monthly"} average
+            based on {view === "year"
+              ? "yearly"
+              : view === "week"
+                ? "weekly"
+                : "monthly"} progress
           </p>
         </CardContent>
       </Card>
@@ -77,7 +83,7 @@ export function SummaryCards({
       <Card>
         <CardHeader className="pb-2">
           <CardDescription>
-            {view === "year" ? "Best Streak" : "Best Current Streak"}
+            {view === "year" ? "Best Streak" : "Current Streak"}
           </CardDescription>
           <CardTitle className="text-3xl">{bestStreak} 🔥</CardTitle>
         </CardHeader>

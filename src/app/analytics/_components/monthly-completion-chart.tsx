@@ -20,21 +20,20 @@ import { chartTooltipStyle } from "./chart-common";
 
 export interface MonthlyCompletionPoint {
   month: string;
-  score: number;
+  score: number | null;
 }
 
 interface MonthlyCompletionChartProps {
-  yearCursor: number;
   data: MonthlyCompletionPoint[];
 }
 
-export function MonthlyCompletionChart({ yearCursor, data }: MonthlyCompletionChartProps) {
+export function MonthlyCompletionChart({ data }: MonthlyCompletionChartProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Monthly Completion</CardTitle>
         <CardDescription>
-          % of habits completed in each month of {yearCursor}
+          Completion compared with each month&apos;s eligible target
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -52,13 +51,16 @@ export function MonthlyCompletionChart({ yearCursor, data }: MonthlyCompletionCh
                 className="fill-muted-foreground"
               />
               <YAxis
-                domain={[0, 100]}
+                domain={[0, "auto"]}
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
               />
               <RTooltip
                 contentStyle={chartTooltipStyle}
-                formatter={(value) => [`${Number(value)}%`, "Completion"]}
+                formatter={(value) => [
+                  value == null ? "N/A" : `${Number(value)}%`,
+                  "Completion",
+                ]}
               />
               <Bar
                 dataKey="score"

@@ -12,6 +12,7 @@ export default async function AnalyticsPage() {
       <Analytics
         initialHabits={data.habits}
         initialCompletions={data.completions}
+        initialSchedules={data.schedules}
         initialPlannerTasks={planner.tasks}
       />
     </div>

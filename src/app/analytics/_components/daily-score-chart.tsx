@@ -21,7 +21,7 @@ import { chartTooltipStyle } from "./chart-common";
 export interface DailyScorePoint {
   date: string;
   full: string;
-  score: number;
+  score: number | null;
 }
 
 interface DailyScoreChartProps {
@@ -34,7 +34,7 @@ export function DailyScoreChart({ data }: DailyScoreChartProps) {
       <CardHeader>
         <CardTitle>Daily Score</CardTitle>
         <CardDescription>
-          % of habits completed each day this month
+          Completion compared with the eligible daily target
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -52,13 +52,16 @@ export function DailyScoreChart({ data }: DailyScoreChartProps) {
                 interval="preserveStartEnd"
               />
               <YAxis
-                domain={[0, 100]}
+                domain={[0, "auto"]}
                 tick={{ fontSize: 12 }}
                 className="fill-muted-foreground"
               />
               <RTooltip
                 contentStyle={chartTooltipStyle}
-                formatter={(value) => [`${Number(value)}%`, "Score"]}
+                formatter={(value) => [
+                  value == null ? "N/A" : `${Number(value)}%`,
+                  "Score",
+                ]}
                 labelFormatter={(_l, payload) =>
                   (payload?.[0]?.payload?.full as string) ?? ""
                 }

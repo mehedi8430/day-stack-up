@@ -8,13 +8,10 @@ import {
   getYearDays,
   getMonthBuckets,
   toKey,
-  monthlyAverageScore,
-  yearlyCompletionRatio,
   getLevel,
   computeStreaks,
   formatDayShort,
 } from "@/lib/date";
-import { useHabitStore } from "@/stores/habit.store";
 import { getCategory, Habit } from "@/lib/types";
 import { CompletionRow } from "@/app/actions/habit.actions";
 import { PlannerTask } from "@/lib/planner-types";
@@ -23,40 +20,52 @@ import { AnalyticsView } from "./analytics-types";
 import { AnalyticsHeader } from "./analytics-header";
 import { SummaryCards } from "./summary-cards";
 import { TimeWorkedChart } from "./time-worked-chart";
-import { MonthlyCompletionChart, MonthlyCompletionPoint } from "./monthly-completion-chart";
+import {
+  MonthlyCompletionChart,
+  MonthlyCompletionPoint,
+} from "./monthly-completion-chart";
 import { PerHabitChart, PerHabitPoint } from "./per-habit-chart";
 import { DailyScoreChart, DailyScorePoint } from "./daily-score-chart";
 import { StreaksPanel, StreakRow } from "./streaks-panel";
 import { Heatmap, HeatCell } from "./heatmap";
 import { HabitStabilityPanel } from "./habit-stability-panel";
-import { computeHabitStability } from "@/lib/habit-progress";
+import {
+  buildCompletionMap,
+  buildScheduleTimelines,
+  computeHabitPeriodMetric,
+  computeHabitStability,
+  computeRangeRate,
+  getProgressPeriod,
+  isHabitEligibleOn,
+  summarizeMetrics,
+  type HabitScheduleRow,
+} from "@/lib/habit-progress";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
+  initialSchedules: HabitScheduleRow[];
   initialPlannerTasks: PlannerTask[];
 }
 
-export function Analytics({ initialHabits, initialCompletions, initialPlannerTasks }: AnalyticsProps) {
-  const habits = useHabitStore((s) => s.habits);
-  const completions = useHabitStore((s) => s.completions);
-  const initialized = useHabitStore((s) => s.initialized);
-  const initialize = useHabitStore((s) => s.initialize);
-
-  React.useEffect(() => {
-    if (!initialized) {
-      initialize(initialHabits, initialCompletions);
-    }
-  }, [initialized, initialize, initialHabits, initialCompletions]);
-
+export function Analytics({
+  initialHabits,
+  initialCompletions,
+  initialSchedules,
+  initialPlannerTasks,
+}: AnalyticsProps) {
   const [cursor, setCursor] = React.useState<Date>(() => new Date());
-  const [yearCursor, setYearCursor] = React.useState<number>(new Date().getFullYear());
+  const [yearCursor, setYearCursor] = React.useState<number>(
+    new Date().getFullYear(),
+  );
   const [view, setView] = React.useState<AnalyticsView>("month");
-  const [plannerTasks, setPlannerTasks] = React.useState<PlannerTask[]>(initialPlannerTasks);
+  const [plannerTasks, setPlannerTasks] =
+    React.useState<PlannerTask[]>(initialPlannerTasks);
+  const [today] = React.useState(() => new Date());
 
   const monthDays = React.useMemo(
     () => getMonthDays(cursor.getFullYear(), cursor.getMonth()),
-    [cursor]
+    [cursor],
   );
   const weekDays = React.useMemo(() => getMonthWeekDays(cursor), [cursor]);
 
@@ -87,60 +96,137 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
   }, [from, to]);
 
   const sortedHabits = React.useMemo(
-    () => [...habits].sort((a, b) => a.order - b.order),
-    [habits]
+    () => [...initialHabits].sort((a, b) => a.order - b.order),
+    [initialHabits],
   );
 
-  const overallRate = monthlyAverageScore(completions, sortedHabits, monthDays);
-  const level = getLevel(overallRate);
+  const completions = React.useMemo(
+    () => buildCompletionMap(initialCompletions),
+    [initialCompletions],
+  );
+  const timelines = React.useMemo(
+    () => buildScheduleTimelines(initialSchedules),
+    [initialSchedules],
+  );
+  const completionsThroughToday = React.useMemo(() => {
+    const todayKey = toKey(today);
+    return Object.fromEntries(
+      Object.entries(completions).filter(([key, completed]) => {
+        const completionDate = key.slice(key.lastIndexOf("__") + 2);
+        return completed && completionDate <= todayKey;
+      }),
+    );
+  }, [completions, today]);
+  const selectedPeriod = React.useMemo(
+    () => getProgressPeriod(view === "week" ? "week" : "month", cursor, today),
+    [view, cursor, today],
+  );
+  const selectedMetrics = React.useMemo(
+    () =>
+      sortedHabits.map((habit) =>
+        computeHabitPeriodMetric(habit, timelines, completions, selectedPeriod),
+      ),
+    [sortedHabits, timelines, completions, selectedPeriod],
+  );
+  const overallMetric = React.useMemo(
+    () => summarizeMetrics(selectedMetrics),
+    [selectedMetrics],
+  );
+  const level =
+    overallMetric.percentage === null
+      ? null
+      : getLevel(overallMetric.percentage);
 
-  const perHabitData: PerHabitPoint[] = sortedHabits.map((h) => {
-    const count = days.filter(
-      (d) => completions[`${h.id}__${toKey(d)}`]
-    ).length;
+  const perHabitData: PerHabitPoint[] = sortedHabits.map((habit, index) => {
+    const metric = selectedMetrics[index];
     return {
-      name: h.name,
-      days: count,
-      total: days.length,
-      fill: getCategory(h.category).color,
+      name: habit.name,
+      days: metric.completed,
+      total: metric.target,
+      fill: getCategory(habit.category).color,
     };
   });
 
   const dailyData: DailyScorePoint[] = days.map((d) => {
-    const done = sortedHabits.filter(
-      (h) => completions[`${h.id}__${toKey(d)}`]
-    ).length;
-    const pct = sortedHabits.length
-      ? Math.round((done / sortedHabits.length) * 100)
-      : 0;
+    const metric =
+      toKey(d) > toKey(today)
+        ? null
+        : computeRangeRate(sortedHabits, timelines, completions, [d]);
     return {
       date: formatDayShort(d),
       full: format(d, "MMM d"),
-      score: pct,
+      score:
+        metric?.percentage == null ? null : Math.round(metric.percentage),
     };
   });
 
-  const streaks: StreakRow[] = sortedHabits.map((h) => ({
-    habit: h,
-    ...computeStreaks(h.id, completions, monthDays),
+  const streakDays = monthDays.filter(
+    (day) => toKey(day) <= toKey(today),
+  );
+  const streaks: StreakRow[] = sortedHabits.map((habit) => ({
+    habit,
+    ...computeStreaks(
+      habit.id,
+      completions,
+      streakDays.filter((day) => isHabitEligibleOn(habit, day)),
+    ),
   }));
 
-  const yearOverallRate = yearlyCompletionRatio(completions, sortedHabits, yearCursor);
-  const yearLevel = getLevel(yearOverallRate);
   const yearDays = React.useMemo(() => getYearDays(yearCursor), [yearCursor]);
-  const monthBuckets = React.useMemo(() => getMonthBuckets(yearCursor), [yearCursor]);
+  const monthBuckets = React.useMemo(
+    () => getMonthBuckets(yearCursor),
+    [yearCursor],
+  );
+  const yearStart = yearDays[0];
+  const yearOverallMetric = React.useMemo(() => {
+    if (toKey(yearStart) > toKey(today)) {
+      return { completed: 0, target: 0, percentage: null };
+    }
+    return computeRangeRate(
+      sortedHabits,
+      timelines,
+      completionsThroughToday,
+      yearDays,
+    );
+  }, [
+    yearStart,
+    today,
+    sortedHabits,
+    timelines,
+    completionsThroughToday,
+    yearDays,
+  ]);
+  const yearLevel =
+    yearOverallMetric.percentage === null
+      ? null
+      : getLevel(yearOverallMetric.percentage);
 
-  const monthlyChartData: MonthlyCompletionPoint[] = monthBuckets.map((monthDaysArr, m) => {
-    const pct = monthlyAverageScore(completions, sortedHabits, monthDaysArr);
-    return {
-      month: format(new Date(yearCursor, m, 1), "MMM"),
-      score: Math.round(pct),
-    };
-  });
+  const monthlyChartData: MonthlyCompletionPoint[] = monthBuckets.map(
+    (monthDaysArr, m) => {
+      const period = getProgressPeriod("month", monthDaysArr[0], today);
+      const metric = summarizeMetrics(
+        sortedHabits.map((habit) =>
+          computeHabitPeriodMetric(habit, timelines, completions, period),
+        ),
+      );
+      return {
+        month: format(new Date(yearCursor, m, 1), "MMM"),
+        score:
+          metric.percentage === null ? null : Math.round(metric.percentage),
+      };
+    },
+  );
 
-  const yearStreaks: StreakRow[] = sortedHabits.map((h) => ({
-    habit: h,
-    ...computeStreaks(h.id, completions, yearDays),
+  const yearStreakDays = yearDays.filter(
+    (day) => toKey(day) <= toKey(today),
+  );
+  const yearStreaks: StreakRow[] = sortedHabits.map((habit) => ({
+    habit,
+    ...computeStreaks(
+      habit.id,
+      completions,
+      yearStreakDays.filter((day) => isHabitEligibleOn(habit, day)),
+    ),
   }));
   const yearBestStreak = Math.max(0, ...yearStreaks.map((s) => s.best));
 
@@ -154,16 +240,15 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
   );
 
   const heatCells: HeatCell[] = yearDays.map((d) => {
-    const done = sortedHabits.filter(
-      (h) => completions[`${h.id}__${toKey(d)}`]
-    ).length;
-    const ratio = sortedHabits.length ? done / sortedHabits.length : 0;
+    const metric = computeRangeRate(sortedHabits, timelines, completions, [d]);
+    const done = toKey(d) > toKey(today) ? 0 : metric.completed;
+    const ratio = metric.target > 0 ? done / metric.target : 0;
     return {
       date: format(d, "yyyy-MM-dd"),
       label: format(d, "EEE, MMM d"),
       ratio,
       done,
-      total: sortedHabits.length,
+      total: metric.target,
     };
   });
 
@@ -192,7 +277,15 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
 
       <SummaryCards
         view={view}
-        completion={Math.round(view === "year" ? yearOverallRate : overallRate)}
+        completion={
+          view === "year"
+            ? yearOverallMetric.percentage === null
+              ? null
+              : Math.round(yearOverallMetric.percentage)
+            : overallMetric.percentage === null
+              ? null
+              : Math.round(overallMetric.percentage)
+        }
         bestStreak={
           view === "year"
             ? yearBestStreak
@@ -210,7 +303,9 @@ export function Analytics({ initialHabits, initialCompletions, initialPlannerTas
       />
 
       {view === "year" && (
-        <MonthlyCompletionChart yearCursor={yearCursor} data={monthlyChartData} />
+        <MonthlyCompletionChart
+          data={monthlyChartData}
+        />
       )}
 
       {view !== "year" ? (
