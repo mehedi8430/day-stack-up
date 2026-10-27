@@ -71,7 +71,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
   - **Monthly Completion chart** (year view) — monthly completion against each month's eligible target
   - **Per-Habit Completion bar chart** — color-coded by category, compared with each habit's eligible target
   - **Daily Score line chart** — daily completions compared with eligible target shares
-  - **Streaks panel** — current (🔥) and best (🏆) streak for every habit
+  - **Streaks panel** — all-time current and best streaks per habit, plus an overall target-aware 30-day consistency rate with trend
   - **Habit Stability panel** — a habit selector displays one weekly
     completion sparkline at a time, defaulting to the first habit, across
     up to 12 completed Monday–Sunday weeks (excluding the current and

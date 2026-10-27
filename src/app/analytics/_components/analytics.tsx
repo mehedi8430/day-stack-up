@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
+import { eachDayOfInterval, format, startOfDay, subDays } from "date-fns";
 import {
   getMonthDays,
   getMonthWeekDays,
@@ -26,7 +26,11 @@ import {
 } from "./monthly-completion-chart";
 import { PerHabitChart, PerHabitPoint } from "./per-habit-chart";
 import { DailyScoreChart, DailyScorePoint } from "./daily-score-chart";
-import { StreaksPanel, StreakRow } from "./streaks-panel";
+import {
+  StreaksPanel,
+  StreakSummary,
+  StreakRow,
+} from "./streaks-panel";
 import { Heatmap, HeatCell } from "./heatmap";
 import { HabitStabilityPanel } from "./habit-stability-panel";
 import {
@@ -160,16 +164,43 @@ export function Analytics({
     };
   });
 
-  const streakDays = monthDays.filter(
-    (day) => toKey(day) <= toKey(today),
+  const todayStart = React.useMemo(() => startOfDay(today), [today]);
+  const earliestHabitDay = sortedHabits.reduce((earliest, habit) => {
+    const createdOn = habit.createdAt.slice(0, 10);
+    return createdOn < earliest ? createdOn : earliest;
+  }, toKey(todayStart));
+  const allTimeStreakDays = React.useMemo(
+    () =>
+      toKey(todayStart) < earliestHabitDay
+        ? []
+        : eachDayOfInterval({
+            start: new Date(`${earliestHabitDay}T12:00:00`),
+            end: todayStart,
+          }),
+    [earliestHabitDay, todayStart],
   );
   const streaks: StreakRow[] = sortedHabits.map((habit) => ({
     habit,
-    ...computeStreaks(
+    current: (() => {
+      const currentStreakEnd =
+        completions[`${habit.id}__${toKey(todayStart)}`]
+          ? todayStart
+          : subDays(todayStart, 1);
+      return computeStreaks(
+        habit.id,
+        completions,
+        allTimeStreakDays.filter(
+          (day) =>
+            isHabitEligibleOn(habit, day) &&
+            toKey(day) <= toKey(currentStreakEnd),
+        ),
+      ).current;
+    })(),
+    best: computeStreaks(
       habit.id,
       completions,
-      streakDays.filter((day) => isHabitEligibleOn(habit, day)),
-    ),
+      allTimeStreakDays.filter((day) => isHabitEligibleOn(habit, day)),
+    ).best,
   }));
 
   const yearDays = React.useMemo(() => getYearDays(yearCursor), [yearCursor]);
@@ -217,18 +248,42 @@ export function Analytics({
     },
   );
 
-  const yearStreakDays = yearDays.filter(
-    (day) => toKey(day) <= toKey(today),
+  const consistencyDays = React.useMemo(
+    () =>
+      eachDayOfInterval({
+        start: subDays(todayStart, 29),
+        end: todayStart,
+      }),
+    [todayStart],
   );
-  const yearStreaks: StreakRow[] = sortedHabits.map((habit) => ({
-    habit,
-    ...computeStreaks(
-      habit.id,
-      completions,
-      yearStreakDays.filter((day) => isHabitEligibleOn(habit, day)),
-    ),
-  }));
-  const yearBestStreak = Math.max(0, ...yearStreaks.map((s) => s.best));
+  const previousConsistencyDays = React.useMemo(
+    () =>
+      eachDayOfInterval({
+        start: subDays(todayStart, 59),
+        end: subDays(todayStart, 30),
+      }),
+    [todayStart],
+  );
+  const consistency = computeRangeRate(
+    sortedHabits,
+    timelines,
+    completionsThroughToday,
+    consistencyDays,
+  ).percentage;
+  const previousConsistency = computeRangeRate(
+    sortedHabits,
+    timelines,
+    completionsThroughToday,
+    previousConsistencyDays,
+  ).percentage;
+  const consistencyTrend =
+    consistency === null || previousConsistency === null
+      ? "na"
+      : consistency > previousConsistency
+        ? "up"
+        : consistency < previousConsistency
+          ? "down"
+          : "same";
 
   const habitStability = React.useMemo(
     () =>
@@ -275,6 +330,12 @@ export function Analytics({
         onCursorChange={setCursor}
       />
 
+      <StreakSummary
+        streaks={streaks}
+        consistency={consistency}
+        consistencyTrend={consistencyTrend}
+      />
+
       <SummaryCards
         view={view}
         completion={
@@ -285,11 +346,6 @@ export function Analytics({
             : overallMetric.percentage === null
               ? null
               : Math.round(overallMetric.percentage)
-        }
-        bestStreak={
-          view === "year"
-            ? yearBestStreak
-            : Math.max(0, ...streaks.map((s) => s.current))
         }
         habitCount={sortedHabits.length}
         level={view === "year" ? yearLevel : level}
@@ -319,7 +375,7 @@ export function Analytics({
 
       {view !== "year" && <DailyScoreChart data={dailyData} />}
 
-      {view !== "year" && <StreaksPanel streaks={streaks} />}
+      <StreaksPanel streaks={streaks} />
 
       <Heatmap year={yearCursor} cells={heatCells} />
     </div>

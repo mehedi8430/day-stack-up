@@ -14,7 +14,6 @@ import { AnalyticsView } from "./analytics-types";
 interface SummaryCardsProps {
   view: AnalyticsView;
   completion: number | null;
-  bestStreak: number;
   habitCount: number;
   level: AchievementLevel | null;
 }
@@ -22,12 +21,11 @@ interface SummaryCardsProps {
 export function SummaryCards({
   view,
   completion,
-  bestStreak,
   habitCount,
   level,
 }: SummaryCardsProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="pb-2">
           <CardDescription>
@@ -80,17 +78,6 @@ export function SummaryCards({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>
-            {view === "year" ? "Best Streak" : "Current Streak"}
-          </CardDescription>
-          <CardTitle className="text-3xl">{bestStreak} 🔥</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground">days in a row</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
