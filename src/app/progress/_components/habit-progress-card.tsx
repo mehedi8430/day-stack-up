@@ -17,15 +17,16 @@ import {
   formatPercentagePoints,
   LevelBadge,
   LevelChange,
-  ProgressBar,
   TrendValue,
 } from "./progress-ui";
+import { cn } from "@/lib/utils";
 
 interface HabitProgressCardProps {
   habit: Habit;
   current: PeriodMetric;
   previous: PeriodMetric;
   comparison: MetricComparison;
+  focused?: boolean;
   /** "week" or "month", used for the progress-bar label. */
   periodNoun: string;
   /** "Previous week" or "Previous week (same span)". */
@@ -37,14 +38,27 @@ export function HabitProgressCard({
   current,
   previous,
   comparison,
+  focused = false,
   periodNoun,
   previousLabel,
 }: HabitProgressCardProps) {
   const category = getCategory(habit.category);
+  const radius = 27;
+  const circumference = 2 * Math.PI * radius;
+  const percentage = current.percentage;
+  const visualPercentage =
+    percentage === null ? 0 : Math.min(100, Math.max(0, percentage));
+  const strokeOffset =
+    circumference - (visualPercentage / 100) * circumference;
 
-  return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
+  const content = (
+    <>
+      <CardHeader
+        className={cn(
+          "pb-3",
+          focused && "p-0 pb-3",
+        )}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -72,24 +86,68 @@ export function HabitProgressCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div>
-          <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-            <p className="text-3xl font-bold tracking-tight">
-              {formatPercentage(current.percentage)}
-            </p>
-            <p className="text-sm text-muted-foreground">
+      <CardContent
+        className={cn(
+          "space-y-4",
+          focused && "p-0",
+        )}
+      >
+        <div className="flex flex-wrap items-center gap-4">
+          <svg
+            className="h-28 w-28 shrink-0"
+            viewBox="0 0 64 64"
+            role="progressbar"
+            aria-label={`${habit.name} completion for this ${periodNoun}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={
+              percentage === null
+                ? undefined
+                : Math.round(visualPercentage)
+            }
+            aria-valuetext={formatPercentage(percentage)}
+          >
+            <circle
+              cx="32"
+              cy="32"
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="6"
+              className="text-muted"
+            />
+            <circle
+              cx="32"
+              cy="32"
+              r={radius}
+              fill="none"
+              stroke={category.color}
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeOffset}
+              transform="rotate(-90 32 32)"
+              className="transition-[stroke-dashoffset]"
+            />
+            <text
+              x="32"
+              y="34"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-foreground text-[11px] font-semibold"
+            >
+              {formatPercentage(percentage)}
+            </text>
+          </svg>
+          <div className="min-w-[10rem] flex-1">
+            <p className="text-sm font-medium text-muted-foreground">
               {current.target === 0
                 ? "No target days in this period"
                 : `${current.completed} of ${formatTargetCount(current.target)} target days`}
             </p>
-          </div>
-          <div className="mt-2">
-            <ProgressBar
-              percentage={current.percentage}
-              color={category.color}
-              label={`${habit.name} completion for this ${periodNoun}`}
-            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              {periodNoun === "week" ? "Weekly" : "Monthly"} completion
+            </p>
           </div>
         </div>
 
@@ -145,6 +203,12 @@ export function HabitProgressCard({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </>
+  );
+
+  return focused ? (
+    <section className="w-full space-y-1">{content}</section>
+  ) : (
+    <Card className="h-full">{content}</Card>
   );
 }

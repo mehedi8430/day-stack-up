@@ -364,20 +364,22 @@ export function Analytics({
         />
       )}
 
-      {view !== "year" ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <PerHabitChart data={perHabitData} dayCount={days.length} />
-          <HabitStabilityPanel rows={habitStability} />
-        </div>
-      ) : (
-        <HabitStabilityPanel rows={habitStability} />
+      {view !== "year" && (
+        <PerHabitChart data={perHabitData} dayCount={days.length} />
       )}
 
       {view !== "year" && <DailyScoreChart data={dailyData} />}
 
       <StreaksPanel streaks={streaks} />
 
-      <Heatmap year={yearCursor} cells={heatCells} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+        <div className="min-w-0">
+          <Heatmap year={yearCursor} cells={heatCells} />
+        </div>
+        <div className="min-w-0">
+          <HabitStabilityPanel rows={habitStability} />
+        </div>
+      </div>
     </div>
   );
 }

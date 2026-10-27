@@ -82,8 +82,7 @@ export function HabitProgress({
     () => getProgressPeriod(view, today, today),
     [view, today],
   );
-  const atLatest =
-    period.start.getTime() >= latestPeriod.start.getTime();
+  const atLatest = period.start.getTime() >= latestPeriod.start.getTime();
 
   const rows = React.useMemo(
     () =>
@@ -124,8 +123,7 @@ export function HabitProgress({
   );
 
   const periodNoun = view;
-  const previousLabel =
-    view === "week" ? "previous week" : "previous month";
+  const previousLabel = view === "week" ? "previous week" : "previous month";
   const previousCardLabel = `Previous ${periodNoun}`;
 
   const periodLabel =
@@ -183,7 +181,10 @@ export function HabitProgress({
         />
         <div className="max-w-3xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
+            <Sparkles
+              className="h-3.5 w-3.5 text-amber-500"
+              aria-hidden="true"
+            />
             YOUR MOMENTUM, AT A GLANCE
           </div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -269,7 +270,9 @@ export function HabitProgress({
               disabled={atLatest}
               aria-label={`Next ${periodNoun}`}
               title={
-                atLatest ? `Already showing the latest ${periodNoun}` : undefined
+                atLatest
+                  ? `Already showing the latest ${periodNoun}`
+                  : undefined
               }
             >
               <ChevronRight className="h-4 w-4" />
@@ -330,6 +333,7 @@ export function HabitProgress({
             previousLabel={previousLabel}
           />
 
+          {/* Habit Progress */}
           <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -348,7 +352,12 @@ export function HabitProgress({
               </p>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div
+              className={cn(
+                "grid gap-4",
+                selectedHabit ? "grid-cols-1" : "lg:grid-cols-2",
+              )}
+            >
               {rows.map((row) => (
                 <HabitProgressCard
                   key={row.habit.id}
@@ -356,6 +365,7 @@ export function HabitProgress({
                   current={row.current}
                   previous={row.previous}
                   comparison={row.comparison}
+                  focused={Boolean(selectedHabit)}
                   periodNoun={periodNoun}
                   previousLabel={previousCardLabel}
                 />
