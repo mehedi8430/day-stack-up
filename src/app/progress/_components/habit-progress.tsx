@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { shiftMonthWeek } from "@/lib/date";
+import { shiftWeek } from "@/lib/date";
 import { getWeeklyTargetLabel, type Habit } from "@/lib/types";
 import type { CompletionRow } from "@/app/actions/habit.actions";
 import {
@@ -157,14 +157,14 @@ export function HabitProgress({
 
   const handlePrevious = () => {
     setCursor((current) =>
-      view === "week" ? shiftMonthWeek(current, -1) : subMonths(current, 1),
+      view === "week" ? shiftWeek(current, -1) : subMonths(current, 1),
     );
   };
 
   const handleNext = () => {
     if (atLatest) return;
     setCursor((current) =>
-      view === "week" ? shiftMonthWeek(current, 1) : addMonths(current, 1),
+      view === "week" ? shiftWeek(current, 1) : addMonths(current, 1),
     );
   };
 

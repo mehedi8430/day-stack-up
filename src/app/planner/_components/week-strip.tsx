@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getMonthWeekDays } from "@/lib/date";
+import { getWeekDays } from "@/lib/date";
 import { sortPlannerTasks } from "@/lib/planner-utils";
 import { usePlannerStore } from "@/stores/planner.store";
 import { DayTasksDialog } from "./day-tasks-dialog";
@@ -30,7 +30,7 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
   if (!weekStart) return null;
 
   const start = parseISO(`${weekStart}T12:00:00`);
-  const days = getMonthWeekDays(start);
+  const days = getWeekDays(start);
   const end = days[days.length - 1] ?? start;
 
   const selectDateFromStrip = (date: string) => {

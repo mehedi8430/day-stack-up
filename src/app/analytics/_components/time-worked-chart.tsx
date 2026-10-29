@@ -21,7 +21,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getMonthBuckets, toKey, formatDayShort } from "@/lib/date";
+import { getMonthBuckets, getWeekChunks, toKey, formatDayShort } from "@/lib/date";
 import { PlannerTask } from "@/lib/planner-types";
 import { chartTooltipStyle } from "./chart-common";
 import { AnalyticsView, TimeWorkedPoint } from "./analytics-types";
@@ -78,18 +78,20 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
     }
 
     if (view === "month" && timeView === "week") {
-      const buckets: Date[][] = [];
-      for (let i = 0; i < days.length; i += 7) {
-        buckets.push(days.slice(i, i + 7));
-      }
-      return buckets.map((b, idx) => {
-        const mins = b.reduce(
+      // Saturday-start weeks that overlap the month; each bar counts only
+      // the month's days inside its week, so bars still sum to the month.
+      return getWeekChunks(days).map((chunk) => {
+        const weekStart = chunk[0];
+        const mins = chunk.reduce(
           (sum, d) => sum + workedMinutes(tasks, toKey(d)),
           0
         );
         return {
-          week: `Week ${idx + 1}`,
-          full: `Week ${idx + 1} · ${format(b[0], "MMM d")}–${format(b[b.length - 1], "MMM d")}`,
+          week: format(weekStart, "MMM d"),
+          full: `${format(weekStart, "MMM d")}–${format(
+            chunk[chunk.length - 1],
+            "MMM d",
+          )} (Sat–Fri week)`,
           hours: toHours(mins),
           mins,
         };

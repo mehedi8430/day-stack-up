@@ -3,7 +3,7 @@
 import { addDays, parseISO } from "date-fns";
 import { create } from "zustand";
 import * as actions from "@/app/actions/planner.actions";
-import { getMonthWeek, shiftMonthWeek, toKey } from "@/lib/date";
+import { getWeek, shiftWeek, toKey } from "@/lib/date";
 import type {
   PlannerPriority,
   PlannerStatus,
@@ -22,7 +22,7 @@ function nextPosition(tasks: PlannerTask[], date: string): number {
 }
 
 function weekStartOf(date: string): string {
-  return toKey(getMonthWeek(parseISO(`${date}T12:00:00`)).start);
+  return toKey(getWeek(parseISO(`${date}T12:00:00`)).start);
 }
 
 let weekRequestId = 0;
@@ -120,7 +120,7 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
   loadWeek: async (weekStart) => {
     const requestId = ++weekRequestId;
     set({ isLoading: true });
-    const week = getMonthWeek(parseISO(`${weekStart}T12:00:00`));
+    const week = getWeek(parseISO(`${weekStart}T12:00:00`));
     const start = toKey(week.start);
     const end = toKey(week.end);
     try {
@@ -156,7 +156,7 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
 
   changeWeek: async (offset) => {
     const nextDate = toKey(
-      shiftMonthWeek(parseISO(`${get().selectedDate}T12:00:00`), offset)
+      shiftWeek(parseISO(`${get().selectedDate}T12:00:00`), offset)
     );
     await get().selectDate(nextDate);
   },

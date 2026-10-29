@@ -4,7 +4,7 @@ import { format, addMonths, subMonths } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getMonthWeek, shiftMonthWeek } from "@/lib/date";
+import { getWeek, shiftWeek } from "@/lib/date";
 import { AnalyticsView } from "./analytics-types";
 
 interface AnalyticsHeaderProps {
@@ -24,14 +24,14 @@ export function AnalyticsHeader({
   onYearChange,
   onCursorChange,
 }: AnalyticsHeaderProps) {
-  const week = view === "week" ? getMonthWeek(cursor) : null;
+  const week = view === "week" ? getWeek(cursor) : null;
 
   const handlePrev = () => {
     if (!onCursorChange) return;
     if (view === "month") {
       onCursorChange(subMonths(cursor, 1));
     } else if (view === "week") {
-      onCursorChange(shiftMonthWeek(cursor, -1));
+      onCursorChange(shiftWeek(cursor, -1));
     }
   };
 
@@ -40,7 +40,7 @@ export function AnalyticsHeader({
     if (view === "month") {
       onCursorChange(addMonths(cursor, 1));
     } else if (view === "week") {
-      onCursorChange(shiftMonthWeek(cursor, 1));
+      onCursorChange(shiftWeek(cursor, 1));
     }
   };
 
@@ -52,7 +52,7 @@ export function AnalyticsHeader({
           {view === "year"
             ? `Your progress for ${yearCursor}`
             : week
-              ? `Your progress for week ${week.index} · ${format(week.start, "MMM d")} – ${format(week.end, "MMM d, yyyy")}`
+              ? `Your progress for ${format(week.start, "MMM d")} – ${format(week.end, "MMM d, yyyy")}`
               : `Your progress for ${format(cursor, "MMMM yyyy")}`}
         </p>
       </div>
@@ -72,7 +72,9 @@ export function AnalyticsHeader({
                 ? yearCursor
                 : view === "month"
                   ? format(cursor, "MMM yyyy")
-                  : `Week ${week?.index ?? ""}`}
+                  : week
+                    ? format(week.start, "MMM d")
+                    : ""}
             </h2>
             <Button
               variant="outline"
