@@ -14,6 +14,12 @@ import {
 } from "lucide-react";
 import { getCategory, getWeeklyTargetLabel, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
+import {
+  computeRangeRate,
+  doneCounterFrom,
+  type ScheduleTimelines,
+} from "@/lib/habit-progress";
+import type { CalendarView } from "@/app/_components/calendar-utils";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +39,8 @@ export function SortableRow({
   habit,
   days,
   completions,
+  timelines,
+  view,
   toggle,
   onEdit,
   onDelete,
@@ -42,6 +50,8 @@ export function SortableRow({
   habit: Habit;
   days: Date[];
   completions: Record<string, boolean>;
+  timelines: ScheduleTimelines;
+  view: CalendarView;
   toggle: (habitId: string, date: Date) => void;
   onEdit: (h: Habit) => void;
   onDelete: (h: Habit) => void;
@@ -65,9 +75,16 @@ export function SortableRow({
   };
 
   const cat = getCategory(habit.category);
-  const doneCount = days.filter(
-    (d) => completions[`${habit.id}__${toKey(d)}`]
-  ).length;
+  // Done / scheduled days: completions on eligible dates vs the schedule for
+  // the visible range. Week view pins the exact weekly target (a mid-week
+  // target change never shows a blend here); month and last-15 keep the
+  // range share, rounded to whole days.
+  const scheduledDaysOverride =
+    view === "week" ? habit.weeklyTarget : undefined;
+  const counter = doneCounterFrom(
+    computeRangeRate([habit], timelines, completions, days),
+    scheduledDaysOverride,
+  );
 
   return (
     <div
@@ -75,10 +92,12 @@ export function SortableRow({
       style={style}
       className={cn("grid", isDragging && "relative z-10")}
     >
-      <div className={cn(
-        "sticky left-0 z-20 flex items-center gap-1 border-b border-r bg-card px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.2)]",
-        isDragging && "bg-accent ring-2 ring-inset ring-primary"
-      )}>
+      <div
+        className={cn(
+          "sticky left-0 z-20 flex items-center gap-1 border-b border-r bg-card px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.2)]",
+          isDragging && "bg-accent ring-2 ring-inset ring-primary",
+        )}
+      >
         <button
           {...attributes}
           {...listeners}
@@ -152,7 +171,7 @@ export function SortableRow({
                 className={cn(
                   "flex items-center justify-center border-b border-r py-2",
                   today && "bg-primary/5",
-                  isDragging && "bg-accent/50"
+                  isDragging && "bg-accent/50",
                 )}
               >
                 <HabitCheckbox
@@ -163,16 +182,34 @@ export function SortableRow({
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent>{formatFullDate(d)}</TooltipContent>
+            <TooltipContent>
+              <span className="font-semibold">{habit.name}</span>
+              <span className="block text-muted-foreground">
+                {formatFullDate(d)}
+              </span>
+            </TooltipContent>
           </Tooltip>
         );
       })}
 
-      <div className="sticky right-0 z-20 flex items-center justify-center border-b border-l bg-card px-3 py-2 font-semibold text-sm shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.2)]">
-        <span className={doneCount === days.length ? "text-primary" : ""}>
-          {doneCount}
-        </span>
-        <span className="text-muted-foreground">/{days.length}</span>
+      <div
+        className={`sticky right-0 z-20 flex items-center justify-center border-b border-l bg-card px-3 py-2 font-semibold text-sm shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.2)] ${counter.complete && "bg-green-600"}`}
+      >
+        <span>{counter.completed}</span>
+        {counter.scheduled && (
+          <span
+            className=""
+            title={`Days targeted for this ${
+              view === "week"
+                ? "week"
+                : view === "month"
+                  ? "month"
+                  : "15-day window"
+            }`}
+          >
+            /{counter.scheduled}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -177,6 +177,8 @@ export default function CalendarGrid({
             days={days}
             habits={sortedHabits}
             completions={completions}
+            schedules={schedules}
+            view={view}
             toggle={toggleCompletion}
             onReorder={reorderHabits}
             onEdit={openEdit}

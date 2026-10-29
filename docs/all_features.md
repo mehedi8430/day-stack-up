@@ -18,7 +18,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
-- **Per-habit done counter** — shows how many days in the visible range were completed (`X/days`)
+- **Per-habit done counter** — shows completed days against the habit's scheduled days for the visible range: week view pins the exact weekly target (a mid-week target change never shows a blend there), while month and last-15 views use the range share rounded to whole days (`22.14` → `22`); trimmed to the habit's creation date and replayed across target changes; turns green when completions cover that scheduled count
 - **Today highlighting** — today's column and header are visually highlighted
 - **Responsive layout** — column widths adapt to mobile and desktop
 - **Empty state** — friendly prompt to add the first habit when there are none
