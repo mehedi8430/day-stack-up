@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getCategory, type Habit } from "@/lib/types";
-import type { HabitStability } from "@/lib/habit-progress";
+import type { HabitStability } from "@/lib/habit-analytics";
 import * as React from "react";
 
 export interface HabitStabilityRow {

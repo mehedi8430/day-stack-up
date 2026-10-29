@@ -24,9 +24,9 @@ const {
   buildCompletionMap,
   buildScheduleTimelines,
   compareMetrics,
-  computeHabitStability,
   computeHabitPeriodMetric,
   computeRangeRate,
+  doneCounterFrom,
   formatTargetCount,
   getPreviousProgressPeriod,
   getProgressPeriod,
@@ -35,6 +35,10 @@ const {
   summarizeMetrics,
   isHabitEligibleOn,
 } = await import("../src/lib/habit-progress.ts");
+
+const { computeHabitStability } = await import(
+  "../src/lib/habit-analytics.ts"
+);
 
 const {
   getMonthDays,
@@ -623,4 +627,102 @@ test("achievement thresholds are preserved", async () => {
   assert.equal(getLevel(40).label, "Intermediate");
   assert.equal(getLevel(0).label, "Beginner");
   assert.equal(getLevel(140).label, "Legendary"); // overachievement
+});
+
+test("done counter shows the scheduled share next to the completed count", () => {
+  // A full 7-day week for a "5 days per week" habit: 7 across 5 -> complete.
+  const week = doneCounterFrom({ completed: 7, target: 5, percentage: 140 });
+  assert.deepEqual(week, { completed: 7, scheduled: 5, complete: true });
+  // Blends across a mid-week target change round to whole days, and the
+  // green coverage check uses that same rounded number.
+  //   5 days at the old 5/7 + 2 days at the new 7/7 = 5.57 -> "6".
+  const blend = 5 * (5 / 7) + 2;
+  assert.equal(doneCounterFrom({ completed: 5, target: blend, percentage: (5 / blend) * 100 }).complete, false);
+  assert.equal(
+    doneCounterFrom({ completed: 5, target: blend, percentage: (5 / blend) * 100 })
+      .scheduled,
+    6,
+  );
+  assert.equal(
+    doneCounterFrom({ completed: 6, target: blend, percentage: (6 / blend) * 100 })
+      .complete,
+    true,
+  );
+
+  // A month's share (5/7 x 31 = 22.14) rounds to 22 and 22 days cover it.
+  const share = (5 / 7) * 31;
+  const month = doneCounterFrom({
+    completed: 22,
+    target: share,
+    percentage: (22 / share) * 100,
+  });
+  assert.equal(month.scheduled, 22);
+  assert.equal(month.complete, true);
+
+  // Nothing scheduled (zero target): the denominator is hidden entirely.
+  const empty = doneCounterFrom({ completed: 3, target: 0, percentage: null });
+  assert.deepEqual(empty, { completed: 3, scheduled: null, complete: false });
+
+  // A sub-half-day share (e.g. 3 eligible days of a 1-day/week habit)
+  // cannot promise a full scheduled day, so it hides the denominator too.
+  const tinyShare = 3 * (1 / 7); // 0.43
+  assert.equal(
+    doneCounterFrom({ completed: 3, target: tinyShare, percentage: 100 })
+      .scheduled,
+    null,
+  );
+});
+
+test("done counter treats float rounding artifacts as whole goals", () => {
+  // 7*(5/7)-style sums can land a hair over the integer target; rounding
+  // pulls them back to the whole scheduled count and stays complete.
+  const rate = {
+    completed: 7,
+    target: 5 + 1e-12,
+    percentage: (7 / (5 + 1e-12)) * 100, // 99.99999999999998 < 100
+  };
+  assert.equal(doneCounterFrom(rate).scheduled, 5);
+  assert.equal(doneCounterFrom(rate).complete, true);
+
+  // ...but genuinely-not-complete rates stay untouched.
+  assert.equal(
+    doneCounterFrom({ completed: 9999, target: 10000, percentage: 99.99 })
+      .complete,
+    false,
+  );
+});
+
+test("done counter can use the habit's exact weekly target in week view", () => {
+  // Week view pins the denominator to the habit's current weekly target,
+  // so a blend from a mid-week target change no longer shows 5.6/6.3.
+  // Here the share over the Sat-Fri week is 5.57 (5 old days + 2 new),
+  // but the cell shows the current exact target.
+  const blendWeek = 5 * (5 / 7) + 2; // 5.5714285...
+  const pinned = doneCounterFrom(
+    { completed: 4, target: blendWeek, percentage: (4 / blendWeek) * 100 },
+    7,
+  );
+  assert.deepEqual(pinned, { completed: 4, scheduled: 7, complete: false });
+  assert.equal(
+    doneCounterFrom(
+      { completed: 7, target: blendWeek, percentage: (7 / blendWeek) * 100 },
+      7,
+    ).complete,
+    true,
+  );
+
+  // Zero-target habits stay hidden even when pinned.
+  const zero = doneCounterFrom(
+    { completed: 2, target: 2, percentage: 100 },
+    0,
+  );
+  assert.deepEqual(zero, { completed: 2, scheduled: null, complete: false });
+
+  // Without an override (month / last 15), the rounded share wins.
+  const range = 5 * (5 / 7) + 9; // 15-day window: 5 days at 5/7, then daily
+  assert.equal(
+    doneCounterFrom({ completed: 11, target: range, percentage: (11 / range) * 100 })
+      .scheduled,
+    13, // 5*(5/7)+9 = 12.57 -> 13
+  );
 });

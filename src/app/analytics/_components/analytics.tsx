@@ -37,13 +37,13 @@ import {
   buildCompletionMap,
   buildScheduleTimelines,
   computeHabitPeriodMetric,
-  computeHabitStability,
   computeRangeRate,
   getProgressPeriod,
   isHabitEligibleOn,
   summarizeMetrics,
   type HabitScheduleRow,
 } from "@/lib/habit-progress";
+import { computeHabitStability } from "@/lib/habit-analytics";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
