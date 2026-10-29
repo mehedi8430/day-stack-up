@@ -10,8 +10,8 @@ import {
 } from "date-fns";
 import {
   getLevel,
-  getMonthWeek,
-  shiftMonthWeek,
+  getWeek,
+  shiftWeek,
   toKey,
   type AchievementLevel,
 } from "@/lib/date";
@@ -160,15 +160,15 @@ export function completionKey(habitId: string, dateKey: string): string {
 
 /**
  * Measures how much a habit's completion frequency varies across up to the
- * last 12 fully completed Monday-to-Sunday weeks. Partial creation weeks and
- * the current, incomplete week are excluded so each point is comparable.
+ * last 12 fully completed Saturday-to-Friday weeks. Partial creation weeks
+ * and the current, incomplete week are excluded so each point is comparable.
  */
 export function computeHabitStability(
   habit: Pick<ProgressHabit, "id" | "createdAt">,
   completions: CompletionMap,
   today: Date,
 ): HabitStability {
-  const currentWeekStart = startOfWeek(startOfDay(today), { weekStartsOn: 1 });
+  const currentWeekStart = startOfWeek(startOfDay(today), { weekStartsOn: 6 });
   const createdOn = habit.createdAt.slice(0, 10);
   const weeklyCompletions: number[] = [];
 
@@ -240,8 +240,7 @@ export function buildCompletionMap(
 }
 
 /**
- * Returns the selected month-anchored week (1–7, 8–14, …, 29–month end) or
- * calendar month.
+ * Returns the selected Saturday-to-Friday week or calendar month.
  *
  * The current period keeps `effectiveEnd === today` for the completed count,
  * while its target spans the whole period so users always see progress
@@ -253,7 +252,7 @@ export function getProgressPeriod(
   today: Date,
 ): ProgressPeriod {
   const todayDay = startOfDay(today);
-  const week = view === "week" ? getMonthWeek(cursor) : null;
+  const week = view === "week" ? getWeek(cursor) : null;
   const start = week ? week.start : startOfMonth(cursor);
   const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
@@ -288,7 +287,7 @@ export function getPreviousProgressPeriod(
 ): ProgressPeriod {
   const week =
     current.view === "week"
-      ? getMonthWeek(shiftMonthWeek(current.start, -1))
+      ? getWeek(shiftWeek(current.start, -1))
       : null;
   const start = week ? week.start : startOfMonth(addMonths(current.start, -1));
   const end = week ? week.end : endOfMonth(start);

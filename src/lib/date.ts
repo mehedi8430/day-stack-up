@@ -1,10 +1,11 @@
 import {
   addDays,
-  addMonths,
   format,
+  startOfDay,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
+  startOfWeek,
   startOfYear,
   endOfYear,
 } from "date-fns";
@@ -13,68 +14,59 @@ export function toKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
-export interface MonthWeek {
-  /** First day of the week bucket (1st, 8th, 15th, 22nd, or 29th). */
+export interface Week {
+  /** First day of the week: always a Saturday. */
   start: Date;
-  /** Last day of the bucket, clamped to the end of the month. */
+  /** Last day of the week: always the Friday six days after `start`. */
   end: Date;
-  /** 1-based index within the month. */
-  index: number;
-  /** Number of week buckets in the month (4 or 5). */
-  count: number;
 }
 
 /**
- * Weeks are anchored to the month: the first week always starts on the 1st,
- * and each following week starts seven days later (1–7, 8–14, 15–21, 22–28,
- * 29–end). The final week can be shorter than seven days.
+ * Weeks run Saturday to Friday and are independent of months: the week
+ * containing `date` is the calendar week whose Saturday is on or before it.
+ * Every week covers exactly seven days, so a week can span a month boundary.
  */
-export function getMonthWeek(date: Date): MonthWeek {
-  const monthStart = startOfMonth(date);
-  const monthEnd = endOfMonth(date);
-  const index = Math.floor((date.getDate() - 1) / 7) + 1;
-  const start = addDays(monthStart, (index - 1) * 7);
-  const candidateEnd = addDays(start, 6);
-  const end = candidateEnd > monthEnd ? monthEnd : candidateEnd;
-
-  return {
-    start,
-    end,
-    index,
-    count: Math.ceil(monthEnd.getDate() / 7),
-  };
+export function getWeek(date: Date): Week {
+  const start = startOfWeek(startOfDay(date), { weekStartsOn: 6 });
+  return { start, end: addDays(start, 6) };
 }
 
-/** Every calendar day in the month-anchored week containing `date`. */
-export function getMonthWeekDays(date: Date): Date[] {
-  const { start, end } = getMonthWeek(date);
+/** Every calendar day in the Saturday-start week containing `date` (7 days). */
+export function getWeekDays(date: Date): Date[] {
+  const { start, end } = getWeek(date);
   return eachDayOfInterval({ start, end });
 }
 
 /**
- * Moves `offset` month-anchored weeks from `date`, crossing month boundaries
- * one bucket at a time so the short week at the end of a month is never
- * skipped.
+ * Moves `offset` whole weeks from `date`, crossing month and year boundaries
+ * freely: weeks walk seven days at a time and no week is ever shortened.
  */
-export function shiftMonthWeek(date: Date, offset: number): Date {
-  let week = getMonthWeek(date);
-  const step = offset >= 0 ? 1 : -1;
+export function shiftWeek(date: Date, offset: number): Date {
+  return addDays(getWeek(date).start, offset * 7);
+}
 
-  for (let i = 0; i < Math.abs(offset); i++) {
-    if (step > 0) {
-      week =
-        week.index < week.count
-          ? getMonthWeek(addDays(week.start, 7))
-          : getMonthWeek(startOfMonth(addMonths(week.start, 1)));
+/**
+ * Groups consecutive calendar days into their Saturday-start weeks, keeping
+ * only the days that fall inside the given list. The chunks partition the
+ * list exactly (every day appears once) and each chunk is the intersection
+ * of a global Sat-Fri week with the listed days.
+ */
+export function getWeekChunks(days: Date[]): Date[][] {
+  const chunks: Date[][] = [];
+  let currentKey = "";
+
+  for (const day of days) {
+    const key = toKey(getWeek(day).start);
+    const current = chunks[chunks.length - 1];
+    if (!current || key !== currentKey) {
+      chunks.push([day]);
+      currentKey = key;
     } else {
-      week =
-        week.index > 1
-          ? getMonthWeek(addDays(week.start, -7))
-          : getMonthWeek(endOfMonth(addMonths(week.start, -1)));
+      current.push(day);
     }
   }
 
-  return week.start;
+  return chunks;
 }
 
 export function getMonthDays(year: number, month: number): Date[] {
