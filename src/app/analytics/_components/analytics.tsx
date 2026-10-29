@@ -4,7 +4,7 @@ import * as React from "react";
 import { eachDayOfInterval, format, startOfDay, subDays } from "date-fns";
 import {
   getMonthDays,
-  getMonthWeekDays,
+  getWeekDays,
   getYearDays,
   getMonthBuckets,
   toKey,
@@ -37,13 +37,13 @@ import {
   buildCompletionMap,
   buildScheduleTimelines,
   computeHabitPeriodMetric,
-  computeHabitStability,
   computeRangeRate,
   getProgressPeriod,
   isHabitEligibleOn,
   summarizeMetrics,
   type HabitScheduleRow,
 } from "@/lib/habit-progress";
+import { computeHabitStability } from "@/lib/habit-analytics";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
@@ -71,7 +71,7 @@ export function Analytics({
     () => getMonthDays(cursor.getFullYear(), cursor.getMonth()),
     [cursor],
   );
-  const weekDays = React.useMemo(() => getMonthWeekDays(cursor), [cursor]);
+  const weekDays = React.useMemo(() => getWeekDays(cursor), [cursor]);
 
   const days = view === "month" ? monthDays : weekDays;
 

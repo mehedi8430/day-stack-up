@@ -10,7 +10,7 @@ import {
 } from "date-fns";
 import { Plus } from "lucide-react";
 import { useHabitStore } from "@/stores/habit.store";
-import { getMonthWeek, shiftMonthWeek } from "@/lib/date";
+import { getWeek, shiftWeek } from "@/lib/date";
 import {
   buildScheduleTimelines,
   computeRangeRate,
@@ -62,7 +62,7 @@ export default function CalendarGrid({
   const [cursor, setCursor] = React.useState<Date>(new Date());
   const [today] = React.useState<Date>(() => startOfDay(new Date()));
   const latestWeekStart = React.useMemo(
-    () => getMonthWeek(today).start,
+    () => getWeek(today).start,
     [today],
   );
   const [weekStart, setWeekStart] = React.useState<Date>(() => latestWeekStart);
@@ -131,15 +131,13 @@ export default function CalendarGrid({
 
   const handlePreviousRange = () => {
     if (view === "month") setCursor((c) => subMonths(c, 1));
-    else if (view === "week")
-      setWeekStart((start) => shiftMonthWeek(start, -1));
+    else if (view === "week") setWeekStart((start) => shiftWeek(start, -1));
     else setRollingEnd((end) => subDays(end, 15));
   };
 
   const handleNextRange = () => {
     if (view === "month") setCursor((c) => addMonths(c, 1));
-    else if (view === "week")
-      setWeekStart((start) => shiftMonthWeek(start, 1));
+    else if (view === "week") setWeekStart((start) => shiftWeek(start, 1));
     else setRollingEnd((end) => addDays(end, 15));
   };
 
@@ -179,6 +177,8 @@ export default function CalendarGrid({
             days={days}
             habits={sortedHabits}
             completions={completions}
+            schedules={schedules}
+            view={view}
             toggle={toggleCompletion}
             onReorder={reorderHabits}
             onEdit={openEdit}

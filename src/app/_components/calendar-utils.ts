@@ -10,12 +10,7 @@ import {
   subDays,
   subMonths,
 } from "date-fns";
-import {
-  getMonthDays,
-  getMonthWeek,
-  getMonthWeekDays,
-  shiftMonthWeek,
-} from "@/lib/date";
+import { getMonthDays, getWeek, getWeekDays, shiftWeek } from "@/lib/date";
 
 export type CalendarView = "week" | "month" | "last15";
 
@@ -80,8 +75,8 @@ export function getCalendarRange({
   today: Date;
 }): CalendarRange {
   if (view === "week") {
-    const weekDays = getMonthWeekDays(weekStart);
-    const currentWeekStart = getMonthWeek(today).start;
+    const weekDays = getWeekDays(weekStart);
+    const currentWeekStart = getWeek(today).start;
 
     if (weekStart.getTime() > currentWeekStart.getTime()) {
       return {
@@ -96,7 +91,7 @@ export function getCalendarRange({
     const progressDays = isCurrentWeek
       ? weekDays.filter((day) => day <= today)
       : weekDays;
-    const previousWeekDays = getMonthWeekDays(shiftMonthWeek(weekStart, -1));
+    const previousWeekDays = getWeekDays(shiftWeek(weekStart, -1));
 
     return {
       days: weekDays,
@@ -153,7 +148,7 @@ export function getRangeLabels({
   days: Date[];
 }): RangeLabels {
   const monthLabel = format(cursor, "MMMM yyyy");
-  const week = getMonthWeek(weekStart);
+  const week = getWeek(weekStart);
   const weekLabel = `${format(week.start, "MMM d")} – ${format(
     week.end,
     "MMM d, yyyy",

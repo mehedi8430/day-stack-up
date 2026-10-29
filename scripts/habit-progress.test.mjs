@@ -24,9 +24,9 @@ const {
   buildCompletionMap,
   buildScheduleTimelines,
   compareMetrics,
-  computeHabitStability,
   computeHabitPeriodMetric,
   computeRangeRate,
+  doneCounterFrom,
   formatTargetCount,
   getPreviousProgressPeriod,
   getProgressPeriod,
@@ -36,15 +36,25 @@ const {
   isHabitEligibleOn,
 } = await import("../src/lib/habit-progress.ts");
 
-const { getMonthWeek, getMonthWeekDays, shiftMonthWeek, toKey } = await import(
-  "../src/lib/date.ts"
+const { computeHabitStability } = await import(
+  "../src/lib/habit-analytics.ts"
 );
+
+const {
+  getMonthDays,
+  getWeek,
+  getWeekChunks,
+  getWeekDays,
+  shiftWeek,
+  toKey,
+} = await import("../src/lib/date.ts");
 
 // Local-noon dates keep every assertion independent of the test machine's
 // timezone: noon is far from any midnight boundary in every real zone.
 const ymd = (year, month, day) => new Date(year, month - 1, day, 12);
 const Y = 2026; // test year
-// Current month-anchored week in the tests: Oct 15-21, 2026.
+// Current Sat-Fri week in the tests: Oct 17-23, 2026 (today = Wed Oct 21).
+// Oct 1, 2026 is a Thursday, so Saturday anchors: Oct 3, 10, 17, 24, 31.
 const MON = 19, TUE = 20, WED = 21, SUN = 25;
 
 const baseHabit = {
@@ -74,10 +84,13 @@ test("habit stability uses the last 12 completed weeks and measures variation", 
   );
 
   assert.equal(stability.weeklyCompletions.length, 12);
-  assert.deepEqual(stability.weeklyCompletions.slice(-2), [4, 6]);
+  // With Sat-Fri weeks: Sat Oct 10-16 holds the Mon-Thu completions (4),
+  // Sat Oct 17-23 holds Mon-Fri (5), and Sat Oct 24+ is the current week,
+  // which is excluded entirely.
+  assert.deepEqual(stability.weeklyCompletions.slice(-2), [4, 5]);
   assert.equal(stability.min, 0);
-  assert.equal(stability.max, 6);
-  assert.equal(stability.variation, 6);
+  assert.equal(stability.max, 5);
+  assert.equal(stability.variation, 5);
   assert.equal(stability.level, "moderate");
 });
 
@@ -145,50 +158,83 @@ test("DAYS_PER_WEEK backs the proportional share", () => {
   assert.equal(DAYS_PER_WEEK, 7);
 });
 
-test("month-anchored weeks start on the 1st and end at month end", () => {
-  const first = getMonthWeek(ymd(Y, 10, 1));
-  assert.equal(first.start.getDate(), 1);
-  assert.equal(first.end.getDate(), 7);
-  assert.equal(first.index, 1);
-  assert.equal(first.count, 5);
+test("weeks run Saturday to Friday and always cover seven days", () => {
+  // Oct 1, 2026 is a Thursday: its week starts the Saturday before it.
+  const first = getWeek(ymd(Y, 10, 1));
+  assert.equal(first.start.getDate(), 26); // Sat Sep 26
+  assert.equal(first.start.getMonth(), 8);
+  assert.equal(first.end.getDate(), 2); // Fri Oct 2
+  assert.equal(getWeekDays(ymd(Y, 10, 1)).length, 7);
 
-  const fourth = getMonthWeek(ymd(Y, 10, 26));
-  assert.equal(fourth.start.getDate(), 22);
-  assert.equal(fourth.end.getDate(), 28);
-  assert.equal(fourth.index, 4);
+  const mid = getWeek(ymd(Y, 10, 15)); // Thursday Oct 15
+  assert.equal(mid.start.getDate(), 10);
+  assert.equal(mid.end.getDate(), 16);
 
-  const last = getMonthWeek(ymd(Y, 10, 29));
-  assert.equal(last.start.getDate(), 29);
-  assert.equal(last.end.getDate(), 31);
-  assert.equal(last.index, 5);
-  assert.equal(getMonthWeekDays(ymd(Y, 10, 29)).length, 3);
-
-  const feb = getMonthWeek(ymd(Y, 2, 22));
-  assert.equal(feb.count, 4);
-  assert.equal(feb.end.getDate(), 28);
+  // A Saturday on a month boundary anchors its own week across months.
+  const boundary = getWeek(ymd(Y, 10, 31)); // Sat Oct 31
+  assert.equal(boundary.start.getDate(), 31);
+  assert.equal(boundary.end.getDate(), 6); // Fri Nov 6
+  assert.equal(boundary.end.getMonth(), 10);
 });
 
-test("shiftMonthWeek crosses months without skipping short weeks", () => {
-  const nextMonth = shiftMonthWeek(ymd(Y, 10, 29), 1);
-  assert.equal(nextMonth.getMonth(), 10); // November
-  assert.equal(nextMonth.getDate(), 1);
+test("shiftWeek walks seven days at a time across months and years", () => {
+  const next = shiftWeek(ymd(Y, 10, 31), 1); // week Oct 31 - Nov 6
+  assert.equal(next.getDate(), 7); // Sat Nov 7
+  assert.equal(next.getMonth(), 10);
 
-  const previousMonth = shiftMonthWeek(ymd(Y, 11, 1), -1);
-  assert.equal(previousMonth.getMonth(), 9); // October
-  assert.equal(previousMonth.getDate(), 29);
+  const previous = shiftWeek(ymd(Y, 11, 4), -1); // Wed Nov 4
+  assert.equal(previous.getDate(), 24); // Sat Oct 24
+  assert.equal(previous.getMonth(), 9);
 
-  const march = shiftMonthWeek(ymd(Y, 2, 22), 1);
-  assert.equal(march.getMonth(), 2); // March
-  assert.equal(march.getDate(), 1);
-
-  const february = shiftMonthWeek(ymd(Y, 3, 1), -1);
-  assert.equal(february.getMonth(), 1); // February
-  assert.equal(february.getDate(), 22);
-
-  const previousYear = shiftMonthWeek(ymd(Y, 1, 1), -1);
+  const previousYear = shiftWeek(ymd(Y, 1, 1), -1); // Thu Jan 1
   assert.equal(previousYear.getFullYear(), Y - 1);
   assert.equal(previousYear.getMonth(), 11); // December
-  assert.equal(previousYear.getDate(), 29);
+  assert.equal(previousYear.getDate(), 20); // Sat Dec 20, 2025
+});
+
+test("consecutive weeks tile the timeline without gaps", () => {
+  for (let i = 0; i < 14; i += 1) {
+    const day = ymd(Y, 8, 20 + i); // Thu Aug 20 .. Sep 2
+    const week = getWeek(day);
+    const before = i > 0 ? getWeek(ymd(Y, 8, 19 + i)) : null;
+
+    assert.equal(week.start.getDay(), 6); // Saturday start
+    assert.equal(week.end.getDay(), 5); // Friday end
+    assert.equal(
+      week.end.getTime() - week.start.getTime(),
+      6 * 24 * 60 * 60 * 1000,
+    );
+
+    if (before) {
+      const elapsed =
+        (week.start.getTime() - before.start.getTime()) / (24 * 60 * 60 * 1000);
+      assert.equal(elapsed, day.getDay() === 6 ? 7 : 0);
+    }
+  }
+
+  // Crossing a year boundary keeps the Saturday rhythm.
+  const yearEnd = getWeek(ymd(Y + 1, 1, 1));
+  assert.equal(yearEnd.start.getDate(), 26); // Sat Dec 26, 2026
+  assert.equal(yearEnd.start.getMonth(), 11);
+  assert.equal(yearEnd.end.getDate(), 1); // Fri Jan 1, 2027
+  assert.equal(yearEnd.end.getMonth(), 0);
+});
+
+test("week chunks partition a month's days into Sat-Fri intersections", () => {
+  const chunks = getWeekChunks(getMonthDays(Y, 9)); // October 2026
+  assert.equal(chunks.length, 6); // Sep 26-Oct 2 ... Oct 31-Nov 6
+  assert.deepEqual(
+    chunks[0].map((d) => d.getDate()),
+    [1, 2],
+  );
+  assert.deepEqual(
+    chunks[1].map((d) => d.getDate()),
+    [3, 4, 5, 6, 7, 8, 9],
+  );
+  assert.deepEqual(chunks[5].map((d) => d.getDate()), [31]);
+
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  assert.equal(total, 31); // every month day belongs to exactly one chunk
 });
 
 test("sanitizeWeeklyTarget defaults corrupt values to daily and keeps true zero", () => {
@@ -242,6 +288,11 @@ test("current week measures against the full weekly target (in-progress period)"
   const period = getProgressPeriod("week", today, today);
 
   assert.equal(period.isCurrent, true);
+  assert.equal(period.start.getDay(), 6); // weeks start Saturday
+  assert.equal(period.start.getDate(), 17); // Sat Oct 17
+  assert.equal(period.end.getDay(), 5); // and end Friday
+  assert.equal(period.end.getDate(), 23); // Fri Oct 23
+  assert.equal(period.totalDays, 7);
   assert.equal(period.effectiveEnd.getDate(), WED);
 
   // Distributed over the full 7 days for a "5 days per week" habit => 5.
@@ -279,7 +330,7 @@ test("mid-week target changes are replayed from schedule history", () => {
   const today = ymd(Y, 10, WED);
   const period = getProgressPeriod("week", today, today);
 
-  // Week Oct 15-21: 7 until Oct 20 inclusive, 5 from Oct 21.
+  // Week Oct 17-23: 7 until Oct 20 inclusive, 5 from Oct 21.
   const metric = computeHabitPeriodMetric(
     { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" },
     buildScheduleTimelines([
@@ -291,8 +342,10 @@ test("mid-week target changes are replayed from schedule history", () => {
   );
 
   assert.equal(metric.completed, 3);
-  assert.ok(Math.abs(metric.target - (6 + 5 / 7)) < 1e-9);
-  assert.ok(Math.abs(metric.percentage - (3 / (6 + 5 / 7)) * 100) < 1e-6);
+  assert.ok(Math.abs(metric.target - (4 + 15 / 7)) < 1e-9);
+  assert.ok(
+    Math.abs(metric.percentage - (3 / (4 + 15 / 7)) * 100) < 1e-6,
+  );
   assert.equal(metric.level.label, "Intermediate");
 });
 
@@ -355,20 +408,20 @@ test("a new target mid-month applies only from its start date", () => {
 });
 
 test("overachievement exceeds 100 percent and maps to the top level", () => {
-  // A completed month-anchored week: Oct 22-28, 2026.
-  const week = getProgressPeriod("week", ymd(Y, 10, 22), ymd(Y, 11, 1));
+  // A completed Sat-Fri week: Oct 10-16, 2026 (Nov 1 is after it ends).
+  const week = getProgressPeriod("week", ymd(Y, 10, 12), ymd(Y, 11, 1));
 
   const metric = computeHabitPeriodMetric(
     { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" },
     buildScheduleTimelines([scheduleRow("h1", "2026-01-01", 5)]),
     completionsFor("h1", [
-      "2026-10-22",
-      "2026-10-23",
-      "2026-10-24",
-      "2026-10-25",
-      "2026-10-26",
-      "2026-10-27",
-      "2026-10-28",
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
     ]),
     week,
   );
@@ -412,7 +465,7 @@ test("future periods and zero targets render as N/A", () => {
     completionsFor("h1", []),
     getProgressPeriod("week", ymd(Y, 9, 28), today),
   );
-  // Week Sep 22-28; created Oct 21 -> the whole week predates creation,
+  // Week Sep 26 - Oct 2; created Oct 21 -> the whole week predates creation,
   // so the target sums to zero.
   assert.equal(beforeCreation.target, 0);
   assert.equal(beforeCreation.percentage, null);
@@ -423,8 +476,8 @@ test("getPreviousProgressPeriod keeps full length and zero stays N/A for future"
   const current = getProgressPeriod("week", today, today);
   const previous = getPreviousProgressPeriod(current);
 
-  assert.equal(previous.start.getDate(), 8); // Week Oct 8-14
-  assert.equal(previous.end.getDate(), 14);
+  assert.equal(previous.start.getDate(), 10); // Week Oct 10-16
+  assert.equal(previous.end.getDate(), 16);
   assert.equal(previous.elapsedDays, 7);
   assert.equal(previous.isCurrent, false);
 
@@ -442,7 +495,7 @@ test("previous progress periods also compare completed counts", () => {
   const metric = computeHabitPeriodMetric(
     habit,
     timelines,
-    completionsFor("h1", ["2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"]),
+    completionsFor("h1", ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]),
     previous,
   );
 
@@ -574,4 +627,102 @@ test("achievement thresholds are preserved", async () => {
   assert.equal(getLevel(40).label, "Intermediate");
   assert.equal(getLevel(0).label, "Beginner");
   assert.equal(getLevel(140).label, "Legendary"); // overachievement
+});
+
+test("done counter shows the scheduled share next to the completed count", () => {
+  // A full 7-day week for a "5 days per week" habit: 7 across 5 -> complete.
+  const week = doneCounterFrom({ completed: 7, target: 5, percentage: 140 });
+  assert.deepEqual(week, { completed: 7, scheduled: 5, complete: true });
+  // Blends across a mid-week target change round to whole days, and the
+  // green coverage check uses that same rounded number.
+  //   5 days at the old 5/7 + 2 days at the new 7/7 = 5.57 -> "6".
+  const blend = 5 * (5 / 7) + 2;
+  assert.equal(doneCounterFrom({ completed: 5, target: blend, percentage: (5 / blend) * 100 }).complete, false);
+  assert.equal(
+    doneCounterFrom({ completed: 5, target: blend, percentage: (5 / blend) * 100 })
+      .scheduled,
+    6,
+  );
+  assert.equal(
+    doneCounterFrom({ completed: 6, target: blend, percentage: (6 / blend) * 100 })
+      .complete,
+    true,
+  );
+
+  // A month's share (5/7 x 31 = 22.14) rounds to 22 and 22 days cover it.
+  const share = (5 / 7) * 31;
+  const month = doneCounterFrom({
+    completed: 22,
+    target: share,
+    percentage: (22 / share) * 100,
+  });
+  assert.equal(month.scheduled, 22);
+  assert.equal(month.complete, true);
+
+  // Nothing scheduled (zero target): the denominator is hidden entirely.
+  const empty = doneCounterFrom({ completed: 3, target: 0, percentage: null });
+  assert.deepEqual(empty, { completed: 3, scheduled: null, complete: false });
+
+  // A sub-half-day share (e.g. 3 eligible days of a 1-day/week habit)
+  // cannot promise a full scheduled day, so it hides the denominator too.
+  const tinyShare = 3 * (1 / 7); // 0.43
+  assert.equal(
+    doneCounterFrom({ completed: 3, target: tinyShare, percentage: 100 })
+      .scheduled,
+    null,
+  );
+});
+
+test("done counter treats float rounding artifacts as whole goals", () => {
+  // 7*(5/7)-style sums can land a hair over the integer target; rounding
+  // pulls them back to the whole scheduled count and stays complete.
+  const rate = {
+    completed: 7,
+    target: 5 + 1e-12,
+    percentage: (7 / (5 + 1e-12)) * 100, // 99.99999999999998 < 100
+  };
+  assert.equal(doneCounterFrom(rate).scheduled, 5);
+  assert.equal(doneCounterFrom(rate).complete, true);
+
+  // ...but genuinely-not-complete rates stay untouched.
+  assert.equal(
+    doneCounterFrom({ completed: 9999, target: 10000, percentage: 99.99 })
+      .complete,
+    false,
+  );
+});
+
+test("done counter can use the habit's exact weekly target in week view", () => {
+  // Week view pins the denominator to the habit's current weekly target,
+  // so a blend from a mid-week target change no longer shows 5.6/6.3.
+  // Here the share over the Sat-Fri week is 5.57 (5 old days + 2 new),
+  // but the cell shows the current exact target.
+  const blendWeek = 5 * (5 / 7) + 2; // 5.5714285...
+  const pinned = doneCounterFrom(
+    { completed: 4, target: blendWeek, percentage: (4 / blendWeek) * 100 },
+    7,
+  );
+  assert.deepEqual(pinned, { completed: 4, scheduled: 7, complete: false });
+  assert.equal(
+    doneCounterFrom(
+      { completed: 7, target: blendWeek, percentage: (7 / blendWeek) * 100 },
+      7,
+    ).complete,
+    true,
+  );
+
+  // Zero-target habits stay hidden even when pinned.
+  const zero = doneCounterFrom(
+    { completed: 2, target: 2, percentage: 100 },
+    0,
+  );
+  assert.deepEqual(zero, { completed: 2, scheduled: null, complete: false });
+
+  // Without an override (month / last 15), the rounded share wins.
+  const range = 5 * (5 / 7) + 9; // 15-day window: 5 days at 5/7, then daily
+  assert.equal(
+    doneCounterFrom({ completed: 11, target: range, percentage: (11 / range) * 100 })
+      .scheduled,
+    13, // 5*(5/7)+9 = 12.57 -> 13
+  );
 });

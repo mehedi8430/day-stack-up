@@ -1,17 +1,15 @@
 import {
-  addDays,
   addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
-  startOfWeek,
   startOfDay,
   startOfMonth,
 } from "date-fns";
 import {
   getLevel,
-  getMonthWeek,
-  shiftMonthWeek,
+  getWeek,
+  shiftWeek,
   toKey,
   type AchievementLevel,
 } from "@/lib/date";
@@ -139,88 +137,8 @@ export interface MetricComparison {
 
 export type CompletionMap = Record<string, boolean>;
 
-export type HabitStabilityLevel =
-  | "high"
-  | "moderate"
-  | "low"
-  | "building"
-  | "inactive";
-
-export interface HabitStability {
-  weeklyCompletions: number[];
-  min: number | null;
-  max: number | null;
-  variation: number | null;
-  level: HabitStabilityLevel;
-}
-
 export function completionKey(habitId: string, dateKey: string): string {
   return `${habitId}__${dateKey}`;
-}
-
-/**
- * Measures how much a habit's completion frequency varies across up to the
- * last 12 fully completed Monday-to-Sunday weeks. Partial creation weeks and
- * the current, incomplete week are excluded so each point is comparable.
- */
-export function computeHabitStability(
-  habit: Pick<ProgressHabit, "id" | "createdAt">,
-  completions: CompletionMap,
-  today: Date,
-): HabitStability {
-  const currentWeekStart = startOfWeek(startOfDay(today), { weekStartsOn: 1 });
-  const createdOn = habit.createdAt.slice(0, 10);
-  const weeklyCompletions: number[] = [];
-
-  for (let weekIndex = 11; weekIndex >= 0; weekIndex -= 1) {
-    const weekStart = addDays(currentWeekStart, -7 * (weekIndex + 1));
-    const weekStartKey = toKey(weekStart);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(createdOn) && weekStartKey <= createdOn) {
-      continue;
-    }
-
-    const weekEnd = addDays(weekStart, 6);
-    let completed = 0;
-    for (const day of eachDayOfInterval({ start: weekStart, end: weekEnd })) {
-      if (completions[completionKey(habit.id, toKey(day))]) completed += 1;
-    }
-    weeklyCompletions.push(completed);
-  }
-
-  if (weeklyCompletions.length === 0) {
-    return {
-      weeklyCompletions,
-      min: null,
-      max: null,
-      variation: null,
-      level: "building",
-    };
-  }
-
-  const min = Math.min(...weeklyCompletions);
-  const max = Math.max(...weeklyCompletions);
-  const variation = max - min;
-  const mean =
-    weeklyCompletions.reduce((sum, count) => sum + count, 0) /
-    weeklyCompletions.length;
-  const standardDeviation = Math.sqrt(
-    weeklyCompletions.reduce(
-      (sum, count) => sum + (count - mean) ** 2,
-      0,
-    ) / weeklyCompletions.length,
-  );
-  const level =
-    weeklyCompletions.length < 4
-      ? "building"
-      : mean === 0
-        ? "inactive"
-      : standardDeviation <= 1.25
-        ? "high"
-        : standardDeviation <= 2.25
-          ? "moderate"
-          : "low";
-
-  return { weeklyCompletions, min, max, variation, level };
 }
 
 /**
@@ -240,8 +158,7 @@ export function buildCompletionMap(
 }
 
 /**
- * Returns the selected month-anchored week (1–7, 8–14, …, 29–month end) or
- * calendar month.
+ * Returns the selected Saturday-to-Friday week or calendar month.
  *
  * The current period keeps `effectiveEnd === today` for the completed count,
  * while its target spans the whole period so users always see progress
@@ -253,7 +170,7 @@ export function getProgressPeriod(
   today: Date,
 ): ProgressPeriod {
   const todayDay = startOfDay(today);
-  const week = view === "week" ? getMonthWeek(cursor) : null;
+  const week = view === "week" ? getWeek(cursor) : null;
   const start = week ? week.start : startOfMonth(cursor);
   const end = week ? week.end : endOfMonth(start);
   const totalDays = differenceInCalendarDays(end, start) + 1;
@@ -288,7 +205,7 @@ export function getPreviousProgressPeriod(
 ): ProgressPeriod {
   const week =
     current.view === "week"
-      ? getMonthWeek(shiftMonthWeek(current.start, -1))
+      ? getWeek(shiftWeek(current.start, -1))
       : null;
   const start = week ? week.start : startOfMonth(addMonths(current.start, -1));
   const end = week ? week.end : endOfMonth(start);
@@ -446,6 +363,45 @@ export function computeRangeRate(
 export function formatTargetCount(value: number): string {
   const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+export interface DoneCounter {
+  /** Completions on the dates eligible for the habit. */
+  completed: number;
+  /**
+   * Scheduled days for the range, rounded to a whole day ("5.6" -> 6), or
+   * null when less than one day is scheduled (or the target is zero) so the
+   * denominator is hidden.
+   */
+  scheduled: number | null;
+  /** True when completions cover the rounded scheduled count. */
+  complete: boolean;
+}
+
+/**
+ * Per-habit "done / scheduled days" counter values for the calendar's end
+ * column. Built from the rate over the visible range: the scheduled share is
+ * each eligible date's `weeklyTarget / 7` (schedule history and creation
+ * dates included). Shares are rounded to whole days so a blend across a
+ * mid-week target change reads as a plain number, and the green coverage
+ * check uses that same rounded number so the display and the color always
+ * agree.
+ *
+ * `scheduledDaysOverride` pins the scheduled count to the habit's exact
+ * weekly target (week view shows what the habit is targeted for this week,
+ * history blends included); month and last-15 views omit it and get the
+ * rounded range share.
+ */
+export function doneCounterFrom(
+  rate: RangeRateMetric,
+  scheduledDaysOverride?: number | null,
+): DoneCounter {
+  const scheduled = Math.round(scheduledDaysOverride ?? rate.target);
+  return {
+    completed: rate.completed,
+    scheduled: scheduled >= 1 ? scheduled : null,
+    complete: scheduled >= 1 && rate.completed >= scheduled,
+  };
 }
 
 function directionFor(delta: number): TrendDirection {

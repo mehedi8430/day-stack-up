@@ -1,7 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { redirect } from "next/navigation";
 import { getPlannerTasksBetween } from "@/app/actions/planner.actions";
-import { getMonthWeek } from "@/lib/date";
+import { getWeek } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import { PlannerManagement } from "./_components/planner-management";
 
@@ -25,7 +25,7 @@ export default async function PlannerPage({
       ? resolvedParams.date
       : today;
 
-  const week = getMonthWeek(parseISO(`${requestedDate}T12:00:00`));
+  const week = getWeek(parseISO(`${requestedDate}T12:00:00`));
   const start = format(week.start, "yyyy-MM-dd");
   const end = format(week.end, "yyyy-MM-dd");
 
