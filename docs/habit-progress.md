@@ -97,9 +97,9 @@ when ready.
 ## 4. Period model
 
 `getProgressPeriod(view, cursor, today)` in `src/lib/habit-progress.ts`
-describes the period being viewed. Weeks are **month-anchored** (1–7, 8–14,
-15–21, 22–28, 29–month end), so the final week of a month can be shorter than
-seven days; months are calendar months.
+describes the period being viewed. Weeks are **Saturday-to-Friday** calendar
+weeks — every week covers exactly seven days, and a week may cross a month
+boundary; months are calendar months.
 
 | Field | Meaning |
 | --- | --- |
@@ -107,18 +107,18 @@ seven days; months are calendar months.
 | `start` | First calendar day of the period |
 | `end` | Last calendar day of the period, including future days |
 | `effectiveEnd` | Last day completions are counted (`today` for the current period); targets use the full period instead |
-| `totalDays` | Calendar length (1–7 for a week, or 28–31 for a month) |
+| `totalDays` | Calendar length (always `7` for a week, or 28–31 for a month) |
 | `elapsedDays` | Days through the effective end; `0` for a future period |
 | `isCurrent` | `today` falls inside the period |
 | `isFuture` | The period starts after today |
 
 Navigation behavior:
 
-- Previous/next step one month-anchored week bucket or one month at a time;
-  navigation crosses month boundaries without skipping a short final week.
+- Previous/next step one Saturday-to-Friday week or one month at a time;
+  navigation crosses month boundaries freely since weeks are not month-bound.
   Forward navigation is disabled at the current period.
 - "This week" / "This month" resets the cursor.
-- The period label is `Oct 22 – Oct 28, 2026` (weeks) or `MMMM yyyy` (months),
+- The period label is `Oct 24 – Oct 30, 2026` (weeks) or `MMMM yyyy` (months),
   announced through `aria-live`.
 
 ## 5. Targets and eligibility
@@ -190,7 +190,7 @@ remain raw completion counts for the visible range.
 ## 6. Comparison with the previous period
 
 `getPreviousProgressPeriod(current)` returns the immediately preceding
-month-anchored week bucket or calendar month **at full length**. v2 compares
+Saturday-to-Friday week or calendar month **at full length**. v2 compares
 **goal with goal**: each period is measured against its own full-period
 target, so the previous period is no longer clipped to the current period's
 elapsed days (that clipping belonged to the daily-pace model of v1). The page
@@ -335,8 +335,8 @@ Current date: Oct 25, 2026 (a Sunday). Week = Oct 22–28.
 ## 12. Validation performed
 
 - **Committed test suite** `scripts/habit-progress.test.mjs`
-  (`npm run test`, Node's built-in runner — no new dependencies): 26 tests
-  covering month-anchored week buckets and navigation, schedule-history
+  (`npm run test`, Node's built-in runner — no new dependencies): 32 tests
+  covering Saturday-to-Friday weeks and week navigation, schedule-history
   resolution, full-period weekly targets, daily habits, mid-week/mid-month
   target changes, monthly proportionality with
   creation trimming, overachievement >100%, future/zero-target N/A rules,
