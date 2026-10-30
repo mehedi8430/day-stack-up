@@ -1,9 +1,7 @@
 "use client";
 
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { format, parseISO, subDays } from "date-fns";
-import { GripVertical, MoveLeft, MoveRight, Pencil, Trash2 } from "lucide-react";
+import { MoveLeft, MoveRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -49,47 +47,22 @@ export function TaskRow({ task }: { task: PlannerTask }) {
     : "";
   const canMoveToYesterday = Boolean(previousDayKey) && task.date !== today;
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   const terminal = task.status === "done" || task.status === "skipped";
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={cn(
-        "group grid grid-cols-[auto_auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-foreground/20 sm:grid-cols-[auto_5rem_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-y-3",
-        isDragging && "relative z-10 opacity-90 shadow-lg",
+        "group grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-foreground/20 sm:grid-cols-[5rem_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-y-3",
         terminal && "opacity-65",
       )}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="col-start-1 row-start-1 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing sm:col-auto sm:row-auto"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div className="hidden text-right text-xs tabular-nums text-muted-foreground sm:col-start-2 sm:block">
+      <div className="hidden text-right text-xs tabular-nums text-muted-foreground sm:block">
         {formatTime(task.startTime)}
       </div>
-      <div className="col-start-2 row-start-1 sm:col-auto sm:row-auto">
+      <div className="col-start-1 row-start-1 sm:col-auto sm:row-auto">
         <TaskStatusButton task={task} />
       </div>
-      <div className="col-start-3 row-start-1 min-w-0 sm:col-auto sm:row-auto">
+      <div className="col-start-2 row-start-1 min-w-0 sm:col-auto sm:row-auto">
         <div className="flex flex-wrap items-center gap-2">
           <p
             className={cn(
@@ -115,14 +88,14 @@ export function TaskRow({ task }: { task: PlannerTask }) {
           {task.notes && <span className="truncate">{task.notes}</span>}
         </div>
       </div>
-      <div className="col-span-3 row-start-2 mt-1 flex items-center justify-end gap-1 border-t pt-2 sm:col-auto sm:row-auto sm:mt-0 sm:border-t-0 sm:pt-0 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
+      <div className="col-span-2 row-start-2 mt-1 flex items-center justify-end gap-1 border-t pt-2 sm:col-auto sm:row-auto sm:mt-0 sm:border-t-0 sm:pt-0 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
         {task.status !== "done" && task.status !== "skipped" && (
           <>
             {canMoveToYesterday && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() =>
                   runPlannerAction(moveTaskToYesterday(task.id), {
                     success: `Task moved to ${format(
@@ -141,7 +114,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9"
               onClick={() =>
                 runPlannerAction(moveTaskToNextDay(task.id), {
                   success: "Task moved to tomorrow",
@@ -158,7 +131,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-9 w-9"
           onClick={() => openEditTask(task.id)}
           aria-label="Edit task"
           title="Edit task"
@@ -168,7 +141,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-destructive"
+          className="h-9 w-9 text-destructive"
           onClick={() => requestDeleteTask(task.id)}
           aria-label="Delete task"
           title="Delete task"

@@ -9,22 +9,31 @@ export function PlannerStatsSidebar() {
   const selectedDate = usePlannerStore((s) => s.selectedDate);
   const isLoading = usePlannerStore((s) => s.isLoading);
 
-  const { completedCount, totalTaskCount, activeCount, scheduledMinutes } =
-    React.useMemo(() => {
-      const dayTasks = tasks.filter((task) => task.date === selectedDate);
-      return {
-        completedCount: dayTasks.filter((task) => task.status === "done")
-          .length,
-        totalTaskCount: dayTasks.length,
-        activeCount: dayTasks.filter(
-          (task) => task.status !== "done" && task.status !== "skipped",
-        ).length,
-        scheduledMinutes: dayTasks.reduce(
-          (total, task) => total + (task.durationMinutes ?? 0),
-          0,
-        ),
-      };
-    }, [tasks, selectedDate]);
+  const {
+    completedCount,
+    totalTaskCount,
+    activeCount,
+    scheduledMinutes,
+    completionRate,
+  } = React.useMemo(() => {
+    const dayTasks = tasks.filter((task) => task.date === selectedDate);
+    const completed = dayTasks.filter((task) => task.status === "done").length;
+    return {
+      completedCount: completed,
+      totalTaskCount: dayTasks.length,
+      activeCount: dayTasks.filter(
+        (task) => task.status !== "done" && task.status !== "skipped",
+      ).length,
+      scheduledMinutes: dayTasks.reduce(
+        (total, task) => total + (task.durationMinutes ?? 0),
+        0,
+      ),
+      completionRate:
+        dayTasks.length === 0
+          ? 0
+          : Math.round((completed / dayTasks.length) * 100),
+    };
+  }, [tasks, selectedDate]);
 
   if (isLoading) {
     return (
@@ -58,6 +67,20 @@ export function PlannerStatsSidebar() {
               /{totalTaskCount}
             </span>
           </p>
+          <div
+            className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-label="Daily task completion"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={completionRate}
+            aria-valuetext={`${completedCount} of ${totalTaskCount} tasks completed`}
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width]"
+              style={{ width: `${completionRate}%` }}
+            />
+          </div>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

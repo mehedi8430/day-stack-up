@@ -1,13 +1,11 @@
 "use client";
 
-import * as React from "react";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getWeekDays } from "@/lib/date";
 import { sortPlannerTasks } from "@/lib/planner-utils";
 import { usePlannerStore } from "@/stores/planner.store";
-import { DayTasksDialog } from "./day-tasks-dialog";
 import { runPlannerAction } from "./planner-feedback";
 
 const MAX_PREVIEW = 3;
@@ -25,7 +23,6 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
   const selectDate = usePlannerStore((s) => s.selectDate);
   const changeWeek = usePlannerStore((s) => s.changeWeek);
   const goToToday = usePlannerStore((s) => s.goToToday);
-  const [activeDate, setActiveDate] = React.useState<string | null>(null);
 
   if (!weekStart) return null;
 
@@ -33,14 +30,21 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
   const days = getWeekDays(start);
   const end = days[days.length - 1] ?? start;
 
-  const selectDateFromStrip = (date: string) => {
+  const selectDateFromStrip = (
+    date: string,
+    scrollTarget = "planner-tasks",
+  ) => {
     runPlannerAction(selectDate(date), {
       fallback: "Failed to load planner",
     });
-    document.getElementById("planner-tasks")?.scrollIntoView({
+    document.getElementById(scrollTarget)?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
+  };
+
+  const selectDateForQuickAdd = (date: string) => {
+    selectDateFromStrip(date, "planner-quick-add");
   };
 
   return (
@@ -67,7 +71,7 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold">This week</h2>
+          <h2 className="font-semibold">Week of {format(start, "MMM d")}</h2>
           <p className="text-sm text-muted-foreground">
             {format(start, "MMM d")} – {format(end, "MMM d, yyyy")}
           </p>
@@ -191,7 +195,7 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
                 variant="outline"
                 size="sm"
                 className="mt-3 w-full gap-1"
-                onClick={() => setActiveDate(key)}
+                onClick={() => selectDateForQuickAdd(key)}
               >
                 <Plus className="h-4 w-4" />
                 Add task
@@ -201,10 +205,6 @@ export function WeekStrip({ onClose }: { onClose: () => void }) {
         })}
       </div>
 
-      <DayTasksDialog
-        date={activeDate}
-        onClose={() => setActiveDate(null)}
-      />
     </section>
   );
 }

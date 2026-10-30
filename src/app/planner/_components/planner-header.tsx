@@ -2,7 +2,6 @@
 
 import { format, isToday, isTomorrow, isYesterday, parseISO } from "date-fns";
 import {
-  CalendarDays,
   CalendarRange,
   ChevronLeft,
   ChevronRight,
@@ -29,14 +28,11 @@ export function PlannerHeader({
   return (
     <header className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <CalendarDays className="h-4 w-4" />
-          <span>{format(date, "EEEE, MMMM d, yyyy")}</span>
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">Daily Planner</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          {format(date, "EEEE, MMMM d, yyyy")}
+        </h1>
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-          Plan your work in time blocks, keep the next action visible, and close
-          the day with a clear record of what moved forward.
+          Choose a day, add a few focused tasks, and keep track of your progress.
         </p>
       </div>
       <div className="flex items-center gap-2">

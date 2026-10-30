@@ -51,6 +51,7 @@ export function NewTaskForm({ date }: { date: string }) {
 
   return (
     <form
+      id="planner-quick-add"
       onSubmit={submit}
       className="rounded-xl border bg-card p-4 shadow-sm sm:p-5"
     >
@@ -103,9 +104,9 @@ export function NewTaskForm({ date }: { date: string }) {
       </div>
       {detailsOpen && (
         <div className="mt-4 border-t pt-4">
-          <div className="flex gap-4 w-full">
+          <div className="grid w-full gap-4 sm:grid-cols-2">
             {/* Duration */}
-            <div className="space-y-2 w-full">
+            <div className="w-full space-y-2">
               <Label htmlFor="task-duration">Duration</Label>
               <div className="relative">
                 <Input
@@ -123,7 +124,7 @@ export function NewTaskForm({ date }: { date: string }) {
               </div>
             </div>
             {/* Priority */}
-            <div className="space-y-2 w-full">
+            <div className="w-full space-y-2">
               <Label htmlFor="task-priority">Priority</Label>
               <select
                 id="task-priority"
@@ -140,7 +141,7 @@ export function NewTaskForm({ date }: { date: string }) {
             </div>
           </div>
           {/* Notes */}
-          <div className="space-y-2 mt-4">
+          <div className="mt-4 space-y-2">
             <Label htmlFor="task-notes">Notes</Label>
             <textarea
               id="task-notes"

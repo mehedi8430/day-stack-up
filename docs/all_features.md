@@ -48,7 +48,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Day-by-day navigation** — previous/next day arrows and a center button showing Today / Tomorrow / Yesterday / date
 - **Quick-add task form** — title, **start time**, **duration** (minutes), **priority** (low / medium / high), and notes; press Enter to add quickly
 - **Status workflow** — status button cycles planned → in_progress → done; plus **move to tomorrow** and **move to yesterday** actions that shift a task one day relative to its own date (move to yesterday is hidden on today's tasks)
-- **Drag-and-drop task reordering**; tasks sorted by start time then position
+- **Time-based task ordering** — scheduled tasks appear by start time, followed by unscheduled tasks
 - **Edit task dialog** — update title, time, duration, priority, and notes
 - **Delete task** — confirmation dialog before removal
 - **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations, shown as hours and minutes, e.g. `2 hrs 10 minutes`)
@@ -56,9 +56,9 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Weekly planner strip** — a collapsible strip for the Saturday-to-Friday
   week containing the selected date (always 7 days; weeks may cross a month
   boundary) opened from the "Weekly planner" button. Each day
-  previews up to 3 of its tasks, has a per-day quick-add input, and can be
-  clicked to open that day below; includes week navigation (prev / next / this
-  week)
+  previews up to 3 of its tasks; selecting a day opens it below, and its
+  "Add task" button selects that day and focuses the shared quick-add form.
+  Includes week navigation (prev / next / this week)
 
 ### 7. Analytics Dashboard (`/analytics`)
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
