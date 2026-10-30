@@ -41,8 +41,8 @@ import {
   getProgressPeriod,
   isHabitEligibleOn,
   summarizeMetrics,
-  type HabitScheduleRow,
 } from "@/lib/habit-progress";
+import type { HabitScheduleRow } from "@/types/habit-progress-types";
 import { computeHabitStability } from "@/lib/habit-analytics";
 
 interface AnalyticsProps {

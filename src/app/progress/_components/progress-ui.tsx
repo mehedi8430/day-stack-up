@@ -1,7 +1,10 @@
 import * as React from "react";
 import { ACHIEVEMENT_LEVELS, type AchievementLevel } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import type { MetricComparison, TrendDirection } from "@/lib/habit-progress";
+import type {
+  MetricComparison,
+  TrendDirection,
+} from "@/types/habit-progress-types";
 
 export function formatPercentage(value: number | null): string {
   return value === null ? "N/A" : `${Math.round(value)}%`;

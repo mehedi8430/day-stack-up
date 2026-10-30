@@ -184,8 +184,17 @@ period. That keeps the bar a "how far so far" pace indicator while fixing the
 old daily-only math: a 5-days/week habit is no longer counted as due seven
 days a week, and days before a habit existed no longer drag the percentage
 down. Percentages can exceed 100%; the bar fills to 100% while
-`aria-valuetext` carries the raw value. The per-habit `X/days` cell counters
-remain raw completion counts for the visible range.
+`aria-valuetext` carries the raw value.
+
+The per-habit `X/scheduled` cell counters are a current-routine glance rather
+than history-aware progress. They count completions on eligible dates in the
+visible range against the habit's **current** weekly target — the exact target
+for a week, `weeklyTarget / 7 × eligible days` for month and last-15 views —
+rounded to whole days. This deliberately ignores `habit_schedules` history (the
+progress page remains the historical view), so a habit that just moved from
+daily to 5 days/week shows `22` scheduled days for a 31-day month instead of a
+misleading `29`-day blend. Creation dates still trim the denominator, and the
+green coverage check uses the same rounded number that is displayed.
 
 ## 6. Comparison with the previous period
 
@@ -272,12 +281,14 @@ Core:
 - `prisma/schema.prisma` — `habits.weekly_target`, new `HabitSchedule` model.
 - `prisma/migrations/20261025120000_habit_weekly_targets/` — DDL, CHECKs,
   FKs, RLS, backfill (see §3.3).
+- `src/types/habit-progress-types.ts` — shared type definitions for progress
+  periods, schedule timelines, metrics, comparisons, and counters.
 - `src/lib/habit-progress.ts` — pure target model:
   `sanitizeWeeklyTarget`, `buildScheduleTimelines`, `resolveWeeklyTarget`,
   `isHabitEligibleOn`, `getProgressPeriod`, `getPreviousProgressPeriod`,
   `computeHabitPeriodMetric`, `summarizeMetrics`, `compareMetrics`,
-  `computeRangeRate` (calendar bar), `buildCompletionMap`,
-  `formatTargetCount`.
+  `computeRangeRate` (calendar bar), `scheduledDaysForRange` (current-target
+  counter denominators), `buildCompletionMap`, `formatTargetCount`.
 - `src/app/actions/habit.actions.ts` — `getInitialData` (+schedules,
   `weeklyTarget`), transactional `addHabit`/`updateHabit` schedule writes,
   `/progress` revalidation for habit/completion mutations, strict

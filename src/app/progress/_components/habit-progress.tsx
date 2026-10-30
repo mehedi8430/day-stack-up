@@ -22,9 +22,11 @@ import {
   getPreviousProgressPeriod,
   getProgressPeriod,
   summarizeMetrics,
-  type HabitScheduleRow,
-  type ProgressPeriodView,
 } from "@/lib/habit-progress";
+import type {
+  HabitScheduleRow,
+  ProgressPeriodView,
+} from "@/types/habit-progress-types";
 import { cn } from "@/lib/utils";
 import { HabitProgressCard } from "./habit-progress-card";
 import { ProgressSummary } from "./progress-summary";

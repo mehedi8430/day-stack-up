@@ -14,8 +14,8 @@ import { getWeek, shiftWeek } from "@/lib/date";
 import {
   buildScheduleTimelines,
   computeRangeRate,
-  type HabitScheduleRow,
 } from "@/lib/habit-progress";
+import type { HabitScheduleRow } from "@/types/habit-progress-types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HabitForm } from "@/app/_components/habit-form";

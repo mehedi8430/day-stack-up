@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePlannerStore } from "@/stores/planner.store";
+import { formatPlannedDuration } from "@/lib/planner-utils";
 
 export function PlannerStatsSidebar() {
   const tasks = usePlannerStore((s) => s.tasks);
@@ -71,11 +72,11 @@ export function PlannerStatsSidebar() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Planned time
           </p>
-          <p className="mt-1 text-2xl font-bold">
-            {scheduledMinutes}
-            <span className="text-base font-normal text-muted-foreground">
-              {" "}min
-            </span>
+          <p
+            className="mt-1 text-xl font-bold leading-tight lg:text-2xl"
+            title={`${scheduledMinutes} minutes`}
+          >
+            {formatPlannedDuration(scheduledMinutes)}
           </p>
           <p className="text-xs text-muted-foreground">from task estimates</p>
         </div>

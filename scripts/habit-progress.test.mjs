@@ -28,6 +28,7 @@ const {
   computeRangeRate,
   doneCounterFrom,
   formatTargetCount,
+  scheduledDaysForRange,
   getPreviousProgressPeriod,
   getProgressPeriod,
   resolveWeeklyTarget,
@@ -724,5 +725,65 @@ test("done counter can use the habit's exact weekly target in week view", () => 
     doneCounterFrom({ completed: 11, target: range, percentage: (11 / range) * 100 })
       .scheduled,
     13, // 5*(5/7)+9 = 12.57 -> 13
+  );
+});
+
+test("calendar counters use the current target for month and 15-day views", () => {
+  // Regression: a habit that moved from daily to 5x/week on Oct 26 must not
+  // blend the old daily history into the month / 15-day denominator. The
+  // calendar counter is a glance at the current routine, so it pins the
+  // habit's current weekly target just like the week view already did.
+  const habit = {
+    ...baseHabit,
+    weeklyTarget: 5,
+    createdAt: "2026-09-01T09:00:00.000Z",
+  };
+  const october = getMonthDays(Y, 9); // 31 days
+  const monthScheduled = scheduledDaysForRange(habit, october);
+  assert.ok(Math.abs(monthScheduled - (5 / 7) * 31) < 1e-9);
+  assert.equal(
+    doneCounterFrom({
+      completed: 8,
+      target: monthScheduled,
+      percentage: (8 / monthScheduled) * 100,
+    }).scheduled,
+    22, // 22.14 -> 22, not the history blend of 29
+  );
+
+  const last15 = Array.from({ length: 15 }, (_, index) =>
+    ymd(Y, 10, 16 + index),
+  );
+  const last15Scheduled = scheduledDaysForRange(habit, last15);
+  assert.ok(Math.abs(last15Scheduled - (5 / 7) * 15) < 1e-9);
+  assert.equal(
+    doneCounterFrom({
+      completed: 8,
+      target: last15Scheduled,
+      percentage: (8 / last15Scheduled) * 100,
+    }).scheduled,
+    11, // 10.71 -> 11, not the history blend of 14
+  );
+
+  // Creation dates still trim the scheduled share: a habit created Oct 21
+  // only has 11 eligible days in October.
+  const created = { ...habit, createdAt: "2026-10-21T09:00:00.000Z" };
+  const trimmed = scheduledDaysForRange(created, october);
+  assert.ok(Math.abs(trimmed - (5 / 7) * 11) < 1e-9);
+  assert.equal(
+    doneCounterFrom({ completed: 5, target: trimmed, percentage: 63.6 })
+      .scheduled,
+    8, // 7.86 -> 8
+  );
+
+  // A habit that did not exist in the range schedules nothing at all.
+  const future = scheduledDaysForRange(
+    { ...habit, createdAt: "2026-11-15T09:00:00.000Z" },
+    october,
+  );
+  assert.equal(future, 0);
+  assert.equal(
+    doneCounterFrom({ completed: 0, target: future, percentage: null })
+      .scheduled,
+    null,
   );
 });

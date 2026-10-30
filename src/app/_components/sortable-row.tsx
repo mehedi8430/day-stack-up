@@ -11,14 +11,16 @@ import {
   Pencil,
   StickyNote,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 import { getCategory, getWeeklyTargetLabel, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import {
   computeRangeRate,
   doneCounterFrom,
-  type ScheduleTimelines,
+  scheduledDaysForRange,
 } from "@/lib/habit-progress";
+import type { ScheduleTimelines } from "@/types/habit-progress-types";
 import type { CalendarView } from "@/app/_components/calendar-utils";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
@@ -75,12 +77,9 @@ export function SortableRow({
   };
 
   const cat = getCategory(habit.category);
-  // Done / scheduled days: completions on eligible dates vs the schedule for
-  // the visible range. Week view pins the exact weekly target (a mid-week
-  // target change never shows a blend here); month and last-15 keep the
-  // range share, rounded to whole days.
+  
   const scheduledDaysOverride =
-    view === "week" ? habit.weeklyTarget : undefined;
+    view === "week" ? habit.weeklyTarget : scheduledDaysForRange(habit, days);
   const counter = doneCounterFrom(
     computeRangeRate([habit], timelines, completions, days),
     scheduledDaysOverride,
@@ -106,10 +105,11 @@ export function SortableRow({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <Link
-          href={`/progress?habit=${encodeURIComponent(habit.id)}`}
-          className="flex min-w-0 max-w-[120px] items-baseline text-left font-medium hover:underline sm:max-w-70"
-          title="View progress"
+        <button
+          type="button"
+          onClick={() => onOpenNotes(habit)}
+          className="flex min-w-0 max-w-[120px] cursor-pointer items-baseline text-left font-medium hover:underline sm:max-w-70"
+          title={`View notes for ${habit.name}`}
         >
           <span className="min-w-0 truncate">{habit.name}</span>
           <span
@@ -118,7 +118,7 @@ export function SortableRow({
           >
             ({habit.weeklyTarget})
           </span>
-        </Link>
+        </button>
         {/* <span
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: cat.color }}
@@ -148,6 +148,12 @@ export function SortableRow({
               <Link href={`/habits/${habit.id}/milestones`}>
                 <Milestone className="h-3.5 w-3.5" />
                 Milestones
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/progress?habit=${encodeURIComponent(habit.id)}`}>
+                <TrendingUp className="h-3.5 w-3.5" />
+                View progress
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
