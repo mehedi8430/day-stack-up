@@ -18,7 +18,7 @@ import { format, isToday } from "date-fns";
 import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/lib/types";
-import type { ScheduleTimelines } from "@/lib/habit-progress";
+import type { ScheduleTimelines } from "@/types/habit-progress-types";
 import type { CalendarView } from "@/app/_components/calendar-utils";
 import { SortableRow } from "@/app/_components/sortable-row";
 

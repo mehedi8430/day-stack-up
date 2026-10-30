@@ -1,10 +1,10 @@
 import { addDays, eachDayOfInterval, startOfDay, startOfWeek } from "date-fns";
 import { toKey } from "@/lib/date";
-import {
-  completionKey,
-  type CompletionMap,
-  type ProgressHabit,
-} from "@/lib/habit-progress";
+import { completionKey } from "@/lib/habit-progress";
+import type {
+  CompletionMap,
+  ProgressHabit,
+} from "@/types/habit-progress-types";
 
 export type HabitStabilityLevel =
   | "high"

@@ -6,11 +6,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCategory, getWeeklyTargetLabel, type Habit } from "@/lib/types";
-import {
-  formatTargetCount,
-  type MetricComparison,
-  type PeriodMetric,
-} from "@/lib/habit-progress";
+import { formatTargetCount } from "@/lib/habit-progress";
+import type {
+  MetricComparison,
+  PeriodMetric,
+} from "@/types/habit-progress-types";
 import {
   formatDayDelta,
   formatPercentage,

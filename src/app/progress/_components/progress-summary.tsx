@@ -10,7 +10,7 @@ import type {
   MetricComparison,
   PeriodMetric,
   ProgressPeriod,
-} from "@/lib/habit-progress";
+} from "@/types/habit-progress-types";
 import {
   formatDayDelta,
   formatPercentage,

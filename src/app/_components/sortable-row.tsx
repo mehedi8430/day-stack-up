@@ -17,8 +17,9 @@ import { toKey, formatFullDate } from "@/lib/date";
 import {
   computeRangeRate,
   doneCounterFrom,
-  type ScheduleTimelines,
+  scheduledDaysForRange,
 } from "@/lib/habit-progress";
+import type { ScheduleTimelines } from "@/types/habit-progress-types";
 import type { CalendarView } from "@/app/_components/calendar-utils";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
@@ -75,12 +76,9 @@ export function SortableRow({
   };
 
   const cat = getCategory(habit.category);
-  // Done / scheduled days: completions on eligible dates vs the schedule for
-  // the visible range. Week view pins the exact weekly target (a mid-week
-  // target change never shows a blend here); month and last-15 keep the
-  // range share, rounded to whole days.
+  
   const scheduledDaysOverride =
-    view === "week" ? habit.weeklyTarget : undefined;
+    view === "week" ? habit.weeklyTarget : scheduledDaysForRange(habit, days);
   const counter = doneCounterFrom(
     computeRangeRate([habit], timelines, completions, days),
     scheduledDaysOverride,

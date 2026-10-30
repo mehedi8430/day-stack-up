@@ -6,39 +6,23 @@ import {
   startOfDay,
   startOfMonth,
 } from "date-fns";
-import {
-  getLevel,
-  getWeek,
-  shiftWeek,
-  toKey,
-  type AchievementLevel,
-} from "@/lib/date";
-
-export type ProgressPeriodView = "week" | "month";
+import { getLevel, getWeek, shiftWeek, toKey } from "@/lib/date";
+import type {
+  CompletionMap,
+  DoneCounter,
+  HabitScheduleRow,
+  MetricComparison,
+  PeriodMetric,
+  ProgressHabit,
+  ProgressPeriod,
+  ProgressPeriodView,
+  RangeRateMetric,
+  ScheduleTimelines,
+  TrendDirection,
+} from "@/types/habit-progress-types";
 
 /** The unit every weekly target is expressed in. */
 export const DAYS_PER_WEEK = 7;
-
-export interface ProgressHabit {
-  id: string;
-  name: string;
-  emoji?: string;
-  category: string;
-  createdAt: string;
-  /** Days per week this habit targets (1-7). 7 = every day. */
-  weeklyTarget: number;
-}
-
-/** One effective-dated schedule row, serialized for the client. */
-export interface HabitScheduleRow {
-  habit_id: string;
-  /** Inclusive first date this target applies to, "yyyy-mm-dd". */
-  starts_on: string;
-  weekly_target: number;
-}
-
-/** habitId -> that habit's schedule rows, sorted by starts_on ascending. */
-export type ScheduleTimelines = Record<string, HabitScheduleRow[]>;
 
 /**
  * Defends the math against corrupt/legacy schedule data. Values outside
@@ -94,48 +78,6 @@ export function resolveWeeklyTarget(
   }
   return sanitizeWeeklyTarget(target);
 }
-
-export interface ProgressPeriod {
-  view: ProgressPeriodView;
-  /** First calendar day of the period. */
-  start: Date;
-  /** Last calendar day of the period, including future dates. */
-  end: Date;
-  /** Last day completions are counted for (today while in progress). */
-  effectiveEnd: Date;
-  totalDays: number;
-  /** Calendar days from the start through the effective end. Zero for a future period. */
-  elapsedDays: number;
-  isCurrent: boolean;
-  isFuture: boolean;
-}
-
-export interface PeriodMetric {
-  completed: number;
-  /**
-   * Period target: the sum of each eligible date's share of the weekly
-   * target (weeklyTarget / 7 per day). May be fractional, e.g. 22.1 for a
-   * "5 days per week" habit across a 31-day month.
-   */
-  target: number;
-  /** Raw percentage vs the target, or null when there is no target. May exceed 100. */
-  percentage: number | null;
-  level: AchievementLevel | null;
-}
-
-export type TrendDirection = "up" | "down" | "same" | "na";
-
-export interface MetricComparison {
-  /** Raw percentage-point difference, or null when either side has no data. */
-  percentageDelta: number | null;
-  /** Completed-day difference, or null when either side has no target. */
-  completedDelta: number | null;
-  trend: TrendDirection;
-  completedTrend: TrendDirection;
-  levelTrend: TrendDirection;
-}
-
-export type CompletionMap = Record<string, boolean>;
 
 export function completionKey(habitId: string, dateKey: string): string {
   return `${habitId}__${dateKey}`;
@@ -313,13 +255,6 @@ export function summarizeMetrics(metrics: PeriodMetric[]): PeriodMetric {
   };
 }
 
-export interface RangeRateMetric {
-  completed: number;
-  target: number;
-  /** Raw percentage vs the target, or null when nothing is eligible. */
-  percentage: number | null;
-}
-
 /**
  * Target-aware achieved-so-far rate for an arbitrary list of dates. The home
  * calendar's progress bar uses this over its elapsed/visible range so it
@@ -365,32 +300,39 @@ export function formatTargetCount(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
-export interface DoneCounter {
-  /** Completions on the dates eligible for the habit. */
-  completed: number;
-  /**
-   * Scheduled days for the range, rounded to a whole day ("5.6" -> 6), or
-   * null when less than one day is scheduled (or the target is zero) so the
-   * denominator is hidden.
-   */
-  scheduled: number | null;
-  /** True when completions cover the rounded scheduled count. */
-  complete: boolean;
+/**
+ * Scheduled days for an arbitrary range using the habit's **current** weekly
+ * target. The calendar's per-habit counter is a glance at the current routine,
+ * so it deliberately ignores `habit_schedules` history: a habit that moved
+ * from daily to 5 days/week shows the 5 days/week goal for the whole visible
+ * range instead of a blend of old and new targets. Creation dates still trim
+ * the range so a habit is never measured before it existed.
+ *
+ * The progress page's history-aware math lives in `computeHabitPeriodMetric`
+ * and is unchanged.
+ */
+export function scheduledDaysForRange(
+  habit: Pick<ProgressHabit, "createdAt" | "weeklyTarget">,
+  days: Date[],
+): number {
+  const share = sanitizeWeeklyTarget(habit.weeklyTarget) / DAYS_PER_WEEK;
+  let scheduled = 0;
+  for (const day of days) {
+    if (isHabitEligibleOn(habit, day)) scheduled += share;
+  }
+  return scheduled;
 }
 
 /**
  * Per-habit "done / scheduled days" counter values for the calendar's end
- * column. Built from the rate over the visible range: the scheduled share is
- * each eligible date's `weeklyTarget / 7` (schedule history and creation
- * dates included). Shares are rounded to whole days so a blend across a
- * mid-week target change reads as a plain number, and the green coverage
- * check uses that same rounded number so the display and the color always
- * agree.
+ * column. Built from the rate over the visible range. The scheduled count is
+ * rounded to whole days, and the green coverage check uses that same rounded
+ * number so the display and the color always agree.
  *
- * `scheduledDaysOverride` pins the scheduled count to the habit's exact
- * weekly target (week view shows what the habit is targeted for this week,
- * history blends included); month and last-15 views omit it and get the
- * rounded range share.
+ * `scheduledDaysOverride` pins the scheduled count to a known goal (the
+ * calendar passes the habit's current weekly target for the week view and
+ * `scheduledDaysForRange` for month / last-15 views). Callers that omit it
+ * fall back to the target carried by the rate.
  */
 export function doneCounterFrom(
   rate: RangeRateMetric,
