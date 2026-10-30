@@ -30,7 +30,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - Default emoji `📋` for new habits
 
 ### 4. Habit Notes
-- **Notes dialog** — open from the habit row's three-dot menu
+- **Notes dialog** — open by clicking the habit name or from the habit row's three-dot menu
 - View, add, and edit free-form notes per habit
 - Notes are stored on the `habits` table (migrated from per-completion notes)
 
@@ -51,7 +51,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Drag-and-drop task reordering**; tasks sorted by start time then position
 - **Edit task dialog** — update title, time, duration, priority, and notes
 - **Delete task** — confirmation dialog before removal
-- **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations)
+- **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations, shown as hours and minutes, e.g. `2 hrs 10 minutes`)
 - Footer note reminding that time blocks are guidance
 - **Weekly planner strip** — a collapsible strip for the Saturday-to-Friday
   week containing the selected date (always 7 days; weeks may cross a month
@@ -86,7 +86,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 
 ### 8. Habit Progress (`/progress`)
 - **Week / Month reporting periods** — weeks are **Saturday-to-Friday** calendar weeks (every week covers exactly 7 days and may cross a month boundary); previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
-- **Direct habit view** — clicking a habit name in the calendar opens `/progress?habit=<id>`, with the summary and cards scoped to that habit and a link back to all habits
+- **Direct habit view** — **View progress** in the calendar row's three-dot menu opens `/progress?habit=<id>`, with the summary and cards scoped to that habit and a link back to all habits
 - **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
 - **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
 - **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
