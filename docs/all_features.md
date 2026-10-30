@@ -47,7 +47,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 ### 6. Daily Planner (`/planner`)
 - **Day-by-day navigation** — previous/next day arrows and a center button showing Today / Tomorrow / Yesterday / date
 - **Quick-add task form** — title, **start time**, **duration** (minutes), **priority** (low / medium / high), and notes; press Enter to add quickly
-- **Status workflow** — status button cycles planned → in_progress → done; plus dedicated **skip** and **move to tomorrow** actions
+- **Status workflow** — status button cycles planned → in_progress → done; plus **move to tomorrow** and **move to yesterday** actions that shift a task one day relative to its own date (move to yesterday is hidden on today's tasks)
 - **Drag-and-drop task reordering**; tasks sorted by start time then position
 - **Edit task dialog** — update title, time, duration, priority, and notes
 - **Delete task** — confirmation dialog before removal

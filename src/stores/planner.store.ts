@@ -75,6 +75,7 @@ interface PlannerState {
   deleteTask: (id: string) => Promise<void>;
   moveTaskToDate: (id: string, date: string) => Promise<void>;
   moveTaskToNextDay: (id: string) => Promise<void>;
+  moveTaskToYesterday: (id: string) => Promise<void>;
   reorderTasks: (ids: string[]) => Promise<void>;
   setTaskStatus: (id: string, status: PlannerStatus) => Promise<void>;
 }
@@ -278,6 +279,15 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
       addDays(parseISO(`${task.date}T12:00:00`), 1)
     );
     await get().moveTaskToDate(id, nextDate);
+  },
+
+  moveTaskToYesterday: async (id) => {
+    const task = get().tasks.find((item) => item.id === id);
+    if (!task) return;
+    const previousDate = toKey(
+      addDays(parseISO(`${task.date}T12:00:00`), -1)
+    );
+    await get().moveTaskToDate(id, previousDate);
   },
 
   reorderTasks: async (ids) => {

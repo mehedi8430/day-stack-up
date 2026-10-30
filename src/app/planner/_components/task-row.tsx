@@ -2,9 +2,10 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { format } from "date-fns";
-import { GripVertical, MoveRight, Pencil, SkipForward, Trash2 } from "lucide-react";
+import { format, parseISO, subDays } from "date-fns";
+import { GripVertical, MoveLeft, MoveRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type {
   PlannerPriority,
@@ -37,10 +38,16 @@ export function formatTime(value: string | null): string {
 }
 
 export function TaskRow({ task }: { task: PlannerTask }) {
-  const setTaskStatus = usePlannerStore((s) => s.setTaskStatus);
+  const today = usePlannerStore((s) => s.today);
   const moveTaskToNextDay = usePlannerStore((s) => s.moveTaskToNextDay);
+  const moveTaskToYesterday = usePlannerStore((s) => s.moveTaskToYesterday);
   const openEditTask = usePlannerStore((s) => s.openEditTask);
   const requestDeleteTask = usePlannerStore((s) => s.requestDeleteTask);
+
+  const previousDayKey = task.date
+    ? toKey(subDays(parseISO(`${task.date}T12:00:00`), 1))
+    : "";
+  const canMoveToYesterday = Boolean(previousDayKey) && task.date !== today;
 
   const {
     attributes,
@@ -111,6 +118,26 @@ export function TaskRow({ task }: { task: PlannerTask }) {
       <div className="col-span-3 row-start-2 mt-1 flex items-center justify-end gap-1 border-t pt-2 sm:col-auto sm:row-auto sm:mt-0 sm:border-t-0 sm:pt-0 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
         {task.status !== "done" && task.status !== "skipped" && (
           <>
+            {canMoveToYesterday && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() =>
+                  runPlannerAction(moveTaskToYesterday(task.id), {
+                    success: `Task moved to ${format(
+                      parseISO(`${previousDayKey}T12:00:00`),
+                      "EEE, MMM d",
+                    )}`,
+                    fallback: "Failed to move task",
+                  })
+                }
+                aria-label="Move to yesterday"
+                title="Move to yesterday"
+              >
+                <MoveLeft className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -125,20 +152,6 @@ export function TaskRow({ task }: { task: PlannerTask }) {
               title="Move to tomorrow"
             >
               <MoveRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() =>
-                runPlannerAction(setTaskStatus(task.id, "skipped"), {
-                  fallback: "Failed to update task",
-                })
-              }
-              aria-label="Skip task"
-              title="Skip task"
-            >
-              <SkipForward className="h-4 w-4" />
             </Button>
           </>
         )}
