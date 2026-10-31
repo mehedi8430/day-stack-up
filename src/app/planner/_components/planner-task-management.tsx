@@ -1,6 +1,19 @@
 "use client";
 
 import * as React from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { CheckCircle2 } from "lucide-react";
 import { NewTaskForm } from "@/app/planner/_components/new-task-form";
 import { TaskRow } from "@/app/planner/_components/task-row";
@@ -11,11 +24,24 @@ export function PlannerTaskManagement() {
   const tasks = usePlannerStore((s) => s.tasks);
   const selectedDate = usePlannerStore((s) => s.selectedDate);
   const isLoading = usePlannerStore((s) => s.isLoading);
+  const reorderTasks = usePlannerStore((s) => s.reorderTasks);
 
   const dayTasks = React.useMemo(
     () => sortPlannerTasks(tasks.filter((task) => task.date === selectedDate)),
     [tasks, selectedDate],
   );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const oldIndex = dayTasks.findIndex((task) => task.id === active.id);
+    const newIndex = dayTasks.findIndex((task) => task.id === over.id);
+    const reordered = arrayMove(dayTasks, oldIndex, newIndex);
+    await reorderTasks(reordered.map((task) => task.id));
+  };
 
   return (
     <div className="space-y-6">
@@ -56,13 +82,24 @@ export function PlannerTaskManagement() {
             </p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {dayTasks.map((task) => (
-              <li key={task.id}>
-                <TaskRow task={task} />
-              </li>
-            ))}
-          </ul>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={dayTasks.map((task) => task.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="space-y-2">
+                {dayTasks.map((task) => (
+                  <li key={task.id}>
+                    <TaskRow task={task} />
+                  </li>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
     </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { format, parseISO, subDays } from "date-fns";
-import { MoveLeft, MoveRight, Pencil, Trash2 } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, MoveLeft, MoveRight, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,14 @@ export function formatTime(value: string | null): string {
 }
 
 export function TaskRow({ task }: { task: PlannerTask }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
   const today = usePlannerStore((s) => s.today);
   const moveTaskToNextDay = usePlannerStore((s) => s.moveTaskToNextDay);
   const moveTaskToYesterday = usePlannerStore((s) => s.moveTaskToYesterday);
@@ -51,11 +61,22 @@ export function TaskRow({ task }: { task: PlannerTask }) {
 
   return (
     <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "group grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-foreground/20 sm:grid-cols-[5rem_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-y-3",
+        "group grid grid-cols-[auto_auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-foreground/20 sm:grid-cols-[auto_5rem_auto_minmax(0,1fr)_auto] sm:items-center sm:gap-y-3",
         terminal && "opacity-65",
+        isDragging && "relative z-10 bg-accent shadow-lg",
       )}
     >
+      <button
+        {...attributes}
+        {...listeners}
+        className="flex shrink-0 cursor-grab justify-center text-muted-foreground/60 hover:text-foreground"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" aria-hidden="true" />
+      </button>
       <div className="hidden text-right text-xs tabular-nums text-muted-foreground sm:block">
         {formatTime(task.startTime)}
       </div>
