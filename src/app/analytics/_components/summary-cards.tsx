@@ -7,8 +7,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { LevelBadge } from "@/components/level-badge";
 import type { AchievementLevel } from "@/lib/date";
-import { LevelBadge } from "@/app/progress/_components/progress-ui";
 import { AnalyticsView } from "./analytics-types";
 
 interface SummaryCardsProps {

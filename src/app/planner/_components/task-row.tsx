@@ -69,6 +69,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
         isDragging && "relative z-10 bg-accent shadow-lg",
       )}
     >
+      {/* DND button */}
       <button
         {...attributes}
         {...listeners}
@@ -77,12 +78,16 @@ export function TaskRow({ task }: { task: PlannerTask }) {
       >
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
-      <div className="hidden text-right text-xs tabular-nums text-muted-foreground sm:block">
+
+      {/* Start time */}
+      <div className="hidden text-center text-xs tabular-nums text-muted-foreground sm:block">
         {formatTime(task.startTime)}
       </div>
+      
       <div className="col-start-1 row-start-1 sm:col-auto sm:row-auto">
         <TaskStatusButton task={task} />
       </div>
+      
       <div className="col-start-2 row-start-1 min-w-0 sm:col-auto sm:row-auto">
         <div className="flex flex-wrap items-center gap-2">
           <p
@@ -102,6 +107,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
             {task.priority}
           </span>
         </div>
+
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="sm:hidden">{formatTime(task.startTime)}</span>
           <span>{statusLabels[task.status]}</span>
@@ -109,6 +115,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
           {task.notes && <span className="truncate">{task.notes}</span>}
         </div>
       </div>
+
       <div className="col-span-2 row-start-2 mt-1 flex items-center justify-end gap-1 border-t pt-2 sm:col-auto sm:row-auto sm:mt-0 sm:border-t-0 sm:pt-0 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
         {task.status !== "done" && task.status !== "skipped" && (
           <>

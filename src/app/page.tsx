@@ -1,21 +1,14 @@
-import { HomeGreeting } from "@/app/_components/home-greeting";
 import { getInitialData } from "@/app/actions/habit.actions";
-import CalendarGrid from "./_components/calendar-grid";
+import { HomeDashboard } from "@/app/_components/home-dashboard";
 
 export default async function HomePage() {
   const data = await getInitialData();
 
   return (
-    <div className="space-y-6 p-4 sm:p-8">
-      <HomeGreeting
-        initialHabits={data.habits}
-        initialCompletions={data.completions}
-      />
-      <CalendarGrid
-        initialHabits={data.habits}
-        initialCompletions={data.completions}
-        initialSchedules={data.schedules}
-      />
-    </div>
+    <HomeDashboard
+      initialHabits={data.habits}
+      initialCompletions={data.completions}
+      initialSchedules={data.schedules}
+    />
   );
 }

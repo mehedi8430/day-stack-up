@@ -21,7 +21,7 @@ import {
   scheduledDaysForRange,
 } from "@/lib/habit-progress";
 import type { ScheduleTimelines } from "@/types/habit-progress-types";
-import type { CalendarView } from "@/app/_components/calendar-utils";
+import type { CalendarView } from "@/app/calendar/_components/calendar-utils";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,9 +151,9 @@ export function SortableRow({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/progress?habit=${encodeURIComponent(habit.id)}`}>
+              <Link href="/analytics">
                 <TrendingUp className="h-3.5 w-3.5" />
-                View progress
+                Analytics
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem

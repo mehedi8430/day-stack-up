@@ -19,8 +19,8 @@ import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/lib/types";
 import type { ScheduleTimelines } from "@/types/habit-progress-types";
-import type { CalendarView } from "@/app/_components/calendar-utils";
-import { SortableRow } from "@/app/_components/sortable-row";
+import type { CalendarView } from "@/app/calendar/_components/calendar-utils";
+import { SortableRow } from "@/app/calendar/_components/sortable-row";
 
 interface CalendarTableProps {
   days: Date[];

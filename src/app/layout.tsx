@@ -33,8 +33,12 @@ export default async function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <ThemeProvider>
           <div className="min-h-screen bg-background text-foreground">
-            <AppHeader isAuthorized={!!user} />
-            <main className="container">{children}</main>
+            <AppHeader isAuthorized={!!user} userEmail={user?.email} />
+            <main
+              className={`container ${user ? "pb-20 lg:pb-0" : ""}`}
+            >
+              {children}
+            </main>
           </div>
           <Toaster richColors />
         </ThemeProvider>

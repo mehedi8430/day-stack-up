@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A full-stack daily habit tracker. Track daily habits on a calendar, plan each day with time-blocked tasks in the planner, break habits down into milestones, attach notes and goals, and visualize progress through a full analytics dashboard. Multi-user support with per-user data isolation (explicit `userId` scoping in every query, with Postgres Row Level Security as defense-in-depth).
+A full-stack daily habit tracker. Track progress from the Home dashboard and habit calendar, plan each day with time-blocked tasks, break habits down into milestones, attach notes and goals, and review trends in Analytics. Multi-user support with per-user data isolation (explicit `userId` scoping in every query, with Postgres Row Level Security as defense-in-depth).
 
 ## Complete Feature List
 
@@ -13,7 +13,15 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Auth layout redirect** — logged-in users visiting `/login` or `/signup` are sent back to `/`
 - **Multi-user isolation** — RLS policies on every table guarantee each user only sees their own data
 
-### 2. Habit Calendar (home `/`)
+### 2. Home Progress Dashboard (`/`)
+- **Weekly overview** — target-aware progress against the week's habit targets, with completed target-days shown through today
+- **Daily check-ins** — toggle today's habits directly from the dashboard
+- **Habit cards** — weekly target progress and achievement level for each habit
+- **Quick links** — Calendar, Milestones, Plan tomorrow, and Analytics
+- **Weekly achievement link** — opens the Milestones hub
+- **Responsive navigation** — compact bottom navigation on mobile and full navigation on larger screens; the existing project typography is retained
+
+### 3. Habit Calendar (`/calendar`)
 - **Range grid view** — switch between Week (Saturday-to-Friday calendar weeks; every week covers exactly 7 days, weeks may span a month boundary, and the current week is the default), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "This week" jump; habits are rows and days are columns with sticky first/last columns
 - **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
@@ -23,28 +31,28 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
 - **Responsive layout** — column widths adapt to mobile and desktop
 - **Empty state** — friendly prompt to add the first habit when there are none
 
-### 3. Habit Management (CRUD)
+### 4. Habit Management (CRUD)
 - **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), an optional written **goal**, and a **weekly target** (*Every day* = 7, or 1–6 days per week for goals like "exercise 5 days a week")
 - **Edit habit** — update name, category, goal, and weekly target from the calendar row; changing the target is recorded in `habit_schedules` effective today so historical progress keeps the previous target
 - **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history and schedule rows
 - Default emoji `📋` for new habits
 
-### 4. Habit Notes
+### 5. Habit Notes
 - **Notes dialog** — open by clicking the habit name or from the habit row's three-dot menu
 - View, add, and edit free-form notes per habit
 - Notes are stored on the `habits` table (migrated from per-completion notes)
 
-### 5. Milestones (per-habit sub-pages)
-- **Milestone hub** (`/habits`) — grid of habit cards showing the emoji, category color dot, category badge, and goal preview; each card links to its milestone manager
+### 6. Milestones (per-habit sub-pages)
+- **Milestone hub** (`/habits`) — responsive overview of habits showing the emoji, category, and goal; each entry links to its milestone manager
 - **Per-habit milestone manager** (`/habits/[habitId]/milestones`):
   - Displays the habit's **goal** at the top (with a link to set it from the calendar if missing)
   - **Add / edit / delete milestones** with title, **start date**, **target date**, **details**, and **resources**
   - **Milestone statuses**: planned, in_progress, done, skipped (inline status select, color-coded badges)
   - **Drag-and-drop milestone reordering**
   - **Detail view dialog** — full read view of details and resources with an edit shortcut
-  - Back to calendar button
+  - Back navigation to the Home dashboard
 
-### 6. Daily Planner (`/planner`)
+### 7. Daily Planner (`/planner`)
 - **Day-by-day navigation** — previous/next day arrows and a center button showing Today / Tomorrow / Yesterday / date
 - **Quick-add task form** — title, **start time**, **duration** (minutes), **priority** (low / medium / high), and notes; press Enter to add quickly
 - **Status workflow** — status button cycles planned → in_progress → done; plus **move to tomorrow** and **move to yesterday** actions that shift a task one day relative to its own date (move to yesterday is hidden on today's tasks)
@@ -60,7 +68,7 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
   "Add task" button selects that day and focuses the shared quick-add form.
   Includes week navigation (prev / next / this week)
 
-### 7. Analytics Dashboard (`/analytics`)
+### 8. Analytics Dashboard (`/analytics`)
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
 - **Summary cards**:
   - Completion % (weekly, monthly, or yearly) against eligible target-days
@@ -80,25 +88,9 @@ A full-stack daily habit tracker. Track daily habits on a calendar, plan each da
     new habits are marked Building and zero-activity habits are called out
     separately.
   - **Yearly Heatmap** (GitHub-style) — completion density against eligible target shares, with tooltips and a less/more legend
-  - **Target-aware summaries** — weekly, monthly, and yearly rates honor habit creation dates and effective-dated weekly targets, matching `/progress`
+  - **Target-aware summaries** — weekly, monthly, and yearly rates honor habit creation dates and effective-dated weekly targets, using the same calculations as the Home dashboard and calendar
   - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or Saturday-to-Friday week
 - Empty state when no habits exist yet
-
-### 8. Habit Progress (`/progress`)
-- **Week / Month reporting periods** — weeks are **Saturday-to-Friday** calendar weeks (every week covers exactly 7 days and may cross a month boundary); previous/next navigation moves one week or month at a time, and forward navigation stops at the current period
-- **Direct habit view** — **View progress** in the calendar row's three-dot menu opens `/progress?habit=<id>`, with the summary and cards scoped to that habit and a link back to all habits
-- **Weekly targets** — every habit targets N days per week (1–7; `Every day` = 7 default); existing habits migrated to daily without data loss
-- **Overall summary** — completion %, completed vs pooled period target, achievement level, and change compared with the previous period
-- **Per-habit breakdown** — completion %, completed/target days, progress bar, current and previous level badges, percentage-point change, completed-day change, and ↑ / ↓ / → trend indicators
-- **Target-based math** — weekly progress is `completed occurrences / weekly target × 100`; monthly targets are proportional (`weeklyTarget/7 × eligible days`, trimmed by the habit's creation date and replayed across target changes via `habit_schedules` history)
-- **Full-period goal view** — current periods always show progress against the full-period target (a full week shows the whole weekly target, and a month shows its proportional target), so users can see how far they are toward the goal; comparisons use full-period goals on both sides (documented on the page)
-- **Overachievement** — percentages can exceed 100% (e.g. 7 completions for a 5-days/week target = 140%); progress bars fill at most to 100% while labels show the real value
-- **Level badges** — reuse the existing `getLevel` thresholds (Beginner <40%, Intermediate 40–59%, Advanced 60–74%, Elite 75–89%, Legendary 90%+) and show whether each habit's level improved, declined, or stayed the same; overachievement maps to Legendary
-- **N/A handling** — future periods, habit-not-yet-created ranges, and zero targets show `N/A` instead of `0%`
-- **Data flow** — reads habits, completions, and schedule rows through `getInitialData` (all user-scoped); `habit_schedules` is the one new table, added with RLS/CHECK constraints and a backfill for existing habits (`docs/habit-progress.md` §3); migration validated locally, application to the remote database pending (`npm run db:deploy`)
-- **Loading, empty, and error states** — route-level branded loader, no-habits prompt, and retryable error boundary
-- **Tests** — `npm run test` runs `scripts/habit-progress.test.mjs` (Node's built-in runner) covering targets, schedules history, proportionality, overachievement, N/A rules, and unchanged level thresholds
-- Full behavior, formulas, worked examples, and file map: `docs/habit-progress.md`
 
 ### 9. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
@@ -147,10 +139,11 @@ src/
 │   ├── habits/      # Milestone hub and per-habit milestone manager
 │   ├── planner/     # Weekly planner (week strip + day view)
 │   ├── analytics/   # Analytics dashboard
-│   ├── progress/    # Weekly/monthly habit progress and period comparison
+│   ├── calendar/    # Habit calendar and completion tracking
 │   ├── actions/     # Server actions for habits, completions, planner & milestones
-│   └── ...          # Habit calendar (home), global layout
-├── components/      # UI components (header, UI kit)
+│   ├── _components/ # Shared components, including the Home dashboard
+│   └── page.tsx     # Home progress dashboard
+├── components/      # Shared UI (header, level badge, UI kit)
 ├── lib/             # Prisma + Supabase clients, date helpers, types
 ├── stores/          # Zustand store (habit.store.ts)
 └── proxy.ts         # Route protection middleware

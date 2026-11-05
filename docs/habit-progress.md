@@ -1,18 +1,22 @@
-# Habit Progress (`/progress`)
+# Target-Aware Habit Progress Calculations
 
-Status: implemented on branch `feat/habit-progress`. The original v1 (daily-only
+The standalone `/progress` page described in the original implementation notes
+has been removed. Its target-aware calculations remain in use on the Home
+dashboard, habit calendar, and Analytics. Sections describing that page's UI,
+route, and validation are historical implementation notes, not current product
+behavior.
+
+The original v1 (daily-only
 model, commits `93644e9`, `b9bd1ac`, `7223586`) was superseded by the
 weekly-target model documented here (migration
 `20261025120000_habit_weekly_targets`).
-Last updated: October 25, 2026.
+Last updated: November 5, 2026.
 
 ## 1. Overview
 
-Habit Progress is a read-only reporting page that shows each habit's progress
-toward its **weekly target** for a selected week or month, compared with the
-directly preceding period. Every habit has a target of N days per week
-(1–7); `7` is "every day" and is the default. The page answers four questions
-for every habit:
+Habit progress calculations measure progress toward each habit's **weekly
+target**. Every habit has a target of N days per week (1–7); `7` is "every day"
+and is the default. The calculations answer four questions for each habit:
 
 1. What percentage of the period **target** was completed
    (`completed occurrences / target × 100`)?
@@ -20,24 +24,18 @@ for every habit:
 3. Did performance improve, decline, or stay flat versus the previous period?
 4. What achievement level does the habit hold, and did that level change?
 
-The period selection, comparison math, level badges, and N/A rules are shared
-between the weekly and monthly views, so both views behave identically.
+The shared calculations keep weekly and monthly target metrics consistent.
+Home and Calendar use range-based progress; Analytics uses period-based
+summaries and achievement levels.
 
-## 2. Entry point and access
+## 2. Former page entry point and access (historical)
 
-- The page lives at `/progress`. Its on-page title is **"The Day Stack"**
-  (the inspirational display name; the navigation link still says "Progress"
-  for orientation).
-- It is opened from the **home page header's right side** ("Progress" button,
-  below the global navigation). It is intentionally **not** in the main
-  navigation or the mobile menu.
-- The route is protected in two places, consistent with the rest of the app:
-  - `src/proxy.ts` redirects unauthenticated visits to `/login`.
-  - `src/app/progress/page.tsx` also redirects when `getInitialData()` reports
-    no authenticated user.
-- The page is dynamic (server-rendered on demand) and read-only; habit and
-  completion mutations stay on the calendar. The habit form's **Weekly target**
-  select lives there too (see §5.3).
+The removed reporting page was served at `/progress`, titled "The Day Stack",
+and protected by the route proxy and a server-side authentication check. It was
+read-only; habit and completion mutations remained on the calendar. The weekly
+target selector has always been part of the habit form, not the reporting page.
+The current app has no `/progress` route: progress is presented on Home,
+Calendar, and Analytics.
 
 ## 3. Data model
 
@@ -175,26 +173,28 @@ level      = getLevel(percentage)           – OKR thresholds unchanged
   Progress bars fill at most to 100%; the surrounding text shows the real
   percentage and `aria-valuetext` announces it uncapped.
 
-### 5.5 Shared use on the home calendar
+### 5.5 Shared use on Home and Calendar
 
-The home calendar's overall range bar (`CalendarGrid`) uses `computeRangeRate`
-with the same target/eligibility/history rules, applied to the **elapsed days
-of the selected range** (week, month, or last 15 days) rather than the full
-period. That keeps the bar a "how far so far" pace indicator while fixing the
-old daily-only math: a 5-days/week habit is no longer counted as due seven
-days a week, and days before a habit existed no longer drag the percentage
-down. Percentages can exceed 100%; the bar fills to 100% while
-`aria-valuetext` carries the raw value.
+The Home dashboard uses `computeRangeRate` to measure this week's target-aware
+progress, counting completed habit-days through today against the full weekly
+target. The Calendar's overall range bar (`CalendarGrid`) uses the same
+target/eligibility/history rules, applied to the **elapsed days of the selected
+range** (week, month, or last 15 days) rather than the full period. That keeps
+the calendar bar a "how far so far" pace indicator. A 5-days/week habit is no
+longer counted as due seven days a week, and days before a habit existed no
+longer drag the percentage down. Percentages can exceed 100%; the bar fills to
+100% while `aria-valuetext` carries the raw value.
 
 The per-habit `X/scheduled` cell counters are a current-routine glance rather
-than history-aware progress. They count completions on eligible dates in the
-visible range against the habit's **current** weekly target — the exact target
-for a week, `weeklyTarget / 7 × eligible days` for month and last-15 views —
-rounded to whole days. This deliberately ignores `habit_schedules` history (the
-progress page remains the historical view), so a habit that just moved from
-daily to 5 days/week shows `22` scheduled days for a 31-day month instead of a
-misleading `29`-day blend. Creation dates still trim the denominator, and the
-green coverage check uses the same rounded number that is displayed.
+than history-aware progress. They count completions on eligible dates in the visible range against the
+habit's **current** weekly target — the exact target for a week,
+`weeklyTarget / 7 × eligible days` for month and last-15 views — rounded to
+whole days. This deliberately ignores `habit_schedules` history (the target
+history is used in the Home dashboard and overall calendar range), so a habit
+that just moved from daily to 5 days/week shows `22` scheduled days for a
+31-day month instead of a misleading `29`-day blend. Creation dates still
+trim the denominator, and the green coverage check uses the same rounded
+number that is displayed.
 
 ## 6. Comparison with the previous period
 
@@ -202,10 +202,10 @@ green coverage check uses the same rounded number that is displayed.
 Saturday-to-Friday week or calendar month **at full length**. v2 compares
 **goal with goal**: each period is measured against its own full-period
 target, so the previous period is no longer clipped to the current period's
-elapsed days (that clipping belonged to the daily-pace model of v1). The page
-copy states this explicitly for in-progress periods
-("Comparing full-period goals…"), because a mid-week percentage naturally
-trails a completed period.
+elapsed days (that clipping belonged to the daily-pace model of v1). The
+former page stated this explicitly for in-progress periods ("Comparing
+full-period goals…"), because a mid-week percentage naturally trails a
+completed period.
 
 | Metric | Rule |
 | --- | --- |
@@ -222,8 +222,9 @@ Display rules:
 - Day deltas show signed whole days (`+2 days`, `−1 day`).
 - Targets render via `formatTargetCount`: whole numbers stay whole
   (`5`, `31`), fractional targets get one decimal (`22.1`, `7.9`).
-- The current period banner shows `Day X of Y · progress is measured against
-  the full period target, including days after today.`
+- The former Progress page displayed `Day X of Y · progress is measured against
+the full period target, including days after today.` This banner is not part of
+the current Home, Calendar, or Analytics interfaces.
 
 ## 7. Achievement levels
 
@@ -239,10 +240,10 @@ Unchanged from v1 and the app's existing OKR thresholds
 | Beginner | 0–39% | `#9ca3af` |
 
 Applied to the raw goal percentage, so overachievement maps to Legendary.
-Level badges and changes appear on the summary and every habit card; the
-legend lists the exact thresholds.
+Analytics displays the achievement badge; the former Progress page also showed
+level changes and a threshold legend on its summary and habit cards.
 
-## 8. UI structure
+## 8. Former Progress page UI (historical)
 
 `src/app/progress/_components/`:
 
@@ -265,7 +266,7 @@ Presentation notes (unchanged in spirit): Tailwind v4 + shadcn/ui, light/dark
 aware, responsive `sm/lg/xl` grids, labelled progress bars, `aria-live` period
 label, screen-reader-friendly loading text.
 
-## 9. Loading, empty, and error states
+## 9. Former Progress page loading, empty, and error states (historical)
 
 - `loading.tsx` — route-level branded loader with rotating progress-focused
   copy, an indeterminate progress sweep, and an sr-only
@@ -274,9 +275,9 @@ label, screen-reader-friendly loading text.
 - `error.tsx` — client error boundary (Next 16 `retry` prop) with "Try again"
   and a calendar link; the error is logged.
 
-## 10. Files
+## 10. Current calculation files and former page files
 
-Core:
+Current calculation and product files:
 
 - `prisma/schema.prisma` — `habits.weekly_target`, new `HabitSchedule` model.
 - `prisma/migrations/20261025120000_habit_weekly_targets/` — DDL, CHECKs,
@@ -291,21 +292,23 @@ Core:
   counter denominators), `buildCompletionMap`, `formatTargetCount`.
 - `src/app/actions/habit.actions.ts` — `getInitialData` (+schedules,
   `weeklyTarget`), transactional `addHabit`/`updateHabit` schedule writes,
-  `/progress` revalidation for habit/completion mutations, strict
-  `parseWeeklyTarget` validation.
+  Home, Calendar, and Analytics revalidation for habit/completion mutations,
+  strict `parseWeeklyTarget` validation.
 - `src/lib/types.ts` — `Habit.weeklyTarget`, `getWeeklyTargetLabel()`.
 - `src/stores/habit.store.ts` — targets flow through add/update.
-- `src/app/_components/habit-form.tsx` — Weekly target select (add + edit).
-- `src/app/progress/page.tsx` — passes schedules to the client shell.
-- `src/app/progress/_components/*` — UI updates described in §8.
-- `src/app/page.tsx` + `src/app/_components/calendar-grid.tsx` — home calendar
-  state shell; the range bar lives in `calendar-progress-bar.tsx`, with
+- `src/app/calendar/_components/habit-form.tsx` — Weekly target select (add + edit).
+- `src/app/page.tsx` + `src/app/_components/home-dashboard.tsx` — Home progress
+  dashboard.
+- `src/app/calendar/page.tsx` + `src/app/calendar/_components/calendar-grid.tsx` —
+  habit calendar; the range bar lives in `calendar-progress-bar.tsx`, with
   range/date helpers in `calendar-utils.ts` (see §5.5).
 - `scripts/habit-progress.test.mjs` — Node built-in test runner suite (see
   §12); no new dev dependencies.
 
-From v1 (unchanged in role): `src/app/progress/{loading,error}.tsx`,
-home-header Progress link, proxy protection, level legend/thresholds.
+The former page implementation files (`src/app/progress/`), its home-header
+link, and its route-specific loading/error states have been removed. The shared
+achievement thresholds remain in `src/lib/date.ts`; the badge used by
+Analytics lives in `src/components/level-badge.tsx`.
 
 ## 11. Worked examples
 
@@ -346,7 +349,7 @@ Current date: Oct 25, 2026 (a Sunday). Week = Oct 22–28.
 ## 12. Validation performed
 
 - **Committed test suite** `scripts/habit-progress.test.mjs`
-  (`npm run test`, Node's built-in runner — no new dependencies): 32 tests
+  (`npm run test`, Node's built-in runner — no new dependencies): 36 tests
   covering Saturday-to-Friday weeks and week navigation, schedule-history
   resolution, full-period weekly targets, daily habits, mid-week/mid-month
   target changes, monthly proportionality with
@@ -361,8 +364,9 @@ Current date: Oct 25, 2026 (a Sunday). Week = Oct 22–28.
   applied to remote Supabase (user runs `npm run db:deploy` when ready).
 - `npm run lint` — passes.
 - `npx tsc --noEmit` — passes.
-- `npm run build` (`prisma generate && next build`) — passes; `/progress`
-  builds as a dynamic route.
+- `npm run build` (`prisma generate && next build`) — passes; the route list
+  includes Home, Calendar, Analytics, Milestones, and Planner, with no
+  standalone Progress route.
 
 ## 13. Known limitations and future work
 
@@ -374,10 +378,10 @@ Current date: Oct 25, 2026 (a Sunday). Week = Oct 22–28.
 - **No archive state:** habits are deleted entirely (with completions and
   schedules). A soft "archived on" date would use the same eligibility
   predicate to stop shares after that date.
-- **State in URL:** period selection remains client state; deep links
-  (`?view=month&from=2026-09-01`) remain a natural enhancement.
-- **Read scale:** the page still reads all of the user's completions via
-  `getInitialData()` (matching analytics); windowing would be shared with
-  analytics if ever needed.
+- **Analytics state in URL:** analytics period selection remains client state;
+  deep links (`?view=month&from=2026-09-01`) remain a natural enhancement.
+- **Read scale:** Home, Calendar, and Analytics currently load the user's
+  completion history through `getInitialData()`; windowing could be shared
+  across these consumers if needed.
 - **Same-day edits collapse:** multiple target changes on one day upsert the
   single row for that day (unique constraint), keeping the last edit.

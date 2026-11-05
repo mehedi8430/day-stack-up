@@ -21,15 +21,11 @@ interface NotesDialogProps {
   habit: Habit | null;
 }
 
-function NotesFields({
-  habit,
-  close,
-}: {
-  habit: Habit;
-  close: () => void;
-}) {
+function NotesFields({ habit, close }: { habit: Habit; close: () => void }) {
   const saveNotes = useHabitStore((s) => s.saveNotes);
-  const liveNote = useHabitStore((s) => s.habits.find((h) => h.id === habit.id)?.notes ?? null);
+  const liveNote = useHabitStore(
+    (s) => s.habits.find((h) => h.id === habit.id)?.notes ?? null,
+  );
 
   const [draft, setDraft] = React.useState(liveNote ?? "");
   const [saving, setSaving] = React.useState(false);
@@ -43,9 +39,7 @@ function NotesFields({
       setDraft(trimmed);
       setEditing(false);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save notes"
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to save notes");
     } finally {
       setSaving(false);
     }
@@ -98,11 +92,7 @@ function NotesFields({
   );
 }
 
-export function NotesDialog({
-  open,
-  onOpenChange,
-  habit,
-}: NotesDialogProps) {
+export function NotesDialog({ open, onOpenChange, habit }: NotesDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">

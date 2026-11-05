@@ -18,20 +18,20 @@ import {
 import type { HabitScheduleRow } from "@/types/habit-progress-types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { HabitForm } from "@/app/_components/habit-form";
+import { HabitForm } from "@/app/calendar/_components/habit-form";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { Habit } from "@/lib/types";
 import type { CompletionRow } from "@/app/actions/habit.actions";
 import { toast } from "sonner";
-import { NotesDialog } from "@/app/_components/notes-dialog";
-import { CalendarTable } from "@/app/_components/calendar-table";
-import { CalendarToolbar } from "@/app/_components/calendar-toolbar";
-import { CalendarProgressBar } from "@/app/_components/calendar-progress-bar";
+import { NotesDialog } from "@/app/calendar/_components/notes-dialog";
+import { CalendarTable } from "@/app/calendar/_components/calendar-table";
+import { CalendarToolbar } from "@/app/calendar/_components/calendar-toolbar";
+import { CalendarProgressBar } from "@/app/calendar/_components/calendar-progress-bar";
 import {
   getCalendarRange,
   getRangeLabels,
   type CalendarView,
-} from "@/app/_components/calendar-utils";
+} from "@/app/calendar/_components/calendar-utils";
 
 interface CalendarGridProps {
   initialHabits: Habit[];

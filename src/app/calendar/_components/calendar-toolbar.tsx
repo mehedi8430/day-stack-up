@@ -2,7 +2,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { CalendarView } from "@/app/_components/calendar-utils";
+import type { CalendarView } from "@/app/calendar/_components/calendar-utils";
 
 interface CalendarToolbarProps {
   view: CalendarView;
