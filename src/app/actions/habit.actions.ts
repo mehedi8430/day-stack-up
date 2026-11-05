@@ -130,7 +130,7 @@ export async function addHabit(data: {
   });
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return {
     success: true,
@@ -205,7 +205,7 @@ export async function updateHabit(
   });
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -218,7 +218,7 @@ export async function deleteHabit(id: string) {
   });
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -236,7 +236,7 @@ export async function reorderHabits(ids: string[]) {
   await Promise.all(updates);
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -276,7 +276,7 @@ export async function toggleCompletion(habitId: string, date: string) {
   }
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return { success: true };
 }
@@ -324,7 +324,7 @@ export async function setCompletion(
   }
 
   revalidatePath("/");
-  revalidatePath("/progress");
+  revalidatePath("/calendar");
   revalidatePath("/analytics");
   return { success: true };
 }
