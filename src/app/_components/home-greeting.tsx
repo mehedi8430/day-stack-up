@@ -1,10 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { format } from "date-fns";
-import { TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toKey } from "@/lib/date";
 import { useHabitStore } from "@/stores/habit.store";
 import type { CompletionRow } from "@/app/actions/habit.actions";
@@ -90,12 +87,6 @@ export function HomeGreeting({
           {dateLabel ? `${dateLabel} · ${progressLabel}` : "\u00A0"}
         </p>
       </div>
-      <Button variant="outline" asChild className="shrink-0 gap-2">
-        <Link href="/progress">
-          <TrendingUp className="h-4 w-4" />
-          Progress
-        </Link>
-      </Button>
     </div>
   );
 }
