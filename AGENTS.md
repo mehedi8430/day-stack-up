@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Purpose
-This repository is a Next.js 16 daily habit tracker with Supabase-backed authentication, multi-user data isolation, a monthly habit calendar, planner, milestones, and analytics dashboard. Future AI agents working in this repo should treat it as a production-style app with user data and auth constraints, and should prefer minimal, careful changes that preserve existing architecture and UX patterns.
+This repository is a Next.js 16 daily habit tracker with Supabase-backed authentication, multi-user data isolation, a home progress dashboard, habit calendar, planner, milestones, and analytics dashboard. Future AI agents working in this repo should treat it as a production-style app with user data and auth constraints, and should prefer minimal, careful changes that preserve existing architecture and UX patterns.
 
 ## Project summary
 - Framework: Next.js 16 (App Router)
@@ -23,7 +23,9 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
   - `src/app/habits/` — milestone hub and per-habit milestone management pages
   - `src/app/planner/` — weekly planner screen (month-anchored week strip + day view) and task UI
   - `src/app/analytics/` — analytics dashboard
-  - `src/app/page.tsx` — main habit calendar landing page
+  - `src/app/calendar/` — habit calendar and completion tracking
+  - `src/app/page.tsx` — home progress dashboard
+- `src/app/_components/home-dashboard.tsx` — home progress dashboard and today's habit check-ins
 - `src/components/` — shared UI like header, back button, and UI primitives
 - `src/lib/` — shared types, date helpers, the Prisma client (`prisma.ts`), and Supabase auth helpers
 - `src/stores/habit.store.ts` — Zustand state for habit/completion optimistic updates
@@ -33,7 +35,8 @@ This repository is a Next.js 16 daily habit tracker with Supabase-backed authent
 
 ## Core product behavior
 - Habit data is scoped per user. Runtime isolation is enforced by an explicit `userId` filter in every Prisma query (`auth.uid()` RLS policies remain in the migrations as defense-in-depth).
-- The home page is the monthly habit calendar; task completion is driven by `habits` + `completions` rows.
+- The home page is the progress dashboard; users track today's habits there and can open the dedicated calendar at `/calendar`.
+- Habit completion is driven by `habits` + `completions` rows and shared through the Zustand store.
 - Planner and analytics read their own tables through the Prisma client and compute aggregates server-side; analytics reuses the habit and planner server actions rather than querying directly.
 - The daily planner stores concrete per-date tasks in `daily_planner_tasks`; the week strip on the planner page is a client-side grouping of those tasks by date.
 - Notes are stored on the `habits` table, not on individual completion rows.
@@ -57,7 +60,7 @@ Examples:
 - avoid duplicating queries or data derivation in multiple places
 
 ### 3) Protected routes are enforced via proxy and server-side auth checks
-- `src/proxy.ts` protects `"/"` and `"/analytics"` for unauthenticated users.
+- `src/proxy.ts` protects authenticated app routes, including `"/"`, `"/calendar"`, and `"/analytics"`.
 - When adjusting auth or route behavior, keep the redirect pattern consistent.
 - For server components, prefer `createClient()` from `src/lib/supabase/server.ts` and explicit user checks.
 
@@ -79,7 +82,7 @@ Run these from the project root:
 - `npm start` — run production build
 - `npm run lint` — lint project with ESLint
 
-No dedicated test suite is present right now; lint is the primary validation path unless a task introduces explicit tests.
+`npm run test` runs the Node.js habit-progress calculation tests; lint and the production build are also standard validation paths.
 
 ## Coding conventions
 - Prefer TypeScript types already defined in `src/lib/types.ts` and related modules.
@@ -113,7 +116,7 @@ When making changes, the agent should:
 - If a feature touches DB schema, update migrations and account for user-scoped behavior.
 
 ## Typical target files by concern
-- Habit/calendar logic: `src/app/actions/habit.actions.ts`, `src/stores/habit.store.ts`, `src/app/_components/calendar-grid.tsx`
+- Habit/calendar logic: `src/app/actions/habit.actions.ts`, `src/stores/habit.store.ts`, `src/app/calendar/_components/calendar-grid.tsx`
 - Planner logic: `src/app/planner/_components/*`, `src/app/actions/planner.actions.ts`
 - Milestones: `src/app/habits/**`, `src/app/actions/milestone.actions.ts`
 - Analytics: `src/app/analytics/**`

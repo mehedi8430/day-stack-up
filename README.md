@@ -1,6 +1,6 @@
 # DayStackUp
 
-A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Supabase**. Stack your day, build streaks, track habits on a monthly calendar, plan your day with the planner, and measure progress with a full analytics dashboard — with multi-user support out of the box.
+A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Supabase**. Stack your day, track progress from a daily dashboard, manage habits on a calendar, plan your day, and explore analytics — with multi-user support out of the box.
 
 [![Live Demo](https://daystackup.vercel.app/)](https://daystackup.vercel.app/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org)
@@ -14,14 +14,15 @@ A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Su
 
 - **Email & password authentication** — sign up, log in, and log out, with protected routes that redirect unauthenticated visitors to the login page.
 - **Multi-user by design** — every query is scoped to the signed-in user, and Postgres Row Level Security is enabled on all tables as defense-in-depth.
-- **Calendar grid** — month view with one-click completion toggles for every habit, plus a per-month done counter.
+- **Home progress dashboard** — weekly progress, daily check-ins, per-habit progress, and quick links to Calendar, Milestones, Planner, and Analytics.
+- **Habit calendar** — week, month, and rolling 15-day grid views with one-click completion toggles and per-range done counters.
 - **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal, plus a **weekly target** (every day or N days per week, e.g. "exercise 5 days a week"); target changes are versioned so historical progress keeps the old target.
 - **Drag-and-drop ordering** — rearrange habits into the order that works for you.
 - **Habit notes** — click any habit's name to attach free-form notes.
 - **Milestones** — break each habit into tracked milestones with start/target dates, details, resources, and progress statuses.
 - **Daily planner** — plan each day with time-blocked tasks (start time, duration, priority, notes, and a planned → in-progress → done → skipped workflow), plus a month-anchored week strip for a whole-week overview.
 - **Analytics dashboard** — completion rates, per-habit and daily-score charts, time worked from planner tasks, current and best streaks, and a GitHub-style yearly heatmap.
-- **Habit progress** — weekly (month-anchored) and monthly progress toward each habit's weekly target, with proportional monthly targets, overachievement (>100%), level badges, and previous-period comparisons.
+- **Target-aware progress** — weekly and monthly calculations respect each habit's weekly target, proportional targets, overachievement (>100%), and effective-dated target changes; progress appears on the Home dashboard, Calendar, and Analytics rather than a separate Progress page.
 - **Dark & light mode** — switch themes from the header.
 
 ## Tech Stack
@@ -92,7 +93,7 @@ npm run db:deploy         # apply migrations to the local database
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`. Create an account via **Sign up**, add your first habit, and start tracking. For local auth to work against the Docker database, keep `LOCAL_AUTH_BOOTSTRAP=1` in `.env` so the signed-in Supabase user is mirrored into the local `auth.users` stub (the `user_id` foreign keys depend on it).
+Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to `/login`. Create an account via **Sign up**, then track habits from Home or open the calendar at `/calendar`. For local auth to work against the Docker database, keep `LOCAL_AUTH_BOOTSTRAP=1` in `.env` so the signed-in Supabase user is mirrored into the local `auth.users` stub (the `user_id` foreign keys depend on it).
 
 ## Project Structure
 
@@ -104,9 +105,10 @@ src/
 │   ├── habits/          # Milestone hub and per-habit milestone manager
 │   ├── planner/         # Weekly planner (month-anchored week strip + day view)
 │   ├── analytics/       # Analytics dashboard
-│   ├── progress/        # Weekly/monthly habit progress and period comparison
+│   ├── calendar/        # Habit calendar and completion tracking
+│   ├── _components/     # Shared route components, including the Home dashboard
 │   ├── actions/         # Server actions for habits, completions, planner & milestones
-│   └── page.tsx         # Habit calendar (home)
+│   └── page.tsx         # Home progress dashboard
 ├── components/          # Shared UI (header, back button, UI kit)
 ├── lib/                 # Prisma + Supabase clients, date helpers, types
 └── stores/              # Zustand store (optimistic habit/completion state)
