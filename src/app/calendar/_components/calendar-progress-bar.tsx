@@ -32,9 +32,9 @@ export function CalendarProgressBar({
   const fill = Math.min(100, Math.max(0, achieved));
 
   return (
-    <div className="rounded-lg border bg-card px-4 py-3">
+    <div className="rounded-lg border bg-gradient-to-r from-violet-100 via-card to-amber-100 bg-card px-4 py-3 dark:from-violet-500/10 dark:via-card dark:to-amber-500/10">
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-muted"
+        className="h-2 w-full overflow-hidden rounded-full bg-foreground/15 dark:bg-muted"
         role="progressbar"
         aria-label="Habit completion for the selected range"
         aria-valuemin={0}
