@@ -14,7 +14,9 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **Multi-user isolation** — RLS policies on every table guarantee each user only sees their own data
 
 ### 2. Home Progress Dashboard (`/`)
-- **Weekly overview** — target-aware progress against the week's habit targets, with completed target-days shown through today
+- **Weekly overview** — target-aware progress against the week's habit targets,
+  completed target-days through today, and a level badge based on weekly
+  progress; see [Home & Analytics Progress](./analytics-progress.md)
 - **Daily check-ins** — toggle today's habits directly from the dashboard
 - **Habit cards** — weekly target progress and achievement level for each habit
 - **Quick links** — Calendar, Milestones, Plan tomorrow, and Analytics
@@ -72,25 +74,22 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **View tabs** — Month / Week / Year, with year navigation arrows in year view
 - **Summary cards**:
   - Completion % (weekly, monthly, or yearly) against eligible target-days
-  - **Level badge** — Beginner → Intermediate → Advanced → Elite → Legendary based on target progress
+  - Achievement level badge for the selected period's completion rate
+  - **30-day consistency** compared with the previous 30 days
   - Active habit count
-  - Best/current streak (🔥)
-  - **Time Worked chart** — hours from completed/in-progress planner task durations; per-day, per-week (Saturday-start weeks that overlap the month, each bar counting only the month's days in its week, toggleable in month view), or per-month (year view); supports **Bar/Line view toggle** with Bar as default
+  - **Time Worked chart** — hours from completed/in-progress planner task durations; per-day in Week view, per Saturday–Friday week in Month view (each bar counts only days within the selected month), or per-month in Year view; supports **Bar/Line view toggle** with Bar as default
   - **Monthly Completion chart** (year view) — monthly completion against each month's eligible target
   - **Per-Habit Completion bar chart** — color-coded by category, compared with each habit's eligible target
-  - **Daily Score line chart** — daily completions compared with eligible target shares
-  - **Streaks panel** — all-time current and best streaks per habit, plus an overall target-aware 30-day consistency rate with trend
+  - **Daily Score chart** — daily completions compared with eligible target shares; switch between Bar and Line views
+  - **Streaks panel** — all-time current and best streaks per habit
   - **Habit Stability panel** — a habit selector displays one weekly
-    completion sparkline at a time, defaulting to the first habit, across
-    up to 12 completed Saturday–Friday weeks (excluding the current and
-    partial creation weeks). Stability labels use standard deviation:
-    High (≤1.25), Moderate (≤2.25), and Low (>2.25) completions per week;
-    new habits are marked Building and zero-activity habits are called out
-    separately.
-  - **Yearly Heatmap** (GitHub-style) — completion density against eligible target shares, with tooltips and a less/more legend
+    completion sparkline at a time across up to 12 completed Saturday–Friday
+    weeks, excluding the current and creation weeks
+  - **Yearly Heatmap** (GitHub-style) — shown in Year view, with completion density against eligible target shares, tooltips and a less/more legend
   - **Target-aware summaries** — weekly, monthly, and yearly rates honor habit creation dates and effective-dated weekly targets, using the same calculations as the Home dashboard and calendar
   - **Month/Week navigation** — prev/next controls in Month and Week views to filter analytics data by any month or Saturday-to-Friday week
 - Empty state when no habits exist yet
+- Calculation details: [Home & Analytics Progress](./analytics-progress.md)
 
 ### 9. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
