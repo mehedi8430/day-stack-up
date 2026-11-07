@@ -58,8 +58,8 @@ interface TimeWorkedChartProps {
 }
 
 export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedChartProps) {
-  const [timeView, setTimeView] = React.useState<"day" | "week">("day");
   const [chartType, setChartType] = React.useState<"bar" | "line">("bar");
+  const isMonthWeekView = view === "month";
 
   const data: TimeWorkedPoint[] = React.useMemo(() => {
     if (view === "year") {
@@ -77,7 +77,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
       });
     }
 
-    if (view === "month" && timeView === "week") {
+    if (isMonthWeekView) {
       // Saturday-start weeks that overlap the month; each bar counts only
       // the month's days inside its week, so bars still sum to the month.
       return getWeekChunks(days).map((chunk) => {
@@ -91,7 +91,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
           full: `${format(weekStart, "MMM d")}–${format(
             chunk[chunk.length - 1],
             "MMM d",
-          )} (Sat–Fri week)`,
+          )} (days in this month)`,
           hours: toHours(mins),
           mins,
         };
@@ -107,16 +107,14 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
         mins,
       };
     });
-  }, [view, timeView, yearCursor, days, tasks]);
+  }, [view, isMonthWeekView, yearCursor, days, tasks]);
 
   const description =
     view === "year"
       ? `Hours of completed planner tasks in each month of ${yearCursor}`
       : view === "week"
         ? "Hours of completed planner tasks per day this week"
-        : timeView === "day"
-          ? "Hours of completed planner tasks per day this month"
-          : "Hours of completed planner tasks per week this month";
+        : "Hours of completed planner tasks per Saturday–Friday week";
 
   return (
     <Card>
@@ -133,14 +131,6 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
                 <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="line">Line</TabsTrigger>
               </TabsList>
             </Tabs>
-            {view === "month" && (
-              <Tabs value={timeView} onValueChange={(v) => setTimeView(v as "day" | "week")}>
-                <TabsList className="h-8 sm:h-10">
-                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="day">Day</TabsTrigger>
-                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="week">Week</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -158,7 +148,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
                   dataKey={
                     view === "year"
                       ? "month"
-                      : view === "month" && timeView === "week"
+                      : isMonthWeekView
                         ? "week"
                         : "date"
                   }
@@ -196,7 +186,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
                   dataKey={
                     view === "year"
                       ? "month"
-                      : view === "month" && timeView === "week"
+                      : isMonthWeekView
                         ? "week"
                         : "date"
                   }

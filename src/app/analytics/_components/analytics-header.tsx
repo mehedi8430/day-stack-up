@@ -49,47 +49,68 @@ export function AnalyticsHeader({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
         <p className="text-sm text-muted-foreground">
-          {view === "year"
-            ? `Your progress for ${yearCursor}`
-            : week
-              ? `Your progress for ${format(week.start, "MMM d")} – ${format(week.end, "MMM d, yyyy")}`
-              : `Your progress for ${format(cursor, "MMMM yyyy")}`}
+          Review completion, consistency, and time invested.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        {(view === "year" || view === "month" || view === "week") && (view === "year" ? true : onCursorChange) && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={view === "year" ? () => onYearChange(yearCursor - 1) : handlePrev}
-              aria-label={view === "year" ? "Previous year" : view === "month" ? "Previous month" : "Previous week"}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="min-w-20 text-center text-lg font-bold">
-              {view === "year"
-                ? yearCursor
-                : view === "month"
-                  ? format(cursor, "MMM yyyy")
-                  : week
-                    ? format(week.start, "MMM d")
-                    : ""}
-            </h2>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={view === "year" ? () => onYearChange(yearCursor + 1) : handleNext}
-              aria-label={view === "year" ? "Next year" : view === "month" ? "Next month" : "Next week"}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        <Tabs value={view} onValueChange={(v) => onViewChange(v as AnalyticsView)}>
+        {(view === "year" || view === "month" || view === "week") &&
+          (view === "year" ? true : onCursorChange) && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={
+                  view === "year"
+                    ? () => onYearChange(yearCursor - 1)
+                    : handlePrev
+                }
+                aria-label={
+                  view === "year"
+                    ? "Previous year"
+                    : view === "month"
+                      ? "Previous month"
+                      : "Previous week"
+                }
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="min-w-20 text-center text-lg font-bold">
+                {view === "year"
+                  ? yearCursor
+                  : view === "month"
+                    ? format(cursor, "MMM yyyy")
+                    : week
+                      ? `${format(week.start, "MMM d")} – ${format(week.end, "MMM d, yyyy")}`
+                      : ""}
+              </h2>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={
+                  view === "year"
+                    ? () => onYearChange(yearCursor + 1)
+                    : handleNext
+                }
+                aria-label={
+                  view === "year"
+                    ? "Next year"
+                    : view === "month"
+                      ? "Next month"
+                      : "Next week"
+                }
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+        <Tabs
+          value={view}
+          onValueChange={(v) => onViewChange(v as AnalyticsView)}
+        >
           <TabsList>
-            <TabsTrigger value="month">Month</TabsTrigger>
             <TabsTrigger value="week">Week</TabsTrigger>
+            <TabsTrigger value="month">Month</TabsTrigger>
             <TabsTrigger value="year">Year</TabsTrigger>
           </TabsList>
         </Tabs>

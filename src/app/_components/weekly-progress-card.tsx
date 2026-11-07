@@ -1,5 +1,7 @@
 import { Trophy } from "lucide-react";
 import { formatTargetCount } from "@/lib/habit-progress";
+import { getLevel } from "@/lib/date";
+import { LevelBadge } from "@/components/level-badge";
 import type { RangeRateMetric } from "@/types/habit-progress-types";
 
 interface WeeklyProgressCardProps {
@@ -15,6 +17,9 @@ export function WeeklyProgressCard({
   weeklyRate,
   habitCount,
 }: WeeklyProgressCardProps) {
+  const level =
+    now && weeklyRate.target > 0 ? getLevel(percentage) : null;
+
   return (
     <section className="relative isolate overflow-hidden rounded-2xl bg-gradient-to-br from-violet-100 via-card to-amber-100 p-5 text-foreground shadow-lg shadow-violet-900/15 dark:from-violet-500/30 dark:via-card dark:to-amber-500/20 dark:text-white sm:rounded-3xl sm:p-7">
       <div
@@ -33,6 +38,7 @@ export function WeeklyProgressCard({
             <span className="rounded-full bg-foreground/10 px-2 py-1 text-xs font-medium text-foreground/90 dark:bg-white/15 dark:text-white/90">
               This week
             </span>
+            {level && <LevelBadge level={level} />}
           </div>
           <p className="mt-2 text-sm text-muted-foreground dark:text-white/80">
             {weeklyRate.target > 0

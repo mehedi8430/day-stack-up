@@ -26,11 +26,7 @@ import {
 } from "./monthly-completion-chart";
 import { PerHabitChart, PerHabitPoint } from "./per-habit-chart";
 import { DailyScoreChart, DailyScorePoint } from "./daily-score-chart";
-import {
-  StreaksPanel,
-  StreakSummary,
-  StreakRow,
-} from "./streaks-panel";
+import { StreaksPanel, StreakRow } from "./streaks-panel";
 import { Heatmap, HeatCell } from "./heatmap";
 import { HabitStabilityPanel } from "./habit-stability-panel";
 import {
@@ -62,7 +58,7 @@ export function Analytics({
   const [yearCursor, setYearCursor] = React.useState<number>(
     new Date().getFullYear(),
   );
-  const [view, setView] = React.useState<AnalyticsView>("month");
+  const [view, setView] = React.useState<AnalyticsView>("week");
   const [plannerTasks, setPlannerTasks] =
     React.useState<PlannerTask[]>(initialPlannerTasks);
   const [today] = React.useState(() => new Date());
@@ -136,10 +132,6 @@ export function Analytics({
     () => summarizeMetrics(selectedMetrics),
     [selectedMetrics],
   );
-  const level =
-    overallMetric.percentage === null
-      ? null
-      : getLevel(overallMetric.percentage);
 
   const perHabitData: PerHabitPoint[] = sortedHabits.map((habit, index) => {
     const metric = selectedMetrics[index];
@@ -159,8 +151,7 @@ export function Analytics({
     return {
       date: formatDayShort(d),
       full: format(d, "MMM d"),
-      score:
-        metric?.percentage == null ? null : Math.round(metric.percentage),
+      score: metric?.percentage == null ? null : Math.round(metric.percentage),
     };
   });
 
@@ -182,10 +173,9 @@ export function Analytics({
   const streaks: StreakRow[] = sortedHabits.map((habit) => ({
     habit,
     current: (() => {
-      const currentStreakEnd =
-        completions[`${habit.id}__${toKey(todayStart)}`]
-          ? todayStart
-          : subDays(todayStart, 1);
+      const currentStreakEnd = completions[`${habit.id}__${toKey(todayStart)}`]
+        ? todayStart
+        : subDays(todayStart, 1);
       return computeStreaks(
         habit.id,
         completions,
@@ -227,11 +217,6 @@ export function Analytics({
     completionsThroughToday,
     yearDays,
   ]);
-  const yearLevel =
-    yearOverallMetric.percentage === null
-      ? null
-      : getLevel(yearOverallMetric.percentage);
-
   const monthlyChartData: MonthlyCompletionPoint[] = monthBuckets.map(
     (monthDaysArr, m) => {
       const period = getProgressPeriod("month", monthDaysArr[0], today);
@@ -289,9 +274,9 @@ export function Analytics({
     () =>
       sortedHabits.map((habit) => ({
         habit,
-        stability: computeHabitStability(habit, completions, new Date()),
+        stability: computeHabitStability(habit, completions, today),
       })),
-    [sortedHabits, completions],
+    [sortedHabits, completions, today],
   );
 
   const heatCells: HeatCell[] = yearDays.map((d) => {
@@ -330,12 +315,6 @@ export function Analytics({
         onCursorChange={setCursor}
       />
 
-      <StreakSummary
-        streaks={streaks}
-        consistency={consistency}
-        consistencyTrend={consistencyTrend}
-      />
-
       <SummaryCards
         view={view}
         completion={
@@ -348,7 +327,17 @@ export function Analytics({
               : Math.round(overallMetric.percentage)
         }
         habitCount={sortedHabits.length}
-        level={view === "year" ? yearLevel : level}
+        level={
+          view === "year"
+            ? yearOverallMetric.percentage === null
+              ? null
+              : getLevel(yearOverallMetric.percentage)
+            : overallMetric.percentage === null
+              ? null
+              : getLevel(overallMetric.percentage)
+        }
+        consistency={consistency}
+        consistencyTrend={consistencyTrend}
       />
 
       <TimeWorkedChart
@@ -358,11 +347,7 @@ export function Analytics({
         tasks={plannerTasks}
       />
 
-      {view === "year" && (
-        <MonthlyCompletionChart
-          data={monthlyChartData}
-        />
-      )}
+      {view === "year" && <MonthlyCompletionChart data={monthlyChartData} />}
 
       {view !== "year" && (
         <PerHabitChart data={perHabitData} dayCount={days.length} />
@@ -372,14 +357,14 @@ export function Analytics({
 
       <StreaksPanel streaks={streaks} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-        <div className="min-w-0">
+      {view === "year" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
           <Heatmap year={yearCursor} cells={heatCells} />
-        </div>
-        <div className="min-w-0">
           <HabitStabilityPanel rows={habitStability} />
         </div>
-      </div>
+      ) : (
+        <HabitStabilityPanel rows={habitStability} />
+      )}
     </div>
   );
 }
