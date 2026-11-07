@@ -40,7 +40,7 @@ interface HomeGreetingProps {
   initialCompletions: CompletionRow[];
 }
 
-export function HomeGreeting({
+export function Greeting({
   initialHabits,
   initialCompletions,
 }: HomeGreetingProps) {

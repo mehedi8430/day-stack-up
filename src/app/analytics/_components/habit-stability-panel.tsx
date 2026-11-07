@@ -40,10 +40,8 @@ const levelStyles: Record<HabitStability["level"], string> = {
   moderate:
     "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300",
   low: "border-red-200 bg-red-100 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300",
-  building:
-    "border-muted bg-muted text-muted-foreground",
-  inactive:
-    "border-muted bg-muted text-muted-foreground",
+  building: "border-muted bg-muted text-muted-foreground",
+  inactive: "border-muted bg-muted text-muted-foreground",
 };
 
 function StabilitySparkline({
