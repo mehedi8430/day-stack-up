@@ -15,8 +15,8 @@ A modern productivity habit tracker built with **Next.js**, **Prisma**, and **Su
 - **Email & password authentication** — sign up, log in, and log out, with protected routes that redirect unauthenticated visitors to the login page.
 - **Multi-user by design** — every query is scoped to the signed-in user, and Postgres Row Level Security is enabled on all tables as defense-in-depth.
 - **Home progress dashboard** — weekly progress, daily check-ins, per-habit progress, and quick links to Calendar, Milestones, Planner, and Analytics.
-- **Habit calendar** — week, month, and rolling 15-day grid views with one-click completion toggles and per-range done counters.
-- **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal, plus a **weekly target** (every day or N days per week, e.g. "exercise 5 days a week"); target changes are versioned so historical progress keeps the old target.
+- **Habit calendar** — week, month, and rolling 15-day grid views with one-click completion toggles and per-range done counters; habits appear from their creation date, and earlier dates cannot be checked.
+- **Habit categories & goals** — tag each habit with a color-coded category (Health, Mind, Work, Fitness, Other) and a written goal, plus a **weekly target** (every day or N days per week, e.g. "exercise 5 days a week"); target changes take effect from the start of the current Saturday–Friday week, while earlier weeks retain their historical target.
 - **Drag-and-drop ordering** — rearrange habits into the order that works for you.
 - **Habit notes** — click any habit's name to attach free-form notes.
 - **Milestones** — break each habit into tracked milestones with start/target dates, details, resources, and progress statuses.

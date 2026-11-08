@@ -11,6 +11,10 @@ streak helpers live in `src/lib/date.ts`.
 - Each eligible date adds `weekly target / 7` to the goal. The effective target
   comes from `habit_schedules`; a change affects dates from its effective date,
   not earlier history.
+- Weekly-target edits take effect from the start of the current Saturday–Friday
+  week. Earlier weeks retain the target that was in effect then.
+- Calendar habits appear only for ranges that overlap their creation date;
+  dates before creation are not checkable.
 - Only completed rows count. Overall rates pool completed days and target shares
   across habits, then calculate `completed / target × 100`. This weights habits
   by their goals and can exceed 100% when goals are exceeded.
@@ -23,6 +27,15 @@ The overall progress card uses the current Saturday–Friday week. Its target
 covers the full week, while its completed count includes completed habits only
 through today. The percentage determines the progress bar and level badge.
 Habit check-ins update local state optimistically and refresh the card.
+
+## Calendar counters
+
+The per-habit counter uses the same schedule history and per-date target shares:
+each eligible date contributes its effective weekly target divided by seven.
+The shares are summed across the visible week, month, or 15-day range and
+rounded to a whole number for display. This means complete weeks contribute
+their weekly target, partial weeks contribute proportionally, and dates before
+the habit's creation do not contribute.
 
 ## Analytics
 
