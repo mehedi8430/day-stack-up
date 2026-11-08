@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { eachDayOfInterval, format, startOfDay, subDays } from "date-fns";
+import { BarChart3 } from "lucide-react";
 import {
   getMonthDays,
   getWeekDays,
@@ -295,7 +296,10 @@ export function Analytics({
   if (sortedHabits.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
-        <div className="mb-4 text-6xl">📊</div>
+        <BarChart3
+          className="mb-4 size-12 text-muted-foreground"
+          aria-hidden="true"
+        />
         <h3 className="text-lg font-semibold">No data to analyze yet</h3>
         <p className="text-sm text-muted-foreground">
           Add habits and mark them done to unlock your analytics.

@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { format, isToday } from "date-fns";
+import { Check } from "lucide-react";
 import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/lib/types";
@@ -103,7 +104,8 @@ export function CalendarTable({
           );
         })}
         <div className="sticky right-0 z-30 flex items-center justify-center border-b border-l bg-card py-3 font-semibold shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.2)]">
-          ✔
+          <Check className="size-4" aria-hidden="true" />
+          <span className="sr-only">Completed</span>
         </div>
 
         {/* Habit rows */}

@@ -54,7 +54,11 @@ export function StreaksPanel({ streaks }: StreaksPanelProps) {
                     className="flex items-center gap-1"
                     title="Current streak"
                   >
-                    🔥 {s.current}
+                    <Flame
+                      className="h-3.5 w-3.5 text-orange-500"
+                      aria-hidden="true"
+                    />{" "}
+                    {s.current}
                   </span>
                   <span
                     className="flex items-center gap-1 text-muted-foreground"

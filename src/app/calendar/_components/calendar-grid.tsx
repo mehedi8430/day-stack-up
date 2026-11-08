@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { addDays, addMonths, startOfDay, subDays, subMonths } from "date-fns";
-import { Plus } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { useHabitStore } from "@/stores/habit.store";
 import { getWeek, shiftWeek } from "@/lib/date";
 import {
@@ -230,7 +230,10 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
-      <div className="mb-4 text-6xl">📋</div>
+      <ClipboardList
+        className="mb-4 size-12 text-muted-foreground"
+        aria-hidden="true"
+      />
       <h3 className="text-lg font-semibold">
         {hasHabits ? "No habits in this date range" : "No habits yet"}
       </h3>
