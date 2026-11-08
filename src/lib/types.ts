@@ -3,7 +3,6 @@ export interface Habit {
   name: string;
   goal: string;
   notes: string | null;
-  emoji?: string;
   category: string;
   order: number;
   createdAt: string; // ISO date

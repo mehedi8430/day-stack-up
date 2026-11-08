@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { getInitialData } from "@/app/actions/habit.actions";
 import { getCategory } from "@/lib/types";
 import { createClient } from "@/lib/supabase/server";
@@ -50,11 +51,6 @@ export default async function HabitsPage() {
                   className="rounded-2xl border bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-start gap-3">
-                    {habit.emoji && (
-                      <span className="text-xl" aria-hidden="true">
-                        {habit.emoji}
-                      </span>
-                    )}
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/habits/${habit.id}/milestones`}
@@ -86,7 +82,8 @@ export default async function HabitsPage() {
                     href={`/habits/${habit.id}/milestones`}
                     className="mt-4 inline-flex min-h-10 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
                   >
-                    Manage milestones <span aria-hidden="true">→</span>
+                    Manage milestones{" "}
+                    <ArrowRight className="size-3.5" aria-hidden="true" />
                   </Link>
                 </article>
               );
@@ -124,14 +121,6 @@ export default async function HabitsPage() {
                             href={`/habits/${habit.id}/milestones`}
                             className="flex min-w-0 items-center gap-3 hover:underline"
                           >
-                            {habit.emoji && (
-                              <span
-                                className="shrink-0 text-xl"
-                                aria-hidden="true"
-                              >
-                                {habit.emoji}
-                              </span>
-                            )}
                             <span className="truncate">{habit.name}</span>
                           </Link>
                         </th>
@@ -162,7 +151,11 @@ export default async function HabitsPage() {
                             href={`/habits/${habit.id}/milestones`}
                             className="font-medium text-foreground underline-offset-4 hover:underline"
                           >
-                            Manage <span aria-hidden="true">→</span>
+                            Manage{" "}
+                            <ArrowRight
+                              className="inline size-3.5"
+                              aria-hidden="true"
+                            />
                           </Link>
                         </td>
                       </tr>

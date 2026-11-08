@@ -131,7 +131,6 @@ export function HabitStabilityPanel({ rows }: HabitStabilityPanelProps) {
           <SelectContent>
             {rows.map(({ habit: option }) => (
               <SelectItem key={option.id} value={option.id}>
-                {option.emoji ? `${option.emoji} ` : ""}
                 {option.name}
               </SelectItem>
             ))}
@@ -142,11 +141,6 @@ export function HabitStabilityPanel({ rows }: HabitStabilityPanelProps) {
         <div className="rounded-lg border border-green-200 bg-green-50/60 p-4 dark:border-green-900 dark:bg-green-950/20">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              {habit.emoji && (
-                <span aria-hidden="true" className="shrink-0">
-                  {habit.emoji}
-                </span>
-              )}
               <span className="truncate text-sm font-semibold">
                 {habit.name}
               </span>

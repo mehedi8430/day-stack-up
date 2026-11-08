@@ -42,7 +42,7 @@ export function HabitCard({
         {isDone ? (
           <Check className="size-5" />
         ) : (
-          habit.emoji || <Sparkles className="size-5" />
+          <Sparkles className="size-5" />
         )}
       </button>
       <div className="min-w-0 flex-1">

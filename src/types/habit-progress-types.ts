@@ -5,7 +5,6 @@ export type ProgressPeriodView = "week" | "month";
 export interface ProgressHabit {
   id: string;
   name: string;
-  emoji?: string;
   category: string;
   createdAt: string;
   /** Days per week this habit targets (1-7). 7 = every day. */

@@ -37,7 +37,6 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), an optional written **goal**, and a **weekly target** (*Every day* = 7, or 1–6 days per week for goals like "exercise 5 days a week")
 - **Edit habit** — update name, category, goal, and weekly target from the calendar row; a target change is recorded in `habit_schedules` effective from the start of the current Saturday–Friday week, while earlier weeks retain their previous target
 - **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history and schedule rows
-- Default emoji `📋` for new habits
 
 ### 5. Habit Notes
 - **Notes dialog** — open by clicking the habit name or from the habit row's three-dot menu
@@ -45,7 +44,7 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - Notes are stored on the `habits` table (migrated from per-completion notes)
 
 ### 6. Milestones (per-habit sub-pages)
-- **Milestone hub** (`/habits`) — responsive overview of habits showing the emoji, category, and goal; each entry links to its milestone manager
+- **Milestone hub** (`/habits`) — responsive overview of habits showing the name, category, and goal; each entry links to its milestone manager
 - **Per-habit milestone manager** (`/habits/[habitId]/milestones`):
   - Displays the habit's **goal** at the top (with a link to set it from the calendar if missing)
   - **Add / edit / delete milestones** with title, **start date**, **target date**, **details**, and **resources**
@@ -103,7 +102,7 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **Schema source of truth** — `prisma/schema.prisma`; migration history lives in `prisma/migrations/` (the old `supabase/migrations/` was removed)
 - **Runtime data access** — the **Prisma Client** (`@prisma/client` with the `@prisma/adapter-pg` driver adapter) is used inside the server actions and `src/lib/auth.ts`. Supabase is used only for authentication.
 - Tables:
-  - `habits` — id, user_id, name, emoji, category, sort_order, goal, notes
+  - `habits` — id, user_id, name, category, sort_order, goal, notes
   - `completions` — id, user_id, habit_id, date, completed, timestamps; UNIQUE(habit_id, date)
   - `daily_planner_tasks` — id, user_id, title, date, start_time, duration_minutes, priority, status, notes, position
   - `habit_topics` (milestones) — id, user_id, habit_id, title, status, start_date, target_date, details, resources, sort_order
