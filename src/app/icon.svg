@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DayStackUp">
+  <rect width="64" height="64" rx="14" fill="#0b1220"/>
+  <path d="M32 34 54 45 32 56 10 45Z" fill="#3987f2"/>
+  <path d="M32 21 54 32 32 43 10 32Z" fill="#41b385"/>
+  <path d="M32 8 54 19 32 30 10 19Z" fill="#fcb11a"/>
+  <path d="M22.5 19 28 24.5 40 12.5" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
