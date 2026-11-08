@@ -138,8 +138,8 @@ function HabitFormFields({
           </Select>
           <p className="text-xs text-muted-foreground">
             Daily habits use Every day. Choose fewer days for weekly goals
-            such as exercising 5 days a week. Changing the target starts from
-            today; past progress keeps the previous target.
+            such as exercising 5 days a week. A target change applies from
+            this week&apos;s Saturday; earlier weeks keep their previous target.
           </p>
         </div>
 

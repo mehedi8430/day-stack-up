@@ -31,6 +31,18 @@ export function getWeek(date: Date): Week {
   return { start, end: addDays(start, 6) };
 }
 
+/** Returns the Saturday starting the current UTC calendar week as a date-only value. */
+export function getCurrentWeekStartUtcDate(date: Date): Date {
+  const daysSinceSaturday = (date.getUTCDay() + 1) % 7;
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() - daysSinceSaturday,
+    ),
+  );
+}
+
 /** Every calendar day in the Saturday-start week containing `date` (7 days). */
 export function getWeekDays(date: Date): Date[] {
   const { start, end } = getWeek(date);

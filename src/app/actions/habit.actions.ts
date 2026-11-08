@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Habit } from "@/lib/types";
+import { getCurrentWeekStartUtcDate } from "@/lib/date";
 
 export interface CompletionRow {
   habit_id: string;
@@ -70,11 +71,6 @@ function parseWeeklyTarget(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 1 || n > 7) return null;
   return n;
-}
-
-/** Current date (UTC calendar day) used to start a new target period. */
-function todayUtcDateKey(): Date {
-  return new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 }
 
 /** Anchors a timestamptz to its UTC calendar day (Prisma `@db.Date` input). */
@@ -179,26 +175,46 @@ export async function updateHabit(
       },
     });
 
-    // Only target changes create history. The new target starts today; all
-    // dates before it keep the previous row, preserving past progress. A row
-    // for today already exists after multiple edits on the same day, so it is
-    // updated in place to keep the unique (habit_id, starts_on) invariant.
+    // Apply the target to the whole current week without changing earlier
+    // weeks. Consolidate older same-week entries so they cannot override it
+    // later in the week.
     if (existing.weeklyTarget !== weeklyTarget) {
-      const startsOn = todayUtcDateKey();
-      const todayRow = await tx.habitSchedule.findUnique({
+      const startsOn = getCurrentWeekStartUtcDate(new Date());
+      const nextWeekStartsOn = new Date(
+        startsOn.getTime() + 7 * 24 * 60 * 60 * 1000,
+      );
+      const currentWeekRows = await tx.habitSchedule.findMany({
         where: {
-          habitId_startsOn: { habitId: id, startsOn },
+          userId: user.id,
+          habitId: id,
+          startsOn: { gte: startsOn, lt: nextWeekStartsOn },
         },
       });
+      const currentWeekRow = currentWeekRows.find(
+        (row) => row.startsOn.getTime() === startsOn.getTime(),
+      );
 
-      if (todayRow) {
+      if (currentWeekRow) {
         await tx.habitSchedule.update({
-          where: { id: todayRow.id },
+          where: { id: currentWeekRow.id },
           data: { weeklyTarget },
         });
       } else {
         await tx.habitSchedule.create({
           data: { userId: user.id, habitId: id, startsOn, weeklyTarget },
+        });
+      }
+
+      const obsoleteRows = currentWeekRows.filter(
+        (row) => row.startsOn.getTime() > startsOn.getTime(),
+      );
+      if (obsoleteRows.length > 0) {
+        await tx.habitSchedule.deleteMany({
+          where: {
+            userId: user.id,
+            habitId: id,
+            id: { in: obsoleteRows.map((row) => row.id) },
+          },
         });
       }
     }
