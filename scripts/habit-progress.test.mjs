@@ -23,13 +23,11 @@ const {
   DAYS_PER_WEEK,
   buildCompletionMap,
   buildScheduleTimelines,
-  compareMetrics,
   computeHabitPeriodMetric,
   computeRangeRate,
   doneCounterFrom,
   formatTargetCount,
   scheduledDaysForRange,
-  getPreviousProgressPeriod,
   getProgressPeriod,
   resolveWeeklyTarget,
   sanitizeWeeklyTarget,
@@ -470,61 +468,6 @@ test("future periods and zero targets render as N/A", () => {
   // so the target sums to zero.
   assert.equal(beforeCreation.target, 0);
   assert.equal(beforeCreation.percentage, null);
-});
-
-test("getPreviousProgressPeriod keeps full length and zero stays N/A for future", () => {
-  const today = ymd(Y, 10, WED);
-  const current = getProgressPeriod("week", today, today);
-  const previous = getPreviousProgressPeriod(current);
-
-  assert.equal(previous.start.getDate(), 10); // Week Oct 10-16
-  assert.equal(previous.end.getDate(), 16);
-  assert.equal(previous.elapsedDays, 7);
-  assert.equal(previous.isCurrent, false);
-
-  const future = getProgressPeriod("week", ymd(Y, 11, 5), today);
-  assert.equal(getPreviousProgressPeriod(future).elapsedDays, 0);
-});
-
-test("previous progress periods also compare completed counts", () => {
-  const today = ymd(Y, 10, WED + 1); // Thursday, still within the same week
-  const period = getProgressPeriod("week", today, today);
-  const previous = getPreviousProgressPeriod(period);
-  const timelines = buildScheduleTimelines([scheduleRow("h1", "2026-01-01", 5)]);
-  const habit = { ...baseHabit, createdAt: "2026-01-01T09:00:00.000Z" };
-
-  const metric = computeHabitPeriodMetric(
-    habit,
-    timelines,
-    completionsFor("h1", ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]),
-    previous,
-  );
-
-  assert.equal(metric.completed, 4);
-  assert.equal(metric.target, 5);
-  assert.ok(Math.abs(metric.percentage - 80) < 1e-6);
-});
-
-test("compareMetrics reports percentage and completed deltas with N/A rules", () => {
-  const comparison = compareMetrics(
-    { completed: 4, target: 5, percentage: 80, level: { rank: 3 } },
-    { completed: 7, target: 5, percentage: 140, level: { rank: 4 } },
-  );
-
-  assert.ok(Math.abs(comparison.percentageDelta + 60) < 1e-6);
-  assert.equal(comparison.completedDelta, -3);
-  assert.equal(comparison.trend, "down");
-  assert.equal(comparison.completedTrend, "down");
-  assert.equal(comparison.levelTrend, "down");
-
-  const na = compareMetrics(
-    { completed: 0, target: 0, percentage: null, level: null },
-    { completed: 3, target: 5, percentage: 60, level: { rank: 2 } },
-  );
-  assert.equal(na.percentageDelta, null);
-  assert.equal(na.completedDelta, null);
-  assert.equal(na.trend, "na");
-  assert.equal(na.completedTrend, "na");
 });
 
 test("summarizeMetrics pools habits including fractional targets", () => {

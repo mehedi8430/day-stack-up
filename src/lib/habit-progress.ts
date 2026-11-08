@@ -1,24 +1,21 @@
 import {
-  addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   startOfDay,
   startOfMonth,
 } from "date-fns";
-import { getLevel, getWeek, shiftWeek, toKey } from "@/lib/date";
+import { getLevel, getWeek, toKey } from "@/lib/date";
 import type {
   CompletionMap,
   DoneCounter,
   HabitScheduleRow,
-  MetricComparison,
   PeriodMetric,
   ProgressHabit,
   ProgressPeriod,
   ProgressPeriodView,
   RangeRateMetric,
   ScheduleTimelines,
-  TrendDirection,
 } from "@/types/habit-progress-types";
 
 /** The unit every weekly target is expressed in. */
@@ -132,37 +129,6 @@ export function getProgressPeriod(
     elapsedDays,
     isCurrent,
     isFuture,
-  };
-}
-
-/**
- * Returns the previous period for comparisons. v2 compares goal with goal, so
- * the previous period keeps its complete length (the elapsed-day clipping
- * used by the daily-only model is gone) and is measured against its own
- * full-period target. A not-yet-started period zeroes the elapsed days so
- * every comparison metric renders as N/A.
- */
-export function getPreviousProgressPeriod(
-  current: ProgressPeriod,
-): ProgressPeriod {
-  const week =
-    current.view === "week"
-      ? getWeek(shiftWeek(current.start, -1))
-      : null;
-  const start = week ? week.start : startOfMonth(addMonths(current.start, -1));
-  const end = week ? week.end : endOfMonth(start);
-  const totalDays = differenceInCalendarDays(end, start) + 1;
-  const elapsedDays = current.isFuture ? 0 : totalDays;
-
-  return {
-    view: current.view,
-    start,
-    end,
-    effectiveEnd: end,
-    totalDays,
-    elapsedDays,
-    isCurrent: false,
-    isFuture: false,
   };
 }
 
@@ -346,35 +312,3 @@ export function doneCounterFrom(
   };
 }
 
-function directionFor(delta: number): TrendDirection {
-  const rounded = Math.round(delta * 10) / 10;
-  if (rounded > 0) return "up";
-  if (rounded < 0) return "down";
-  return "same";
-}
-
-export function compareMetrics(
-  current: PeriodMetric,
-  previous: PeriodMetric,
-): MetricComparison {
-  const percentageDelta =
-    current.percentage !== null && previous.percentage !== null
-      ? current.percentage - previous.percentage
-      : null;
-  const completedDelta =
-    current.target > 0 && previous.target > 0
-      ? current.completed - previous.completed
-      : null;
-
-  return {
-    percentageDelta,
-    completedDelta,
-    trend: percentageDelta === null ? "na" : directionFor(percentageDelta),
-    completedTrend:
-      completedDelta === null ? "na" : directionFor(completedDelta),
-    levelTrend:
-      current.level && previous.level
-        ? directionFor(current.level.rank - previous.level.rank)
-        : "na",
-  };
-}
