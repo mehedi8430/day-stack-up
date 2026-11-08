@@ -149,6 +149,14 @@ export function isHabitEligibleOn(
   return toKey(date) >= createdOn;
 }
 
+/** A habit appears in a calendar range only if it existed on at least one day in it. */
+export function isHabitEligibleInRange(
+  habit: Pick<ProgressHabit, "createdAt">,
+  days: Date[],
+): boolean {
+  return days.some((day) => isHabitEligibleOn(habit, day));
+}
+
 /**
  * Goal-based metric for one habit and period.
  *
@@ -258,6 +266,17 @@ export function computeRangeRate(
   };
 }
 
+/** Weekly target effective on the first eligible date in a visible range. */
+export function weeklyTargetForRange(
+  habit: Pick<ProgressHabit, "id" | "createdAt" | "weeklyTarget">,
+  timelines: ScheduleTimelines,
+  days: Date[],
+): number | null {
+  const firstEligibleDay = days.find((day) => isHabitEligibleOn(habit, day));
+  if (!firstEligibleDay) return null;
+  return resolveWeeklyTarget(habit, timelines, toKey(firstEligibleDay));
+}
+
 /**
  * Formats a possibly fractional target count: 31 -> "31", 22.142857 -> "22.1".
  */
@@ -267,48 +286,17 @@ export function formatTargetCount(value: number): string {
 }
 
 /**
- * Scheduled days for an arbitrary range using the habit's **current** weekly
- * target. The calendar's per-habit counter is a glance at the current routine,
- * so it deliberately ignores `habit_schedules` history: a habit that moved
- * from daily to 5 days/week shows the 5 days/week goal for the whole visible
- * range instead of a blend of old and new targets. Creation dates still trim
- * the range so a habit is never measured before it existed.
- *
- * The progress page's history-aware math lives in `computeHabitPeriodMetric`
- * and is unchanged.
- */
-export function scheduledDaysForRange(
-  habit: Pick<ProgressHabit, "createdAt" | "weeklyTarget">,
-  days: Date[],
-): number {
-  const share = sanitizeWeeklyTarget(habit.weeklyTarget) / DAYS_PER_WEEK;
-  let scheduled = 0;
-  for (const day of days) {
-    if (isHabitEligibleOn(habit, day)) scheduled += share;
-  }
-  return scheduled;
-}
-
-/**
  * Per-habit "done / scheduled days" counter values for the calendar's end
- * column. Built from the rate over the visible range. The scheduled count is
- * rounded to whole days, and the green coverage check uses that same rounded
- * number so the display and the color always agree.
- *
- * `scheduledDaysOverride` pins the scheduled count to a known goal (the
- * calendar passes the habit's current weekly target for the week view and
- * `scheduledDaysForRange` for month / last-15 views). Callers that omit it
- * fall back to the target carried by the rate.
+ * column. The scheduled count is rounded to whole days, and the green coverage
+ * check uses that same rounded number so the display and color agree.
  */
 export function doneCounterFrom(
   rate: RangeRateMetric,
-  scheduledDaysOverride?: number | null,
 ): DoneCounter {
-  const scheduled = Math.round(scheduledDaysOverride ?? rate.target);
+  const scheduled = Math.round(rate.target);
   return {
     completed: rate.completed,
     scheduled: scheduled >= 1 ? scheduled : null,
     complete: scheduled >= 1 && rate.completed >= scheduled,
   };
 }
-

@@ -27,12 +27,13 @@ const {
   computeRangeRate,
   doneCounterFrom,
   formatTargetCount,
-  scheduledDaysForRange,
   getProgressPeriod,
   resolveWeeklyTarget,
   sanitizeWeeklyTarget,
   summarizeMetrics,
   isHabitEligibleOn,
+  isHabitEligibleInRange,
+  weeklyTargetForRange,
 } = await import("../src/lib/habit-progress.ts");
 
 const { computeHabitStability } = await import(
@@ -44,6 +45,7 @@ const {
   getWeek,
   getWeekChunks,
   getWeekDays,
+  getCurrentWeekStartUtcDate,
   shiftWeek,
   toKey,
 } = await import("../src/lib/date.ts");
@@ -191,6 +193,17 @@ test("shiftWeek walks seven days at a time across months and years", () => {
   assert.equal(previousYear.getDate(), 20); // Sat Dec 20, 2025
 });
 
+test("weekly target changes begin at the current Saturday UTC", () => {
+  const date = (year, month, day) =>
+    new Date(Date.UTC(year, month - 1, day));
+  const key = (value) => value.toISOString().slice(0, 10);
+
+  assert.equal(key(getCurrentWeekStartUtcDate(date(2026, 11, 8))), "2026-11-07");
+  assert.equal(key(getCurrentWeekStartUtcDate(date(2026, 11, 7))), "2026-11-07");
+  assert.equal(key(getCurrentWeekStartUtcDate(date(2026, 11, 13))), "2026-11-07");
+  assert.equal(key(getCurrentWeekStartUtcDate(date(2026, 11, 14))), "2026-11-14");
+});
+
 test("consecutive weeks tile the timeline without gaps", () => {
   for (let i = 0; i < 14; i += 1) {
     const day = ymd(Y, 8, 20 + i); // Thu Aug 20 .. Sep 2
@@ -269,6 +282,16 @@ test("isHabitEligibleOn trims dates before creation", () => {
   assert.equal(isHabitEligibleOn(baseHabit, ymd(Y, 10, 20)), false);
   assert.equal(isHabitEligibleOn(baseHabit, ymd(Y, 10, 21)), true);
   assert.equal(isHabitEligibleOn(baseHabit, ymd(Y, 10, 25)), true);
+});
+
+test("calendar range eligibility excludes habits created after the range", () => {
+  const habit = { createdAt: "2026-10-24T09:00:00.000Z" };
+  const previousWeek = getWeekDays(ymd(2026, 10, 21));
+  const currentWeek = getWeekDays(ymd(2026, 10, 25));
+
+  assert.equal(isHabitEligibleInRange(habit, previousWeek), false);
+  assert.equal(isHabitEligibleInRange(habit, currentWeek), true);
+  assert.equal(isHabitEligibleInRange(habit, []), false);
 });
 
 test("completion map ignores false rows and counts each date once", () => {
@@ -636,97 +659,59 @@ test("done counter treats float rounding artifacts as whole goals", () => {
   );
 });
 
-test("done counter can use the habit's exact weekly target in week view", () => {
-  // Week view pins the denominator to the habit's current weekly target,
-  // so a blend from a mid-week target change no longer shows 5.6/6.3.
-  // Here the share over the Sat-Fri week is 5.57 (5 old days + 2 new),
-  // but the cell shows the current exact target.
-  const blendWeek = 5 * (5 / 7) + 2; // 5.5714285...
-  const pinned = doneCounterFrom(
-    { completed: 4, target: blendWeek, percentage: (4 / blendWeek) * 100 },
-    7,
-  );
-  assert.deepEqual(pinned, { completed: 4, scheduled: 7, complete: false });
-  assert.equal(
-    doneCounterFrom(
-      { completed: 7, target: blendWeek, percentage: (7 / blendWeek) * 100 },
-      7,
-    ).complete,
-    true,
-  );
-
-  // Zero-target habits stay hidden even when pinned.
-  const zero = doneCounterFrom(
-    { completed: 2, target: 2, percentage: 100 },
-    0,
-  );
-  assert.deepEqual(zero, { completed: 2, scheduled: null, complete: false });
-
-  // Without an override (month / last 15), the rounded share wins.
-  const range = 5 * (5 / 7) + 9; // 15-day window: 5 days at 5/7, then daily
-  assert.equal(
-    doneCounterFrom({ completed: 11, target: range, percentage: (11 / range) * 100 })
-      .scheduled,
-    13, // 5*(5/7)+9 = 12.57 -> 13
-  );
-});
-
-test("calendar counters use the current target for month and 15-day views", () => {
-  // Regression: a habit that moved from daily to 5x/week on Oct 26 must not
-  // blend the old daily history into the month / 15-day denominator. The
-  // calendar counter is a glance at the current routine, so it pins the
-  // habit's current weekly target just like the week view already did.
+test("calendar counters preserve previous weeks and apply the current-week target", () => {
   const habit = {
     ...baseHabit,
     weeklyTarget: 5,
-    createdAt: "2026-09-01T09:00:00.000Z",
+    createdAt: "2026-10-01T09:00:00.000Z",
   };
-  const october = getMonthDays(Y, 9); // 31 days
-  const monthScheduled = scheduledDaysForRange(habit, october);
-  assert.ok(Math.abs(monthScheduled - (5 / 7) * 31) < 1e-9);
-  assert.equal(
-    doneCounterFrom({
-      completed: 8,
-      target: monthScheduled,
-      percentage: (8 / monthScheduled) * 100,
-    }).scheduled,
-    22, // 22.14 -> 22, not the history blend of 29
+  const previousWeekDays = getWeekDays(ymd(Y, 10, 15));
+  const timelines = buildScheduleTimelines([
+    scheduleRow("h1", "2026-10-01", 7),
+    scheduleRow("h1", "2026-10-17", 5),
+  ]);
+  const previousWeekRate = computeRangeRate(
+    [habit],
+    timelines,
+    completionsFor("h1", ["2026-10-12", "2026-10-13", "2026-10-14"]),
+    previousWeekDays,
   );
 
-  const last15 = Array.from({ length: 15 }, (_, index) =>
-    ymd(Y, 10, 16 + index),
-  );
-  const last15Scheduled = scheduledDaysForRange(habit, last15);
-  assert.ok(Math.abs(last15Scheduled - (5 / 7) * 15) < 1e-9);
-  assert.equal(
-    doneCounterFrom({
-      completed: 8,
-      target: last15Scheduled,
-      percentage: (8 / last15Scheduled) * 100,
-    }).scheduled,
-    11, // 10.71 -> 11, not the history blend of 14
-  );
+  assert.equal(previousWeekRate.target, 7);
+  assert.equal(weeklyTargetForRange(habit, timelines, previousWeekDays), 7);
+  assert.deepEqual(doneCounterFrom(previousWeekRate), {
+    completed: 3,
+    scheduled: 7,
+    complete: false,
+  });
 
-  // Creation dates still trim the scheduled share: a habit created Oct 21
-  // only has 11 eligible days in October.
-  const created = { ...habit, createdAt: "2026-10-21T09:00:00.000Z" };
-  const trimmed = scheduledDaysForRange(created, october);
-  assert.ok(Math.abs(trimmed - (5 / 7) * 11) < 1e-9);
-  assert.equal(
-    doneCounterFrom({ completed: 5, target: trimmed, percentage: 63.6 })
-      .scheduled,
-    8, // 7.86 -> 8
+  const currentWeekRate = computeRangeRate(
+    [habit],
+    timelines,
+    buildCompletionMap([]),
+    getWeekDays(ymd(Y, 10, 21)),
   );
+  assert.equal(currentWeekRate.target, 5);
+  assert.equal(
+    weeklyTargetForRange(habit, timelines, getWeekDays(ymd(Y, 10, 21))),
+    5,
+  );
+  assert.equal(doneCounterFrom(currentWeekRate).scheduled, 5);
 
-  // A habit that did not exist in the range schedules nothing at all.
-  const future = scheduledDaysForRange(
-    { ...habit, createdAt: "2026-11-15T09:00:00.000Z" },
-    october,
+  const afterCreation = {
+    ...habit,
+    createdAt: "2026-10-24T09:00:00.000Z",
+  };
+  const beforeCreationRate = computeRangeRate(
+    [afterCreation],
+    timelines,
+    buildCompletionMap([]),
+    previousWeekDays,
   );
-  assert.equal(future, 0);
-  assert.equal(
-    doneCounterFrom({ completed: 0, target: future, percentage: null })
-      .scheduled,
-    null,
-  );
+  assert.equal(weeklyTargetForRange(afterCreation, timelines, previousWeekDays), null);
+  assert.deepEqual(doneCounterFrom(beforeCreationRate), {
+    completed: 0,
+    scheduled: null,
+    complete: false,
+  });
 });
