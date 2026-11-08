@@ -24,18 +24,18 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **Responsive navigation** — compact bottom navigation on mobile and full navigation on larger screens; the existing project typography is retained
 
 ### 3. Habit Calendar (`/calendar`)
-- **Range grid view** — switch between Week (Saturday-to-Friday calendar weeks; every week covers exactly 7 days, weeks may span a month boundary, and the current week is the default), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "This week" jump; habits are rows and days are columns with sticky first/last columns
+- **Range grid view** — switch between Week (Saturday-to-Friday calendar weeks; every week covers exactly 7 days, weeks may span a month boundary, and the current week is the default), Month (calendar month), and Last 15 days (rolling window ending today); every view has previous/next navigation, Month has a "Today" jump, and Week has a "This week" jump; habits appear only from their creation date, and pre-creation dates cannot be checked; habits are rows and days are columns with sticky first/last columns
 - **Range progress bar** — overall achievement for the elapsed part of the visible range, weighted by each habit's weekly target, trimmed to its creation date, and replayed across target changes; shows the percentage-point change versus the previous equivalent period and the achieved percentage (bars cap at 100%, labels may exceed it)
 - **One-click completion toggle** per habit/day, rendered as category-colored `HabitCheckbox` cells
 - **Drag-and-drop habit reordering** (dnd-kit) with a dedicated grip handle
-- **Per-habit done counter** — shows completed days against the habit's current scheduled days for the visible range: every view pins the habit's current weekly target (week view uses the exact target; month and last-15 views use the target's share of the eligible days, rounded to whole days, e.g. 5 days/week across a 31-day month → `22.14` → `22`), so a mid-period target change never blends old and new targets into the denominator; trimmed to the habit's creation date; turns green when completions cover that scheduled count
+- **Per-habit done counter** — shows completed days against the scheduled days for the visible range, proportionally weighted by each eligible date's effective weekly target and trimmed to the habit's creation date; historical ranges keep the target that was in effect then, and the counter turns green when completions cover the rounded scheduled count
 - **Today highlighting** — today's column and header are visually highlighted
 - **Responsive layout** — column widths adapt to mobile and desktop
 - **Empty state** — friendly prompt to add the first habit when there are none
 
 ### 4. Habit Management (CRUD)
 - **Add habit** with name, a color-coded **category** (Health, Mind, Work, Fitness, Other), an optional written **goal**, and a **weekly target** (*Every day* = 7, or 1–6 days per week for goals like "exercise 5 days a week")
-- **Edit habit** — update name, category, goal, and weekly target from the calendar row; changing the target is recorded in `habit_schedules` effective today so historical progress keeps the previous target
+- **Edit habit** — update name, category, goal, and weekly target from the calendar row; a target change is recorded in `habit_schedules` effective from the start of the current Saturday–Friday week, while earlier weeks retain their previous target
 - **Delete habit** — confirmation dialog; deletes the habit and cascades its completion history and schedule rows
 - Default emoji `📋` for new habits
 

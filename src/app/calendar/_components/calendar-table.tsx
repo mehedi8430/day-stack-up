@@ -19,7 +19,6 @@ import { toKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/lib/types";
 import type { ScheduleTimelines } from "@/types/habit-progress-types";
-import type { CalendarView } from "@/app/calendar/_components/calendar-utils";
 import { SortableRow } from "@/app/calendar/_components/sortable-row";
 
 interface CalendarTableProps {
@@ -27,7 +26,6 @@ interface CalendarTableProps {
   habits: Habit[];
   completions: Record<string, boolean>;
   schedules: ScheduleTimelines;
-  view: CalendarView;
   toggle: (habitId: string, date: Date) => void;
   onReorder: (ids: string[]) => void;
   onEdit: (habit: Habit) => void;
@@ -40,7 +38,6 @@ export function CalendarTable({
   habits,
   completions,
   schedules,
-  view,
   toggle,
   onReorder,
   onEdit,
@@ -127,7 +124,6 @@ export function CalendarTable({
                   days={days}
                   completions={completions}
                   timelines={schedules}
-                  view={view}
                   toggle={toggle}
                   onEdit={onEdit}
                   onDelete={onDelete}

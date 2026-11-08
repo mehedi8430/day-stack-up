@@ -51,18 +51,6 @@ export interface PeriodMetric {
   level: AchievementLevel | null;
 }
 
-export type TrendDirection = "up" | "down" | "same" | "na";
-
-export interface MetricComparison {
-  /** Raw percentage-point difference, or null when either side has no data. */
-  percentageDelta: number | null;
-  /** Completed-day difference, or null when either side has no target. */
-  completedDelta: number | null;
-  trend: TrendDirection;
-  completedTrend: TrendDirection;
-  levelTrend: TrendDirection;
-}
-
 export type CompletionMap = Record<string, boolean>;
 
 export interface RangeRateMetric {

@@ -11,17 +11,16 @@ import {
   Pencil,
   StickyNote,
   Trash2,
-  TrendingUp,
 } from "lucide-react";
 import { getCategory, getWeeklyTargetLabel, Habit } from "@/lib/types";
 import { toKey, formatFullDate } from "@/lib/date";
 import {
   computeRangeRate,
   doneCounterFrom,
-  scheduledDaysForRange,
+  isHabitEligibleOn,
+  weeklyTargetForRange,
 } from "@/lib/habit-progress";
 import type { ScheduleTimelines } from "@/types/habit-progress-types";
-import type { CalendarView } from "@/app/calendar/_components/calendar-utils";
 import { HabitCheckbox } from "@/components/ui/habit-checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +41,6 @@ export function SortableRow({
   days,
   completions,
   timelines,
-  view,
   toggle,
   onEdit,
   onDelete,
@@ -53,7 +51,6 @@ export function SortableRow({
   days: Date[];
   completions: Record<string, boolean>;
   timelines: ScheduleTimelines;
-  view: CalendarView;
   toggle: (habitId: string, date: Date) => void;
   onEdit: (h: Habit) => void;
   onDelete: (h: Habit) => void;
@@ -77,13 +74,10 @@ export function SortableRow({
   };
 
   const cat = getCategory(habit.category);
-  
-  const scheduledDaysOverride =
-    view === "week" ? habit.weeklyTarget : scheduledDaysForRange(habit, days);
-  const counter = doneCounterFrom(
-    computeRangeRate([habit], timelines, completions, days),
-    scheduledDaysOverride,
-  );
+
+  const rangeRate = computeRangeRate([habit], timelines, completions, days);
+  const counter = doneCounterFrom(rangeRate);
+  const rangeWeeklyTarget = weeklyTargetForRange(habit, timelines, days);
 
   return (
     <div
@@ -112,12 +106,14 @@ export function SortableRow({
           title={`View notes for ${habit.name}`}
         >
           <span className="min-w-0 truncate">{habit.name}</span>
-          <span
-            className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground"
-            title={getWeeklyTargetLabel(habit.weeklyTarget)}
-          >
-            ({habit.weeklyTarget})
-          </span>
+          {rangeWeeklyTarget !== null && (
+            <span
+              className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground"
+              title={`${getWeeklyTargetLabel(rangeWeeklyTarget)} at the start of this range`}
+            >
+              ({rangeWeeklyTarget})
+            </span>
+          )}
         </button>
         {/* <span
           className="h-2 w-2 shrink-0 rounded-full"
@@ -150,12 +146,6 @@ export function SortableRow({
                 Milestones
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/analytics">
-                <TrendingUp className="h-3.5 w-3.5" />
-                Analytics
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => onDelete(habit)}
               className="text-destructive focus:text-destructive"
@@ -170,6 +160,7 @@ export function SortableRow({
       {days.map((d) => {
         const checked = !!completions[`${habit.id}__${toKey(d)}`];
         const today = isToday(d);
+        const eligible = isHabitEligibleOn(habit, d);
         return (
           <Tooltip key={toKey(d)}>
             <TooltipTrigger asChild>
@@ -180,18 +171,22 @@ export function SortableRow({
                   isDragging && "bg-accent/50",
                 )}
               >
-                <HabitCheckbox
-                  checked={checked}
-                  onToggle={() => toggle(habit.id, d)}
-                  color={cat.color}
-                  today={today}
-                />
+                {eligible && (
+                  <HabitCheckbox
+                    checked={checked}
+                    onToggle={() => toggle(habit.id, d)}
+                    color={cat.color}
+                    today={today}
+                  />
+                )}
               </div>
             </TooltipTrigger>
             <TooltipContent>
               <span className="font-semibold">{habit.name}</span>
               <span className="block text-muted-foreground">
-                {formatFullDate(d)}
+                {eligible
+                  ? formatFullDate(d)
+                  : `Not tracked before ${formatFullDate(new Date(habit.createdAt))}`}
               </span>
             </TooltipContent>
           </Tooltip>
@@ -203,16 +198,7 @@ export function SortableRow({
       >
         <span>{counter.completed}</span>
         {counter.scheduled && (
-          <span
-            className=""
-            title={`Days targeted for this ${
-              view === "week"
-                ? "week"
-                : view === "month"
-                  ? "month"
-                  : "15-day window"
-            }`}
-          >
+          <span title="Scheduled days for this range">
             /{counter.scheduled}
           </span>
         )}
