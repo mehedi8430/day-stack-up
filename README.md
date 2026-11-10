@@ -125,11 +125,13 @@ prisma/
 | `npm run build`       | Generate the Prisma client and create a production build (`prisma generate && next build`) |
 | `npm start`           | Serve the production build                                   |
 | `npm run lint`        | Run ESLint                                                   |
-| `npm run db:migrate`  | Create/apply a migration in local dev (`prisma migrate dev`) |
+| `npm run db:migrate`  | Create/apply a migration in local dev (`prisma migrate dev`); requires `DATABASE_URL` |
 | `npm run db:deploy`   | Apply pending migrations (`prisma migrate deploy`)           |
 | `npm run db:status`   | Show migration status (`prisma migrate status`)              |
 | `npm run db:studio`   | Open Prisma Studio (`prisma studio`)                         |
 | `npm run db:validate` | Validate `prisma/schema.prisma`                              |
 | `npm run test`        | Run progress calculation tests (Node's built-in runner)      |
+
+`prisma migrate dev` uses `DATABASE_URL`, falling back to `SUPABASE_DATABASE_URL` when it is unset. Keep `DATABASE_URL` pointed at the local Docker database when creating migrations — do not run `db:migrate` against Supabase. Use `npm run db:deploy` for the Supabase database.
 
 The production build runs `prisma generate` first, so the generated client exists on a fresh install (such as Vercel) before Next.js compiles.

@@ -7,16 +7,21 @@
 -- owner, i.e. the migration connection, still bypasses RLS) and revoke the API
 -- roles' grants where those roles exist (they do not exist on local Docker
 -- Postgres, so the revokes are guarded).
-
-ALTER TABLE "public"."_prisma_migrations" ENABLE ROW LEVEL SECURITY;
+--
+-- The table is absent while Prisma replays migrations into a shadow database,
+-- so skip the lockdown there instead of failing the replay.
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-    REVOKE ALL ON TABLE "public"."_prisma_migrations" FROM "anon";
-  END IF;
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-    REVOKE ALL ON TABLE "public"."_prisma_migrations" FROM "authenticated";
+  IF to_regclass('public._prisma_migrations') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE "public"."_prisma_migrations" ENABLE ROW LEVEL SECURITY';
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+      EXECUTE 'REVOKE ALL ON TABLE "public"."_prisma_migrations" FROM "anon"';
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+      EXECUTE 'REVOKE ALL ON TABLE "public"."_prisma_migrations" FROM "authenticated"';
+    END IF;
   END IF;
 END
 $$;
