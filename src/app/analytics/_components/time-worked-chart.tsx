@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
 import {
   BarChart,
   Bar,
@@ -21,33 +20,20 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getMonthBuckets, getWeekChunks, toKey, formatDayShort } from "@/lib/date";
+import { buildTimeWorkedData } from "@/lib/time-worked";
 import { PlannerTask } from "@/lib/planner-types";
 import { chartTooltipStyle } from "./chart-common";
-import { AnalyticsView, TimeWorkedPoint } from "./analytics-types";
-
-const WORKED_STATUSES = ["done", "in_progress"];
-
-function workedMinutes(tasks: PlannerTask[], date: string): number {
-  return tasks
-    .filter(
-      (t) =>
-        t.date === date &&
-        t.durationMinutes &&
-        WORKED_STATUSES.includes(t.status)
-    )
-    .reduce((sum, t) => sum + (t.durationMinutes ?? 0), 0);
-}
+import {
+  AnalyticsView,
+  TimeWorkedGranularity,
+  TimeWorkedPoint,
+} from "./analytics-types";
 
 function formatDuration(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h === 0) return `${m}m`;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-function toHours(mins: number): number {
-  return Math.round((mins / 60) * 10) / 10;
 }
 
 interface TimeWorkedChartProps {
@@ -59,62 +45,34 @@ interface TimeWorkedChartProps {
 
 export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedChartProps) {
   const [chartType, setChartType] = React.useState<"bar" | "line">("bar");
-  const isMonthWeekView = view === "month";
+  const [monthGranularity, setMonthGranularity] =
+    React.useState<TimeWorkedGranularity>("week");
+  const isMonthView = view === "month";
+  const isMonthWeekView = isMonthView && monthGranularity === "week";
 
-  const data: TimeWorkedPoint[] = React.useMemo(() => {
-    if (view === "year") {
-      return getMonthBuckets(yearCursor).map((monthDays, m) => {
-        const mins = monthDays.reduce(
-          (sum, d) => sum + workedMinutes(tasks, toKey(d)),
-          0
-        );
-        return {
-          month: format(new Date(yearCursor, m, 1), "MMM"),
-          full: format(new Date(yearCursor, m, 1), "MMMM yyyy"),
-          hours: toHours(mins),
-          mins,
-        };
-      });
-    }
-
-    if (isMonthWeekView) {
-      // Saturday-start weeks that overlap the month; each bar counts only
-      // the month's days inside its week, so bars still sum to the month.
-      return getWeekChunks(days).map((chunk) => {
-        const weekStart = chunk[0];
-        const mins = chunk.reduce(
-          (sum, d) => sum + workedMinutes(tasks, toKey(d)),
-          0
-        );
-        return {
-          week: format(weekStart, "MMM d"),
-          full: `${format(weekStart, "MMM d")}–${format(
-            chunk[chunk.length - 1],
-            "MMM d",
-          )} (days in this month)`,
-          hours: toHours(mins),
-          mins,
-        };
-      });
-    }
-
-    return days.map((d) => {
-      const mins = workedMinutes(tasks, toKey(d));
-      return {
-        date: formatDayShort(d),
-        full: format(d, "MMM d"),
-        hours: toHours(mins),
-        mins,
-      };
-    });
-  }, [view, isMonthWeekView, yearCursor, days, tasks]);
+  const data: TimeWorkedPoint[] = React.useMemo(
+    () =>
+      buildTimeWorkedData({
+        view,
+        yearCursor,
+        days,
+        tasks,
+        monthGranularity,
+      }),
+    [view, yearCursor, days, tasks, monthGranularity],
+  );
 
   const description =
     view === "year"
       ? `Hours of completed planner tasks in each month of ${yearCursor}`
       : view === "week"
         ? "Hours of completed planner tasks per day this week"
-        : "Hours of completed planner tasks per Saturday–Friday week";
+        : monthGranularity === "week"
+          ? "Hours of completed planner tasks per Saturday–Friday week"
+          : "Hours of completed planner tasks per day this month";
+
+  const xAxisKey =
+    view === "year" ? "month" : isMonthWeekView ? "week" : "date";
 
   return (
     <Card>
@@ -125,6 +83,23 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
             <CardDescription>{description}</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {isMonthView && (
+              <Tabs
+                value={monthGranularity}
+                onValueChange={(v) =>
+                  setMonthGranularity(v as TimeWorkedGranularity)
+                }
+              >
+                <TabsList className="h-8 sm:h-10">
+                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="week">
+                    Weekly
+                  </TabsTrigger>
+                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="day">
+                    Daily
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
             <Tabs value={chartType} onValueChange={(v) => setChartType(v as "bar" | "line")}>
               <TabsList className="h-8 sm:h-10">
                 <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="bar">Bar</TabsTrigger>
@@ -145,13 +120,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
                   vertical={false}
                 />
                 <XAxis
-                  dataKey={
-                    view === "year"
-                      ? "month"
-                      : isMonthWeekView
-                        ? "week"
-                        : "date"
-                  }
+                  dataKey={xAxisKey}
                   tick={{ fontSize: 11 }}
                   className="fill-muted-foreground"
                 />
@@ -183,13 +152,7 @@ export function TimeWorkedChart({ view, yearCursor, days, tasks }: TimeWorkedCha
                   vertical={false}
                 />
                 <XAxis
-                  dataKey={
-                    view === "year"
-                      ? "month"
-                      : isMonthWeekView
-                        ? "week"
-                        : "date"
-                  }
+                  dataKey={xAxisKey}
                   tick={{ fontSize: 11 }}
                   className="fill-muted-foreground"
                 />
