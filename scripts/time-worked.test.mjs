@@ -47,7 +47,7 @@ test("month view can build daily points", () => {
     tasks: [
       task("2026-11-02", 45),
       task("2026-11-02", 45, "in_progress"),
-      task("2026-11-02", 30, "todo"),
+      task("2026-11-02", 30, "planned"),
       task("2026-11-03", null),
     ],
   });
@@ -55,9 +55,25 @@ test("month view can build daily points", () => {
   assert.equal(points.length, days.length);
   assert.equal(points[1].date, "Mon 2");
   assert.equal(points[1].full, "Nov 2");
-  assert.equal(points[1].mins, 90);
-  assert.equal(points[1].hours, 1.5);
+  assert.equal(points[1].mins, 120);
+  assert.equal(points[1].hours, 2);
   assert.equal(points[2].mins, 0);
+});
+
+test("counts recorded task minutes regardless of task status", () => {
+  const days = getMonthDays(2026, 10);
+  const points = buildTimeWorkedData({
+    view: "month",
+    yearCursor: 2026,
+    days,
+    monthGranularity: "day",
+    tasks: [
+      task("2026-11-02", 60, "planned"),
+      task("2026-11-02", 30, "skipped"),
+    ],
+  });
+
+  assert.equal(points[1].mins, 90);
 });
 
 test("week view builds daily points regardless of month granularity", () => {
