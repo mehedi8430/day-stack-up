@@ -66,7 +66,6 @@ export async function createPlannerTask(data: {
   title: string;
   date: string;
   startTime?: string;
-  durationMinutes?: number;
   priority: PlannerPriority;
   notes?: string;
 }): Promise<{ task: PlannerTask } | { error: string }> {
@@ -84,7 +83,6 @@ export async function createPlannerTask(data: {
       title: data.title.trim(),
       date: new Date(data.date),
       startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}`) : null,
-      durationMinutes: data.durationMinutes || null,
       priority: data.priority,
       notes: data.notes?.trim() || null,
       position: count,
@@ -92,6 +90,7 @@ export async function createPlannerTask(data: {
   });
 
   revalidatePath("/planner");
+  revalidatePath("/analytics");
   return { task: mapTask(task) };
 }
 
@@ -107,12 +106,23 @@ export async function updatePlannerTask(
   }
 ): Promise<{ task: PlannerTask } | { error: string }> {
   const user = await requireUser();
+  if (
+    updates.durationMinutes !== undefined &&
+    updates.durationMinutes !== null &&
+    (!Number.isInteger(updates.durationMinutes) ||
+      updates.durationMinutes < 1)
+  ) {
+    return { error: "Time worked must be a positive whole number of minutes" };
+  }
+
   const values: Record<string, unknown> = { updatedAt: new Date() };
   if (updates.title !== undefined) values.title = updates.title.trim();
   if (updates.startTime !== undefined) {
     values.startTime = updates.startTime ? new Date(`1970-01-01T${updates.startTime}`) : null;
   }
-  if (updates.durationMinutes !== undefined) values.durationMinutes = updates.durationMinutes || null;
+  if (updates.durationMinutes !== undefined) {
+    values.durationMinutes = updates.durationMinutes;
+  }
   if (updates.priority !== undefined) values.priority = updates.priority;
   if (updates.status !== undefined) values.status = updates.status;
   if (updates.notes !== undefined) values.notes = updates.notes;
@@ -123,6 +133,7 @@ export async function updatePlannerTask(
   });
 
   revalidatePath("/planner");
+  revalidatePath("/analytics");
   return { task: mapTask(task) };
 }
 
@@ -132,6 +143,7 @@ export async function deletePlannerTask(id: string): Promise<{ error?: string }>
     where: { id, userId: user.id },
   });
   revalidatePath("/planner");
+  revalidatePath("/analytics");
   return {};
 }
 
@@ -153,6 +165,15 @@ export async function movePlannerTaskToDate(
   date: string
 ): Promise<{ task: PlannerTask } | { error: string }> {
   const user = await requireUser();
+  const existingTask = await prisma.dailyPlannerTask.findFirst({
+    where: { id, userId: user.id },
+    select: { durationMinutes: true },
+  });
+  if (!existingTask) return { error: "Task not found" };
+  if ((existingTask.durationMinutes ?? 0) > 0) {
+    return { error: "Tasks with logged time cannot be moved to another day" };
+  }
+
   const count = await prisma.dailyPlannerTask.count({
     where: {
       userId: user.id,
@@ -171,5 +192,6 @@ export async function movePlannerTaskToDate(
   });
 
   revalidatePath("/planner");
+  revalidatePath("/analytics");
   return { task: mapTask(task) };
 }

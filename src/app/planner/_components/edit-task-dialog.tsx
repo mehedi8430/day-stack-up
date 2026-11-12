@@ -83,19 +83,23 @@ function EditTaskForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-duration">Duration (min)</Label>
+          <Label htmlFor="edit-duration">Actual time worked (min)</Label>
           <Input
             id="edit-duration"
             type="number"
             min="1"
             step="5"
-            placeholder="30"
+            placeholder="Not logged"
             value={duration}
             onChange={(event) => setDuration(event.target.value)}
             disabled={saving}
           />
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Only time recorded here counts toward your work goals. Once time is
+        logged, this task cannot be moved to another day.
+      </p>
       {/* priority */}
       <div className="space-y-2">
         <Label htmlFor="edit-priority">Priority</Label>

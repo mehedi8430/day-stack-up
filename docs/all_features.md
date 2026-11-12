@@ -55,12 +55,12 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 
 ### 7. Daily Planner (`/planner`)
 - **Day-by-day navigation** — previous/next day arrows and a center button showing Today / Tomorrow / Yesterday / date
-- **Quick-add task form** — title, **start time**, **duration** (minutes), **priority** (low / medium / high), and notes; press Enter to add quickly
+- **Quick-add task form** — title, **start time**, **priority** (low / medium / high), and notes; press Enter to add quickly. Log actual minutes worked later from the task editor.
 - **Status workflow** — status button cycles planned → in_progress → done; plus **move to tomorrow** and **move to yesterday** actions that shift a task one day relative to its own date (move to yesterday is hidden on today's tasks)
 - **Time-based task ordering** — scheduled tasks appear by start time, followed by unscheduled tasks
-- **Edit task dialog** — update title, time, duration, priority, and notes
+- **Edit task dialog** — update title, time, actual minutes worked, priority, and notes
 - **Delete task** — confirmation dialog before removal
-- **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and planned time (sum of task durations, shown as hours and minutes, e.g. `2 hrs 10 minutes`)
+- **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and actual time logged across the selected day's tasks
 - Footer note reminding that time blocks are guidance
 - **Weekly planner strip** — a collapsible strip for the Saturday-to-Friday
   week containing the selected date (always 7 days; weeks may cross a month
@@ -76,7 +76,7 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
   - Achievement level badge for the selected period's completion rate
   - **30-day consistency** compared with the previous 30 days
   - Active habit count
-  - **Time Worked chart** — hours from completed/in-progress planner task durations; per-day in Week view, per Saturday–Friday week in Month view (each bar counts only days within the selected month), or per-month in Year view; supports **Bar/Line view toggle** with Bar as default
+  - **Time Worked** — user-configurable daily hours and weekly qualifying-day goals (default 8 hours and 5 days); monthly logged hours, qualifying workdays, and average time per logged day; charts group by day, Saturday–Friday week, or month and support Bar/Line toggles
   - **Monthly Completion chart** (year view) — monthly completion against each month's eligible target
   - **Per-Habit Completion bar chart** — color-coded by category, compared with each habit's eligible target
   - **Daily Score chart** — daily completions compared with eligible target shares; switch between Bar and Line views
@@ -90,7 +90,11 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - Empty state when no habits exist yet
 - Calculation details: [Home & Analytics Progress](./analytics-progress.md)
 
-### 9. UI / UX
+### 9. Settings (`/settings`)
+- **Work goals** — configure daily target hours in 15-minute increments and minimum qualifying days per week; weekly hours target is calculated automatically
+- **Extensible per-user settings storage** — JSON settings are stored by key with authenticated user scoping and RLS policies
+
+### 10. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
 - **Optimistic updates** — instant UI feedback with rollback on error (Zustand store)
 - **Toast notifications** (Sonner) for success/error feedback

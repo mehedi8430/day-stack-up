@@ -111,7 +111,10 @@ export function TaskRow({ task }: { task: PlannerTask }) {
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="sm:hidden">{formatTime(task.startTime)}</span>
           <span>{statusLabels[task.status]}</span>
-          {task.durationMinutes && <span>{task.durationMinutes} min</span>}
+          {task.durationMinutes && <span>Logged {task.durationMinutes} min</span>}
+          {(task.durationMinutes ?? 0) > 0 && (
+            <span>Day locked by logged time</span>
+          )}
           {task.notes && <span className="truncate">{task.notes}</span>}
         </div>
       </div>
@@ -119,41 +122,44 @@ export function TaskRow({ task }: { task: PlannerTask }) {
       <div className="col-span-2 row-start-2 mt-1 flex items-center justify-end gap-1 border-t pt-2 sm:col-auto sm:row-auto sm:mt-0 sm:border-t-0 sm:pt-0 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
         {task.status !== "done" && task.status !== "skipped" && (
           <>
-            {canMoveToYesterday && (
+            {canMoveToYesterday &&
+              (task.durationMinutes ?? 0) === 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() =>
+                    runPlannerAction(moveTaskToYesterday(task.id), {
+                      success: `Task moved to ${format(
+                        parseISO(`${previousDayKey}T12:00:00`),
+                        "EEE, MMM d",
+                      )}`,
+                      fallback: "Failed to move task",
+                    })
+                  }
+                  aria-label="Move to yesterday"
+                  title="Move to yesterday"
+                >
+                  <MoveLeft className="h-4 w-4" />
+                </Button>
+              )}
+            {(task.durationMinutes ?? 0) === 0 && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9"
                 onClick={() =>
-                  runPlannerAction(moveTaskToYesterday(task.id), {
-                    success: `Task moved to ${format(
-                      parseISO(`${previousDayKey}T12:00:00`),
-                      "EEE, MMM d",
-                    )}`,
+                  runPlannerAction(moveTaskToNextDay(task.id), {
+                    success: "Task moved to tomorrow",
                     fallback: "Failed to move task",
                   })
                 }
-                aria-label="Move to yesterday"
-                title="Move to yesterday"
+                aria-label="Move to tomorrow"
+                title="Move to tomorrow"
               >
-                <MoveLeft className="h-4 w-4" />
+                <MoveRight className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() =>
-                runPlannerAction(moveTaskToNextDay(task.id), {
-                  success: "Task moved to tomorrow",
-                  fallback: "Failed to move task",
-                })
-              }
-              aria-label="Move to tomorrow"
-              title="Move to tomorrow"
-            >
-              <MoveRight className="h-4 w-4" />
-            </Button>
           </>
         )}
         <Button

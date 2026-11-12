@@ -53,8 +53,17 @@ The Week, Month, and Year selector controls the main completion KPI and charts:
 | Yearly Heatmap | In Year view, each date's completed count divided by that date's target shares. Future dates display no completions. |
 | Streaks | Current and best runs of completed calendar days per habit, over its history. The current run includes today if completed; otherwise it is counted through yesterday. |
 | Habit Stability | Weekly completion counts for up to 12 completed Saturday–Friday weeks. The current week and the habit's creation week are excluded. Stability describes variation in counts, not goal attainment: fewer than four weeks is Building, zero average is Inactive; otherwise standard deviation ≤1.25 is High, ≤2.25 is Moderate, and higher is Low. |
-| Time Worked | Sum of planner task `durationMinutes` for `done` and `in_progress` tasks. It is a total of task durations, not stopwatch-tracked time. Week view groups by day, Month by Saturday–Friday weeks (only dates in the selected month), and Year by month. Bar and Line are display choices only. |
+| Time Worked | Sum of planner task `durationMinutes` recorded in the task editor; task status does not affect the total. User-configurable work goals (default: 8 hours/day and 5 qualifying days/week) are stored in the extensible user-settings table. A qualifying day reaches the saved daily target; the weekly hours target is daily target × qualifying days. Weeks run Saturday–Friday. Month view summarizes logged hours, qualifying days, and average time per day with logged time; the chart can group by day or Saturday–Friday weeks. Year view groups logged time by month. Daily charts show the configured target line. Tasks with recorded time cannot be moved to another day, preserving the date associated with the work. |
 
 The analytics page receives user-scoped habits, completions, schedules, and
-planner tasks from server actions. It uses shared progress helpers for rates;
-charts format those results rather than defining separate progress rules.
+planner tasks and work goals from server actions. It uses shared progress
+helpers for rates; charts format those results rather than defining separate
+progress rules.
+
+## Settings
+
+`user_settings` stores user-owned JSON values by key. Add new settings by
+registering a stable key and a typed parser/default in `src/lib/settings.ts`,
+then read and update that key through authenticated server actions. This keeps
+future preferences out of feature-specific table columns while retaining
+per-user query scoping and RLS.

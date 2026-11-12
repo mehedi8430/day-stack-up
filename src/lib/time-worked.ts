@@ -2,8 +2,6 @@ import { format } from "date-fns";
 import { formatDayShort, getMonthBuckets, getWeekChunks, toKey } from "@/lib/date";
 import type { PlannerTask } from "@/lib/planner-types";
 
-const WORKED_STATUSES = ["done", "in_progress"];
-
 export type TimeWorkedGranularity = "day" | "week";
 
 export interface TimeWorkedPoint {
@@ -25,13 +23,15 @@ interface BuildTimeWorkedDataArgs {
 
 function workedMinutes(tasks: PlannerTask[], date: string): number {
   return tasks
-    .filter(
-      (t) =>
-        t.date === date &&
-        t.durationMinutes &&
-        WORKED_STATUSES.includes(t.status),
-    )
-    .reduce((sum, t) => sum + (t.durationMinutes ?? 0), 0);
+    .filter((task) => task.date === date)
+    .reduce((sum, task) => sum + (task.durationMinutes ?? 0), 0);
+}
+
+export function getActualWorkedMinutes(
+  tasks: PlannerTask[],
+  date: string,
+): number {
+  return workedMinutes(tasks, date);
 }
 
 function toHours(mins: number): number {

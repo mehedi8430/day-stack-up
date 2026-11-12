@@ -68,6 +68,17 @@ model DailyPlannerTask {
   @@schema("public")
 }
 
+model UserSetting {
+  userId    String   @map("user_id") @db.Uuid
+  key       String   @db.Text
+  value     Json     @db.JsonB
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@id([userId, key])
+  @@map("user_settings")
+  @@schema("public")
+}
+
 model HabitTopic {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String    @map("user_id") @db.Uuid

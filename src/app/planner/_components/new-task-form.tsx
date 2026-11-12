@@ -13,7 +13,6 @@ export function NewTaskForm({ date }: { date: string }) {
   const createTask = usePlannerStore((s) => s.createTask);
   const [title, setTitle] = React.useState("");
   const [startTime, setStartTime] = React.useState("");
-  const [duration, setDuration] = React.useState("");
   const [priority, setPriority] = React.useState<PlannerPriority>("medium");
   const [notes, setNotes] = React.useState("");
   const [detailsOpen, setDetailsOpen] = React.useState(false);
@@ -29,13 +28,11 @@ export function NewTaskForm({ date }: { date: string }) {
         title: trimmed,
         date,
         startTime: startTime || undefined,
-        durationMinutes: duration ? Number(duration) : undefined,
         priority,
         notes: notes || undefined,
       });
       setTitle("");
       setStartTime("");
-      setDuration("");
       setNotes("");
       setPriority("medium");
       setDetailsOpen(false);
@@ -104,25 +101,7 @@ export function NewTaskForm({ date }: { date: string }) {
       </div>
       {detailsOpen && (
         <div className="mt-4 border-t pt-4">
-          <div className="grid w-full gap-4 sm:grid-cols-2">
-            {/* Duration */}
-            <div className="w-full space-y-2">
-              <Label htmlFor="task-duration">Duration</Label>
-              <div className="relative">
-                <Input
-                  id="task-duration"
-                  type="number"
-                  min="1"
-                  step="5"
-                  placeholder="30"
-                  value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
-                />
-                <span className="pointer-events-none absolute right-3 top-2.5 text-xs text-muted-foreground">
-                  min
-                </span>
-              </div>
-            </div>
+          <div className="grid w-full gap-4 sm:max-w-sm">
             {/* Priority */}
             <div className="w-full space-y-2">
               <Label htmlFor="task-priority">Priority</Label>

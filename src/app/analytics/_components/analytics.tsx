@@ -41,12 +41,14 @@ import {
 } from "@/lib/habit-progress";
 import type { HabitScheduleRow } from "@/types/habit-progress-types";
 import { computeHabitStability } from "@/lib/habit-analytics";
+import type { WorkGoalSettings } from "@/lib/settings";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
   initialSchedules: HabitScheduleRow[];
   initialPlannerTasks: PlannerTask[];
+  workGoals: WorkGoalSettings;
 }
 
 export function Analytics({
@@ -54,6 +56,7 @@ export function Analytics({
   initialCompletions,
   initialSchedules,
   initialPlannerTasks,
+  workGoals,
 }: AnalyticsProps) {
   const [cursor, setCursor] = React.useState<Date>(() => new Date());
   const [yearCursor, setYearCursor] = React.useState<number>(
@@ -295,15 +298,35 @@ export function Analytics({
 
   if (sortedHabits.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
-        <BarChart3
-          className="mb-4 size-12 text-muted-foreground"
-          aria-hidden="true"
+      <div className="mx-auto max-w-7xl space-y-6">
+        <AnalyticsHeader
+          view={view}
+          yearCursor={yearCursor}
+          cursor={cursor}
+          onViewChange={setView}
+          onYearChange={setYearCursor}
+          onCursorChange={setCursor}
         />
-        <h3 className="text-lg font-semibold">No data to analyze yet</h3>
-        <p className="text-sm text-muted-foreground">
-          Add habits and mark them done to unlock your analytics.
-        </p>
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-10 text-center">
+          <BarChart3
+            className="mb-4 size-12 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <h3 className="text-lg font-semibold">
+            No habit data to analyze yet
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            You can still track your work time in the planner.
+          </p>
+        </div>
+        <TimeWorkedChart
+          view={view}
+          yearCursor={yearCursor}
+          days={days}
+          tasks={plannerTasks}
+          today={today}
+          workGoals={workGoals}
+        />
       </div>
     );
   }
@@ -349,6 +372,8 @@ export function Analytics({
         yearCursor={yearCursor}
         days={days}
         tasks={plannerTasks}
+        today={today}
+        workGoals={workGoals}
       />
 
       {view === "year" && <MonthlyCompletionChart data={monthlyChartData} />}
