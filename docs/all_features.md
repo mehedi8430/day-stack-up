@@ -76,7 +76,7 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
   - Achievement level badge for the selected period's completion rate
   - **30-day consistency** compared with the previous 30 days
   - Active habit count
-  - **Time Worked** — daily 8-hour and weekly 40-hour/five-day goals based on task minutes recorded in the editor; monthly logged hours, 8-hour workdays, and average time per logged day; charts group by day, Saturday–Friday week, or month and support Bar/Line toggles
+  - **Time Worked** — user-configurable daily hours and weekly qualifying-day goals (default 8 hours and 5 days); monthly logged hours, qualifying workdays, and average time per logged day; charts group by day, Saturday–Friday week, or month and support Bar/Line toggles
   - **Monthly Completion chart** (year view) — monthly completion against each month's eligible target
   - **Per-Habit Completion bar chart** — color-coded by category, compared with each habit's eligible target
   - **Daily Score chart** — daily completions compared with eligible target shares; switch between Bar and Line views
@@ -90,7 +90,11 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - Empty state when no habits exist yet
 - Calculation details: [Home & Analytics Progress](./analytics-progress.md)
 
-### 9. UI / UX
+### 9. Settings (`/settings`)
+- **Work goals** — configure daily target hours in 15-minute increments and minimum qualifying days per week; weekly hours target is calculated automatically
+- **Extensible per-user settings storage** — JSON settings are stored by key with authenticated user scoping and RLS policies
+
+### 10. UI / UX
 - **Dark & light mode toggle** — persisted in localStorage, respects system preference, with a flash-of-wrong-theme prevention script
 - **Optimistic updates** — instant UI feedback with rollback on error (Zustand store)
 - **Toast notifications** (Sonner) for success/error feedback
