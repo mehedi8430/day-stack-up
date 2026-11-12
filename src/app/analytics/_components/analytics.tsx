@@ -41,12 +41,14 @@ import {
 } from "@/lib/habit-progress";
 import type { HabitScheduleRow } from "@/types/habit-progress-types";
 import { computeHabitStability } from "@/lib/habit-analytics";
+import type { WorkGoalSettings } from "@/lib/settings";
 
 interface AnalyticsProps {
   initialHabits: Habit[];
   initialCompletions: CompletionRow[];
   initialSchedules: HabitScheduleRow[];
   initialPlannerTasks: PlannerTask[];
+  workGoals: WorkGoalSettings;
 }
 
 export function Analytics({
@@ -54,6 +56,7 @@ export function Analytics({
   initialCompletions,
   initialSchedules,
   initialPlannerTasks,
+  workGoals,
 }: AnalyticsProps) {
   const [cursor, setCursor] = React.useState<Date>(() => new Date());
   const [yearCursor, setYearCursor] = React.useState<number>(
@@ -309,7 +312,9 @@ export function Analytics({
             className="mb-4 size-12 text-muted-foreground"
             aria-hidden="true"
           />
-          <h3 className="text-lg font-semibold">No habit data to analyze yet</h3>
+          <h3 className="text-lg font-semibold">
+            No habit data to analyze yet
+          </h3>
           <p className="text-sm text-muted-foreground">
             You can still track your work time in the planner.
           </p>
@@ -320,6 +325,7 @@ export function Analytics({
           days={days}
           tasks={plannerTasks}
           today={today}
+          workGoals={workGoals}
         />
       </div>
     );
@@ -367,6 +373,7 @@ export function Analytics({
         days={days}
         tasks={plannerTasks}
         today={today}
+        workGoals={workGoals}
       />
 
       {view === "year" && <MonthlyCompletionChart data={monthlyChartData} />}

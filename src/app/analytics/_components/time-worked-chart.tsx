@@ -21,12 +21,14 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  buildTimeWorkedData,
-  getActualWorkedMinutes,
-} from "@/lib/time-worked";
+import { buildTimeWorkedData, getActualWorkedMinutes } from "@/lib/time-worked";
 import { getYearDays, toKey } from "@/lib/date";
 import type { PlannerTask } from "@/lib/planner-types";
+import {
+  getWeeklyWorkTargetMinutes,
+  isQualifyingWorkday,
+  type WorkGoalSettings,
+} from "@/lib/settings";
 import { chartTooltipStyle } from "./chart-common";
 import {
   AnalyticsView,
@@ -41,16 +43,13 @@ function formatDuration(mins: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-const DAILY_TARGET_MINUTES = 8 * 60;
-const WEEKLY_TARGET_MINUTES = 40 * 60;
-const WEEKLY_TARGET_DAYS = 5;
-
 interface TimeWorkedChartProps {
   view: AnalyticsView;
   yearCursor: number;
   days: Date[];
   tasks: PlannerTask[];
   today: Date;
+  workGoals: WorkGoalSettings;
 }
 
 export function TimeWorkedChart({
@@ -59,12 +58,17 @@ export function TimeWorkedChart({
   days,
   tasks,
   today,
+  workGoals,
 }: TimeWorkedChartProps) {
   const [chartType, setChartType] = React.useState<"bar" | "line">("bar");
   const [monthGranularity, setMonthGranularity] =
     React.useState<TimeWorkedGranularity>("week");
   const isMonthView = view === "month";
   const isMonthWeekView = isMonthView && monthGranularity === "week";
+  const dailyTargetMinutes = workGoals.dailyTargetMinutes;
+  const dailyTargetHours = dailyTargetMinutes / 60;
+  const weeklyTargetDays = workGoals.workdaysPerWeek;
+  const weeklyTargetMinutes = getWeeklyWorkTargetMinutes(workGoals);
 
   const data: TimeWorkedPoint[] = React.useMemo(
     () =>
@@ -99,9 +103,8 @@ export function TimeWorkedChart({
   const loggedDays = elapsedDays.filter(
     (day) => getActualWorkedMinutes(tasks, toKey(day)) > 0,
   ).length;
-  const qualifyingDays = elapsedDays.filter(
-    (day) =>
-      getActualWorkedMinutes(tasks, toKey(day)) >= DAILY_TARGET_MINUTES,
+  const qualifyingDays = elapsedDays.filter((day) =>
+    isQualifyingWorkday(getActualWorkedMinutes(tasks, toKey(day)), workGoals),
   ).length;
   const averageMinutesPerLoggedDay =
     loggedDays > 0 ? Math.round(totalMinutes / loggedDays) : 0;
@@ -110,31 +113,30 @@ export function TimeWorkedChart({
   const isFuturePeriod =
     periodDays.length > 0 && toKey(periodDays[0]) > todayKey;
   const bestDayMinutes = elapsedDays.reduce(
-    (best, day) =>
-      Math.max(best, getActualWorkedMinutes(tasks, toKey(day))),
+    (best, day) => Math.max(best, getActualWorkedMinutes(tasks, toKey(day))),
     0,
   );
   const dailyDisplayMinutes = hasToday ? todayMinutes : bestDayMinutes;
   const weeklyHoursPercentage = Math.min(
     100,
-    (totalMinutes / WEEKLY_TARGET_MINUTES) * 100,
+    (totalMinutes / weeklyTargetMinutes) * 100,
   );
   const dailyPercentage = Math.min(
     100,
-    (dailyDisplayMinutes / DAILY_TARGET_MINUTES) * 100,
+    (dailyDisplayMinutes / dailyTargetMinutes) * 100,
   );
   const dailyGoalMessage =
-    dailyDisplayMinutes >= DAILY_TARGET_MINUTES
+    dailyDisplayMinutes >= dailyTargetMinutes
       ? "Daily goal reached"
-      : `${formatDuration(DAILY_TARGET_MINUTES - dailyDisplayMinutes)} to go`;
+      : `${formatDuration(dailyTargetMinutes - dailyDisplayMinutes)} to go`;
   const weeklyGoalMessage = isFuturePeriod
     ? "This week has not started yet"
-    : qualifyingDays >= WEEKLY_TARGET_DAYS
-      ? "Five-day minimum reached"
+    : qualifyingDays >= weeklyTargetDays
+      ? `${weeklyTargetDays}-day minimum reached`
       : toKey(periodDays[periodDays.length - 1]) < todayKey
-        ? "Week ended below the five-day minimum"
-        : `${WEEKLY_TARGET_DAYS - qualifyingDays} more qualifying ${
-            WEEKLY_TARGET_DAYS - qualifyingDays === 1 ? "day" : "days"
+        ? `Week ended below the ${weeklyTargetDays}-day minimum`
+        : `${weeklyTargetDays - qualifyingDays} more qualifying ${
+            weeklyTargetDays - qualifyingDays === 1 ? "day" : "days"
           } to go`;
   const showDailyGoalLine =
     view === "week" || (view === "month" && monthGranularity === "day");
@@ -162,8 +164,8 @@ export function TimeWorkedChart({
           <div>
             <CardTitle>Time Worked</CardTitle>
             <CardDescription>
-              {description}. Task time starts unlogged and only counts after
-              you record it in the task editor.
+              {description}. Task time starts unlogged and only counts after you
+              record it in the task editor.
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -175,19 +177,38 @@ export function TimeWorkedChart({
                 }
               >
                 <TabsList className="h-8 sm:h-10">
-                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="week">
+                  <TabsTrigger
+                    className="text-xs sm:text-sm px-2 sm:px-3"
+                    value="week"
+                  >
                     Weekly
                   </TabsTrigger>
-                  <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="day">
+                  <TabsTrigger
+                    className="text-xs sm:text-sm px-2 sm:px-3"
+                    value="day"
+                  >
                     Daily
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             )}
-            <Tabs value={chartType} onValueChange={(v) => setChartType(v as "bar" | "line")}>
+            <Tabs
+              value={chartType}
+              onValueChange={(v) => setChartType(v as "bar" | "line")}
+            >
               <TabsList className="h-8 sm:h-10">
-                <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="bar">Bar</TabsTrigger>
-                <TabsTrigger className="text-xs sm:text-sm px-2 sm:px-3" value="line">Line</TabsTrigger>
+                <TabsTrigger
+                  className="text-xs sm:text-sm px-2 sm:px-3"
+                  value="bar"
+                >
+                  Bar
+                </TabsTrigger>
+                <TabsTrigger
+                  className="text-xs sm:text-sm px-2 sm:px-3"
+                  value="line"
+                >
+                  Line
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -207,7 +228,8 @@ export function TimeWorkedChart({
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {formatDuration(dailyDisplayMinutes)}
                 <span className="text-base font-normal text-muted-foreground">
-                  {" "}/ 8h
+                  {" "}
+                  / {formatDuration(dailyTargetMinutes)}
                 </span>
               </p>
               {progressBar(dailyPercentage, "Daily time goal progress")}
@@ -222,7 +244,8 @@ export function TimeWorkedChart({
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {formatDuration(totalMinutes)}
                 <span className="text-base font-normal text-muted-foreground">
-                  {" "}/ 40h
+                  {" "}
+                  / {formatDuration(weeklyTargetMinutes)}
                 </span>
               </p>
               {progressBar(weeklyHoursPercentage, "Weekly time goal progress")}
@@ -237,7 +260,8 @@ export function TimeWorkedChart({
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {qualifyingDays}
                 <span className="text-base font-normal text-muted-foreground">
-                  {" "}/ 5
+                  {" "}
+                  / {weeklyTargetDays}
                 </span>
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -288,7 +312,11 @@ export function TimeWorkedChart({
                 <YAxis
                   domain={
                     showDailyGoalLine
-                      ? [0, (max: number) => Math.max(8, Math.ceil(max))]
+                      ? [
+                          0,
+                          (max: number) =>
+                            Math.max(dailyTargetHours, Math.ceil(max)),
+                        ]
                       : undefined
                   }
                   tick={{ fontSize: 12 }}
@@ -296,11 +324,11 @@ export function TimeWorkedChart({
                 />
                 {showDailyGoalLine && (
                   <ReferenceLine
-                    y={8}
+                    y={dailyTargetHours}
                     stroke="hsl(var(--muted-foreground))"
                     strokeDasharray="5 5"
                     label={{
-                      value: "8h goal",
+                      value: `${dailyTargetHours}h goal`,
                       position: "insideTopRight",
                       fontSize: 11,
                     }}
@@ -337,7 +365,11 @@ export function TimeWorkedChart({
                 <YAxis
                   domain={
                     showDailyGoalLine
-                      ? [0, (max: number) => Math.max(8, Math.ceil(max))]
+                      ? [
+                          0,
+                          (max: number) =>
+                            Math.max(dailyTargetHours, Math.ceil(max)),
+                        ]
                       : undefined
                   }
                   tick={{ fontSize: 12 }}
@@ -345,11 +377,11 @@ export function TimeWorkedChart({
                 />
                 {showDailyGoalLine && (
                   <ReferenceLine
-                    y={8}
+                    y={dailyTargetHours}
                     stroke="hsl(var(--muted-foreground))"
                     strokeDasharray="5 5"
                     label={{
-                      value: "8h goal",
+                      value: `${dailyTargetHours}h goal`,
                       position: "insideTopRight",
                       fontSize: 11,
                     }}
