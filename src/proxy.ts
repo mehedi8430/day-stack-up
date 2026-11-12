@@ -36,6 +36,7 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname === "/calendar" ||
     request.nextUrl.pathname === "/analytics" ||
+    request.nextUrl.pathname === "/settings" ||
     request.nextUrl.pathname === "/habits" ||
     request.nextUrl.pathname.startsWith("/habits/");
 

@@ -13,6 +13,7 @@ import {
   LogOut,
   ClipboardList,
   ListTodo,
+  Settings,
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -150,6 +151,12 @@ export function AppHeader({
                     {userEmail || "Signed-in account"}
                   </div>
                   <div className="-mx-1 my-1 h-px bg-border" />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="size-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={loggingOut}
                     className="text-destructive focus:text-destructive"
