@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePlannerStore } from "@/stores/planner.store";
-import { formatPlannedDuration } from "@/lib/planner-utils";
+import { formatDuration } from "@/lib/planner-utils";
 
 export function PlannerStatsSidebar() {
   const tasks = usePlannerStore((s) => s.tasks);
@@ -13,7 +13,7 @@ export function PlannerStatsSidebar() {
     completedCount,
     totalTaskCount,
     activeCount,
-    scheduledMinutes,
+    loggedMinutes,
     completionRate,
   } = React.useMemo(() => {
     const dayTasks = tasks.filter((task) => task.date === selectedDate);
@@ -24,7 +24,7 @@ export function PlannerStatsSidebar() {
       activeCount: dayTasks.filter(
         (task) => task.status !== "done" && task.status !== "skipped",
       ).length,
-      scheduledMinutes: dayTasks.reduce(
+      loggedMinutes: dayTasks.reduce(
         (total, task) => total + (task.durationMinutes ?? 0),
         0,
       ),
@@ -93,15 +93,17 @@ export function PlannerStatsSidebar() {
         </div>
         <div className="rounded-lg border bg-card p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Planned time
+            Time logged
           </p>
           <p
             className="mt-1 text-xl font-bold leading-tight lg:text-2xl"
-            title={`${scheduledMinutes} minutes`}
+            title={`${loggedMinutes} minutes`}
           >
-            {formatPlannedDuration(scheduledMinutes)}
+            {formatDuration(loggedMinutes)}
           </p>
-          <p className="text-xs text-muted-foreground">from task estimates</p>
+          <p className="text-xs text-muted-foreground">
+            across the selected day&apos;s tasks
+          </p>
         </div>
       </div>
     </aside>

@@ -23,6 +23,16 @@ export function DeleteTaskDialog() {
           This will permanently remove{" "}
           <span className="font-semibold">{task?.title}</span> from your
           planner. This action cannot be undone.
+          {(task?.durationMinutes ?? 0) > 0 && (
+            <>
+              {" "}
+              It will also remove{" "}
+              <span className="font-semibold">
+                {task?.durationMinutes} logged minutes
+              </span>{" "}
+              from your work-time history.
+            </>
+          )}
         </>
       }
       confirmLabel="Delete"

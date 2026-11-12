@@ -31,7 +31,6 @@ interface NewPlannerTaskInput {
   title: string;
   date: string;
   startTime?: string;
-  durationMinutes?: number;
   priority: PlannerPriority;
   notes?: string;
 }
@@ -180,7 +179,7 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
       title: data.title.trim(),
       date: data.date,
       startTime: data.startTime || null,
-      durationMinutes: data.durationMinutes || null,
+      durationMinutes: null,
       priority: data.priority,
       status: "planned",
       notes: data.notes?.trim() || null,

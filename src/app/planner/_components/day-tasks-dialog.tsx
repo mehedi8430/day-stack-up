@@ -95,28 +95,35 @@ export function DayTasksDialog({
                               {task.priority}
                             </span>
                             {task.durationMinutes ? (
-                              <span>{task.durationMinutes} min</span>
+                              <span>Logged {task.durationMinutes} min</span>
                             ) : null}
+                            {(task.durationMinutes ?? 0) > 0 && (
+                              <span>Day locked by logged time</span>
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
-                          {!terminal && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                runPlannerAction(moveTaskToNextDay(task.id), {
-                                  success: "Task moved to tomorrow",
-                                  fallback: "Failed to move task",
-                                })
-                              }
-                              aria-label="Move to tomorrow"
-                              title="Move to tomorrow"
-                            >
-                              <MoveRight className="h-4 w-4" />
-                            </Button>
-                          )}
+                          {!terminal &&
+                            (task.durationMinutes ?? 0) === 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  runPlannerAction(
+                                    moveTaskToNextDay(task.id),
+                                    {
+                                      success: "Task moved to tomorrow",
+                                      fallback: "Failed to move task",
+                                    },
+                                  )
+                                }
+                                aria-label="Move to tomorrow"
+                                title="Move to tomorrow"
+                              >
+                                <MoveRight className="h-4 w-4" />
+                              </Button>
+                            )}
                           <Button
                             variant="ghost"
                             size="icon"
