@@ -14,6 +14,7 @@ import type {
 } from "@/lib/planner-types";
 import { usePlannerStore } from "@/stores/planner.store";
 import { runPlannerAction } from "./planner-feedback";
+import { TaskFocusControls } from "./task-focus-controls";
 import { TaskStatusButton } from "./task-status-button";
 
 const statusLabels: Record<PlannerStatus, string> = {
@@ -162,6 +163,7 @@ export function TaskRow({ task }: { task: PlannerTask }) {
             )}
           </>
         )}
+        <TaskFocusControls task={task} />
         <Button
           variant="ghost"
           size="icon"

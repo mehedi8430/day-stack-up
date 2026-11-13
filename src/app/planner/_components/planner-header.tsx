@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlannerStore } from "@/stores/planner.store";
+import { FocusTimerBar } from "./focus-timer-bar";
 import { runPlannerAction } from "./planner-feedback";
 
 export function PlannerHeader({
@@ -34,6 +35,7 @@ export function PlannerHeader({
         <p className="mt-2 max-w-xl text-sm text-muted-foreground">
           Choose a day, add a few focused tasks, and keep track of your progress.
         </p>
+        <FocusTimerBar />
       </div>
       <div className="flex items-center gap-2">
         {!isWeekStripOpen && (

@@ -15,6 +15,7 @@ import { sortPlannerTasks } from "@/lib/planner-utils";
 import { usePlannerStore } from "@/stores/planner.store";
 import { NewTaskForm } from "./new-task-form";
 import { runPlannerAction } from "./planner-feedback";
+import { TaskFocusControls } from "./task-focus-controls";
 import { TaskStatusButton } from "./task-status-button";
 import { formatTime } from "./task-row";
 
@@ -124,6 +125,7 @@ export function DayTasksDialog({
                                 <MoveRight className="h-4 w-4" />
                               </Button>
                             )}
+                          <TaskFocusControls task={task} compact />
                           <Button
                             variant="ghost"
                             size="icon"
