@@ -8,6 +8,10 @@ import { useFocusStore } from "@/stores/focus.store";
 import { usePlannerStore } from "@/stores/planner.store";
 import { DeleteTaskDialog } from "./delete-task-dialog";
 import { EditTaskDialog } from "./edit-task-dialog";
+import {
+  FinishFocusDialog,
+  SwitchFocusDialog,
+} from "./focus-dialogs";
 import { PlannerHeader } from "./planner-header";
 import { PlannerStatsSidebar } from "./planner-stats-sidebar";
 import { PlannerTaskManagement } from "./planner-task-management";
@@ -114,6 +118,8 @@ export function PlannerManagement({
 
       <DeleteTaskDialog />
       <EditTaskDialog />
+      <SwitchFocusDialog />
+      <FinishFocusDialog />
     </div>
   );
 }
