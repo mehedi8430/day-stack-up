@@ -61,6 +61,10 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
 - **Edit task dialog** — update title, time, actual minutes worked, priority, and notes
 - **Delete task** — confirmation dialog before removal
 - **Summary sidebar** — completed count (`X/Y`), remaining tasks (planned or in progress), and actual time logged across the selected day's tasks
+- **Focus timer** — start, pause, resume, and finish a count-up timer from any non-terminal task. A compact timer in the planner header stays visible while switching days and shows the focused task, elapsed time, and pause/finish controls.
+  - Elapsed time is derived from saved timestamps and persisted automatically: pausing, finishing, switching tasks, or a 60-second heartbeat folds whole minutes into the task's logged time, so a reload or navigation never loses tracked time.
+  - Only one timer runs per user. Starting a different task asks for confirmation; the previous session is paused with its time preserved rather than discarded.
+  - Finishing saves the time and offers an optional "Mark this task as done" checkbox; timer state and task completion stay separate.
 - Footer note reminding that time blocks are guidance
 - **Weekly planner strip** — a collapsible strip for the Saturday-to-Friday
   week containing the selected date (always 7 days; weeks may cross a month
@@ -109,9 +113,11 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
   - `habits` — id, user_id, name, category, sort_order, goal, notes
   - `completions` — id, user_id, habit_id, date, completed, timestamps; UNIQUE(habit_id, date)
   - `daily_planner_tasks` — id, user_id, title, date, start_time, duration_minutes, priority, status, notes, position
+  - `focus_sessions` — id, user_id, task_id, status (`running` / `paused` / `completed`), started_at, segment_started_at, ended_at, accumulated_seconds, reported_seconds, timestamps; session history is stored separately from tasks, and task `duration_minutes` remains the aggregate used by analytics
   - `habit_topics` (milestones) — id, user_id, habit_id, title, status, start_date, target_date, details, resources, sort_order
 - **RLS enabled on all tables** with full CRUD policies scoped to `auth.uid()`, shipped as guarded raw SQL in the migration set (Prisma cannot model RLS or CHECK constraints)
-- **CHECK constraints** on `priority`, `status`, and `duration_minutes` (`status`/`priority` stay `String` columns, not Prisma enums)
+- **CHECK constraints** on `priority`, `status`, and `duration_minutes` (`status`/`priority` stay `String` columns, not Prisma enums), plus focus-session status, non-negative seconds, segment/status, and completed/ended-at consistency
+- Partial unique indexes allow at most one `running` focus session per user and one unfinished session per task
 - `user_id` foreign keys reference `auth.users(id) ON DELETE CASCADE` (Supabase-managed `auth` schema; stubbed locally for Docker Postgres)
 - Indexes on foreign keys and ordering columns
 - Because the app connects through a privileged database role, **runtime user isolation is enforced by explicit `userId` filters in every Prisma query**; the RLS policies remain in place as defense-in-depth
@@ -158,7 +164,7 @@ prisma/
 
 1. User signs up/logs in → **Supabase Auth** handles sessions; protected routes redirect to `/login`
 2. Data is read and written through server actions using the **Prisma Client**, always scoped by `userId`
-3. Habits are stored in `habits`, completions in `completions`, planner tasks in `daily_planner_tasks`, milestones in `habit_topics`
+3. Habits are stored in `habits`, completions in `completions`, planner tasks in `daily_planner_tasks`, focus sessions in `focus_sessions`, milestones in `habit_topics`
 4. Mutations go Server Action → Prisma Client → Postgres, then `revalidatePath` refreshes the cache
 5. The Zustand store holds client state with optimistic updates and rolls back on error
 6. Analytics are computed server-side from completion and planner data using date-fns
