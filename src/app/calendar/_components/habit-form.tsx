@@ -90,7 +90,6 @@ function HabitFormFields({
             placeholder="e.g. Wake Up on Time"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            autoFocus
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSave();
             }}

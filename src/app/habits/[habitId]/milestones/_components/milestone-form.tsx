@@ -72,7 +72,6 @@ export function MilestoneForm({
             value={draft.title}
             onChange={(event) => update("title", event.target.value)}
             placeholder="Name this milestone"
-            autoFocus
           />
         </div>
         <div className="space-y-2">

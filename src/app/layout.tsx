@@ -4,6 +4,8 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppHeader } from "@/components/app-header";
+import { GlobalFocusTimer } from "@/components/global-focus-timer";
+import { getActiveFocusSession } from "@/app/actions/focus.actions";
 import { createClient } from "@/lib/supabase/server";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -24,6 +26,9 @@ export default async function RootLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const { session: initialFocusSession } = user
+    ? await getActiveFocusSession()
+    : { session: null };
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -39,6 +44,9 @@ export default async function RootLayout({
             >
               {children}
             </main>
+            {user && (
+              <GlobalFocusTimer initialFocusSession={initialFocusSession} />
+            )}
           </div>
           <Toaster richColors />
         </ThemeProvider>

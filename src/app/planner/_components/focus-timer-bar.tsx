@@ -1,10 +1,10 @@
 "use client";
 
 import { Pause, Play, Square } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatFocusElapsed } from "@/lib/focus-timer";
 import { useFocusStore } from "@/stores/focus.store";
-import { usePlannerStore } from "@/stores/planner.store";
 import { cn } from "@/lib/utils";
 import { runPlannerAction } from "./planner-feedback";
 import { useFocusElapsed } from "./use-focus-elapsed";
@@ -15,8 +15,6 @@ export function FocusTimerBar() {
   const pause = useFocusStore((s) => s.pause);
   const resume = useFocusStore((s) => s.resume);
   const requestFinish = useFocusStore((s) => s.requestFinish);
-  const selectDate = usePlannerStore((s) => s.selectDate);
-  const selectedDate = usePlannerStore((s) => s.selectedDate);
   const elapsed = useFocusElapsed(activeSession);
 
   if (!activeSession) return null;
@@ -30,7 +28,7 @@ export function FocusTimerBar() {
       aria-label={`Focus timer for ${activeSession.taskTitle}, ${
         running ? "running" : "paused"
       }`}
-      className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2"
+      className="fixed inset-x-3 bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[min(28rem,calc(100vw-3rem))] sm:max-w-none"
     >
       <span
         aria-hidden="true"
@@ -40,19 +38,13 @@ export function FocusTimerBar() {
         )}
       />
       <div className="min-w-0">
-        <button
-          type="button"
-          onClick={() => {
-            if (activeSession.taskDate === selectedDate) return;
-            runPlannerAction(selectDate(activeSession.taskDate), {
-              fallback: "Failed to open the focused task",
-            });
-          }}
+        <Link
+          href={`/planner?date=${activeSession.taskDate}`}
           className="block max-w-44 truncate text-left text-sm font-medium hover:underline sm:max-w-60"
-          title="Go to the focused task's date"
+          title="Open the focused task's date"
         >
           {activeSession.taskTitle}
-        </button>
+        </Link>
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           {running ? "Focusing" : "Paused"}
         </p>
@@ -73,11 +65,7 @@ export function FocusTimerBar() {
         aria-label={running ? "Pause focus timer" : "Resume focus timer"}
         title={running ? "Pause focus timer" : "Resume focus timer"}
       >
-        {running ? (
-          <Pause className="h-4 w-4" />
-        ) : (
-          <Play className="h-4 w-4" />
-        )}
+        {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </Button>
       <Button
         variant="ghost"

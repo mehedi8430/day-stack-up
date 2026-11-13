@@ -17,7 +17,7 @@ import type {
   FocusSession,
   FocusSessionStatus,
 } from "@/lib/focus-types";
-import type { PlannerTaskPatch } from "@/lib/planner-types";
+import type { PlannerStatus, PlannerTaskPatch } from "@/lib/planner-types";
 
 function toDateKey(value: Date): string {
   return value.toISOString().split("T")[0];
@@ -30,6 +30,7 @@ function mapFocusSession(session: FocusSessionRow): FocusSession {
     taskId: session.taskId,
     taskTitle: session.task.title,
     taskDate: toDateKey(session.task.date),
+    taskStatus: session.task.status as PlannerStatus,
     status: session.status as FocusSessionStatus,
     startedAt: session.startedAt.toISOString(),
     segmentStartedAt: session.segmentStartedAt?.toISOString() ?? null,

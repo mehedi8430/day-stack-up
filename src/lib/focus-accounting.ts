@@ -7,6 +7,7 @@ export const sessionInclude = {
     select: {
       title: true,
       date: true,
+      status: true,
     },
   },
 } satisfies Prisma.FocusSessionInclude;

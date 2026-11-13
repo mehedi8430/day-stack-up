@@ -1,4 +1,4 @@
-import type { PlannerTaskPatch } from "./planner-types";
+import type { PlannerStatus, PlannerTaskPatch } from "./planner-types";
 
 export type FocusSessionStatus = "running" | "paused" | "completed";
 
@@ -8,6 +8,7 @@ export interface FocusSession {
   taskId: string;
   taskTitle: string;
   taskDate: string;
+  taskStatus: PlannerStatus;
   status: FocusSessionStatus;
   startedAt: string;
   segmentStartedAt: string | null;

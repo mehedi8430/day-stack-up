@@ -59,7 +59,6 @@ export function NewTaskForm({ date }: { date: string }) {
           placeholder="What needs to happen?"
           aria-label="Task title"
           autoComplete="off"
-          autoFocus
           disabled={saving}
           className="sm:flex-1"
         />

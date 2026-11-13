@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { formatFocusElapsed } from "@/lib/focus-timer";
 import type { FocusSession } from "@/lib/focus-types";
-import type { PlannerTask } from "@/lib/planner-types";
 import { useFocusStore } from "@/stores/focus.store";
 import { usePlannerStore } from "@/stores/planner.store";
 import { useFocusElapsed } from "./use-focus-elapsed";
@@ -67,18 +66,12 @@ export function SwitchFocusDialog() {
   );
 }
 
-function FinishFocusForm({
-  session,
-  task,
-}: {
-  session: FocusSession;
-  task: PlannerTask | null;
-}) {
+function FinishFocusForm({ session }: { session: FocusSession }) {
   const isMutating = useFocusStore((s) => s.isMutating);
   const confirmFinish = useFocusStore((s) => s.confirmFinish);
   const cancelFinish = useFocusStore((s) => s.cancelFinish);
   const elapsed = useFocusElapsed(session);
-  const alreadyDone = task?.status === "done";
+  const alreadyDone = session.taskStatus === "done";
   const [markDone, setMarkDone] = React.useState(alreadyDone);
 
   const handleFinish = async () => {
@@ -152,11 +145,6 @@ export function FinishFocusDialog() {
   const finishingSessionId = useFocusStore((s) => s.finishingSessionId);
   const isMutating = useFocusStore((s) => s.isMutating);
   const cancelFinish = useFocusStore((s) => s.cancelFinish);
-  const task = usePlannerStore((s) =>
-    activeSession
-      ? (s.tasks.find((item) => item.id === activeSession.taskId) ?? null)
-      : null,
-  );
 
   return (
     <Dialog
@@ -167,11 +155,7 @@ export function FinishFocusDialog() {
     >
       <DialogContent>
         {activeSession && (
-          <FinishFocusForm
-            key={activeSession.id}
-            session={activeSession}
-            task={task}
-          />
+          <FinishFocusForm key={activeSession.id} session={activeSession} />
         )}
       </DialogContent>
     </Dialog>

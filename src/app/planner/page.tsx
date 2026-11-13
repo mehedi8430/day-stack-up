@@ -1,6 +1,5 @@
 import { format, parseISO } from "date-fns";
 import { redirect } from "next/navigation";
-import { getActiveFocusSession } from "@/app/actions/focus.actions";
 import { getPlannerTasksBetween } from "@/app/actions/planner.actions";
 import { getWeek } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
@@ -30,15 +29,11 @@ export default async function PlannerPage({
   const start = format(week.start, "yyyy-MM-dd");
   const end = format(week.end, "yyyy-MM-dd");
 
-  const [{ tasks }, { session: initialFocusSession }] = await Promise.all([
-    getPlannerTasksBetween(start, end),
-    getActiveFocusSession(),
-  ]);
+  const { tasks } = await getPlannerTasksBetween(start, end);
 
   return (
     <PlannerManagement
       initialTasks={tasks}
-      initialFocusSession={initialFocusSession}
       today={today}
       selectedDate={requestedDate}
       weekStart={start}

@@ -59,7 +59,6 @@ function NotesFields({ habit, close }: { habit: Habit; close: () => void }) {
             placeholder="Add notes..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            autoFocus
           />
         ) : draft ? (
           <p className="whitespace-pre-wrap">{draft}</p>

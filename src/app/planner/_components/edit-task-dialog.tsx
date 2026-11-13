@@ -75,7 +75,6 @@ function EditTaskForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="What needs to happen?"
-          autoFocus
           disabled={saving}
         />
       </div>
@@ -96,7 +95,6 @@ function EditTaskForm({
             id="edit-duration"
             type="number"
             min="1"
-            step="5"
             placeholder="Not logged"
             value={duration}
             onChange={(event) => setDuration(event.target.value)}
