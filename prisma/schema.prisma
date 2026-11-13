@@ -63,8 +63,32 @@ model DailyPlannerTask {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
+  focusSessions FocusSession[]
+
   @@index([userId, date], map: "idx_daily_planner_tasks_user_date")
   @@map("daily_planner_tasks")
+  @@schema("public")
+}
+
+model FocusSession {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  taskId             String    @map("task_id") @db.Uuid
+  status             String    @default("running")
+  startedAt          DateTime  @map("started_at") @db.Timestamptz(6)
+  segmentStartedAt   DateTime? @map("segment_started_at") @db.Timestamptz(6)
+  endedAt            DateTime? @map("ended_at") @db.Timestamptz(6)
+  accumulatedSeconds Int       @default(0) @map("accumulated_seconds")
+  reportedSeconds    Int       @default(0) @map("reported_seconds")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  task DailyPlannerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_focus_sessions_user_id")
+  @@index([taskId], map: "idx_focus_sessions_task_id")
+  @@index([userId, status], map: "idx_focus_sessions_user_status")
+  @@map("focus_sessions")
   @@schema("public")
 }
 
