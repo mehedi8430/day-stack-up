@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  formatPlannerTime,
+  parsePlannerTime,
+} from "@/lib/planner-utils";
 import type {
   PlannerPriority,
   PlannerStatus,
@@ -18,9 +22,7 @@ function mapTask(task: unknown): PlannerTask {
       return time.length >= 5 ? time.slice(0, 5) : time;
     }
     if (time instanceof Date) {
-      const hours = time.getHours().toString().padStart(2, "0");
-      const minutes = time.getMinutes().toString().padStart(2, "0");
-      return `${hours}:${minutes}`;
+      return formatPlannerTime(time);
     }
     return null;
   };
@@ -70,6 +72,13 @@ export async function createPlannerTask(data: {
   notes?: string;
 }): Promise<{ task: PlannerTask } | { error: string }> {
   const user = await requireUser();
+  const startTime = data.startTime
+    ? parsePlannerTime(data.startTime)
+    : null;
+  if (data.startTime && !startTime) {
+    return { error: "Start time must be a valid time" };
+  }
+
   const count = await prisma.dailyPlannerTask.count({
     where: {
       userId: user.id,
@@ -82,7 +91,7 @@ export async function createPlannerTask(data: {
       userId: user.id,
       title: data.title.trim(),
       date: new Date(data.date),
-      startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}`) : null,
+      startTime,
       priority: data.priority,
       notes: data.notes?.trim() || null,
       position: count,
@@ -118,7 +127,13 @@ export async function updatePlannerTask(
   const values: Record<string, unknown> = { updatedAt: new Date() };
   if (updates.title !== undefined) values.title = updates.title.trim();
   if (updates.startTime !== undefined) {
-    values.startTime = updates.startTime ? new Date(`1970-01-01T${updates.startTime}`) : null;
+    const startTime = updates.startTime
+      ? parsePlannerTime(updates.startTime)
+      : null;
+    if (updates.startTime && !startTime) {
+      return { error: "Start time must be a valid time" };
+    }
+    values.startTime = startTime;
   }
   if (updates.durationMinutes !== undefined) {
     values.durationMinutes = updates.durationMinutes;

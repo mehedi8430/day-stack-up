@@ -14,7 +14,7 @@ export function QuickLinks({ tomorrowHref }: QuickLinksProps) {
   const actions = [
     { href: "/calendar", label: "Calendar", icon: CalendarDays },
     { href: "/habits", label: "Milestones", icon: ClipboardList },
-    { href: tomorrowHref, label: "Plan tomorrow", icon: ListTodo },
+    { href: "/planner", label: "Planned Tasks", icon: ListTodo },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
   ];
 

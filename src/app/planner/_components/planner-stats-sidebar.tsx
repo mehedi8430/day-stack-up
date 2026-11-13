@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePlannerStore } from "@/stores/planner.store";
 import { formatDuration } from "@/lib/planner-utils";
 
@@ -104,6 +105,15 @@ export function PlannerStatsSidebar() {
           <p className="text-xs text-muted-foreground">
             across the selected day&apos;s tasks
           </p>
+          <Link
+            href="/settings"
+            className="mt-2 inline-flex items-center rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+          >
+            Set work goals in Settings
+            <span aria-hidden="true" className="ml-1">
+              →
+            </span>
+          </Link>
         </div>
       </div>
     </aside>
