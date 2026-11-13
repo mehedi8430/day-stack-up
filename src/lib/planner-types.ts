@@ -15,3 +15,9 @@ export interface PlannerTask {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PlannerTaskPatch {
+  id: string;
+  durationMinutes?: number | null;
+  status?: PlannerStatus;
+}
