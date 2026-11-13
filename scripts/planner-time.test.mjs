@@ -16,9 +16,28 @@ registerHooks({
   },
 });
 
-const { formatPlannerTime, parsePlannerTime } = await import(
-  "../src/lib/planner-utils.ts"
-);
+const {
+  formatPlannerTime,
+  getDurationMinutesUpdate,
+  parsePlannerTime,
+} = await import("../src/lib/planner-utils.ts");
+
+test("an untouched duration field is not submitted", () => {
+  assert.equal(getDurationMinutesUpdate(null, ""), undefined);
+  assert.equal(getDurationMinutesUpdate(0, ""), undefined);
+  assert.equal(getDurationMinutesUpdate(5, "5"), undefined);
+});
+
+test("an edited duration field is submitted", () => {
+  assert.equal(getDurationMinutesUpdate(5, "10"), 10);
+  assert.equal(getDurationMinutesUpdate(5, ""), null);
+  assert.equal(getDurationMinutesUpdate(0, "15"), 15);
+});
+
+test("invalid duration values are not submitted", () => {
+  assert.equal(getDurationMinutesUpdate(5, "abc"), undefined);
+  assert.equal(getDurationMinutesUpdate(5, "-3"), undefined);
+});
 
 test("planner time round-trips as wall-clock time", () => {
   const value = parsePlannerTime("07:30");

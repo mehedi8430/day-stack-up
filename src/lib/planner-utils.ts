@@ -33,6 +33,34 @@ export function sortPlannerTasks(tasks: PlannerTask[]): PlannerTask[] {
 }
 
 /**
+ * Decides whether the task editor should submit its duration field.
+ *
+ * Returns `undefined` when the field still represents the duration the form
+ * opened with, so saving other fields cannot overwrite minutes a running focus
+ * timer just synced. Returns `null` for a cleared field and a number for a
+ * valid edit.
+ */
+export function getDurationMinutesUpdate(
+  initial: number | null,
+  draft: string,
+): number | null | undefined {
+  const trimmed = draft.trim();
+  const parsed = trimmed === "" ? null : Number(trimmed);
+
+  if (
+    parsed !== null &&
+    (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0)
+  ) {
+    return undefined;
+  }
+
+  const normalizedInitial = initial === null || initial === 0 ? null : initial;
+  if (parsed === normalizedInitial) return undefined;
+
+  return parsed;
+}
+
+/**
  * Formats a minute total as a human-readable duration, e.g. 130 -> "2 hrs
  * 10 minutes" and 45 -> "45 minutes".
  */

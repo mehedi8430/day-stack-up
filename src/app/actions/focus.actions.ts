@@ -2,34 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import type { FocusSession as FocusSessionModel, Prisma } from "@prisma/client";
+import {
+  getSessionElapsedSeconds,
+  lockFocusSession,
+  mergeTaskUpdate,
+  sessionInclude,
+  syncTrackedTime,
+  type FocusSessionRow,
+} from "@/lib/focus-accounting";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getTrackedMinuteSync } from "@/lib/focus-timer";
 import type {
   FocusMutationResult,
   FocusSession,
   FocusSessionStatus,
 } from "@/lib/focus-types";
 import type { PlannerTaskPatch } from "@/lib/planner-types";
-
-const sessionInclude = {
-  task: {
-    select: {
-      title: true,
-      date: true,
-    },
-  },
-} satisfies Prisma.FocusSessionInclude;
-
-type FocusSessionRow = Prisma.FocusSessionGetPayload<{
-  include: typeof sessionInclude;
-}>;
-
-type SessionTiming = {
-  status: string;
-  accumulatedSeconds: number;
-  segmentStartedAt: Date | null;
-};
 
 function toDateKey(value: Date): string {
   return value.toISOString().split("T")[0];
@@ -50,76 +38,6 @@ function mapFocusSession(session: FocusSessionRow): FocusSession {
     reportedSeconds: session.reportedSeconds,
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
-  };
-}
-
-function getSessionElapsedSeconds(
-  session: SessionTiming,
-  now: Date,
-): number {
-  const accumulated = Math.max(0, Math.floor(session.accumulatedSeconds));
-  if (session.status !== "running" || !session.segmentStartedAt) {
-    return accumulated;
-  }
-
-  return (
-    accumulated +
-    Math.max(
-      0,
-      Math.floor((now.getTime() - session.segmentStartedAt.getTime()) / 1000),
-    )
-  );
-}
-
-function mergeTaskUpdate(
-  updates: PlannerTaskPatch[],
-  update: PlannerTaskPatch,
-): void {
-  const existing = updates.find((item) => item.id === update.id);
-  if (existing) {
-    Object.assign(existing, update);
-  } else {
-    updates.push(update);
-  }
-}
-
-async function syncTrackedTime(
-  tx: Prisma.TransactionClient,
-  session: Pick<
-    FocusSessionModel,
-    "userId" | "taskId" | "reportedSeconds"
-  >,
-  elapsedSeconds: number,
-  now: Date,
-): Promise<{
-  reportedSeconds: number;
-  taskUpdate?: PlannerTaskPatch;
-}> {
-  const sync = getTrackedMinuteSync(
-    session.reportedSeconds,
-    elapsedSeconds,
-  );
-  if (sync.minutes === 0) {
-    return { reportedSeconds: sync.reportedSeconds };
-  }
-
-  const task = await tx.dailyPlannerTask.findFirst({
-    where: { id: session.taskId, userId: session.userId },
-    select: { durationMinutes: true },
-  });
-  if (!task) {
-    return { reportedSeconds: sync.reportedSeconds };
-  }
-
-  const durationMinutes = (task.durationMinutes ?? 0) + sync.minutes;
-  await tx.dailyPlannerTask.update({
-    where: { id: session.taskId, userId: session.userId },
-    data: { durationMinutes, updatedAt: now },
-  });
-
-  return {
-    reportedSeconds: sync.reportedSeconds,
-    taskUpdate: { id: session.taskId, durationMinutes },
   };
 }
 
@@ -168,7 +86,10 @@ async function pauseRunningSessions(
   });
 
   const taskUpdates: PlannerTaskPatch[] = [];
-  for (const session of running) {
+  for (const candidate of running) {
+    const session = await lockFocusSession(tx, candidate.id, userId);
+    if (!session || session.status !== "running") continue;
+
     const paused = await pauseSession(tx, session, now);
     if (paused.taskUpdate) {
       mergeTaskUpdate(taskUpdates, paused.taskUpdate);
@@ -181,16 +102,6 @@ function revalidateFocusPaths(taskUpdates: PlannerTaskPatch[]): void {
   if (taskUpdates.length === 0) return;
   revalidatePath("/planner");
   revalidatePath("/analytics");
-}
-
-async function findSessionForUser(
-  sessionId: string,
-  userId: string,
-): Promise<FocusSessionRow | null> {
-  return prisma.focusSession.findFirst({
-    where: { id: sessionId, userId },
-    include: sessionInclude,
-  });
 }
 
 export async function getActiveFocusSession(): Promise<{
@@ -232,9 +143,12 @@ export async function startFocusSession(
   const now = new Date();
   const result = await prisma.$transaction(async (tx) => {
     const taskUpdates: PlannerTaskPatch[] = [];
-    const existing = await tx.focusSession.findFirst({
+    const existingSummary = await tx.focusSession.findFirst({
       where: { userId: user.id, taskId, endedAt: null },
     });
+    const existing = existingSummary
+      ? await lockFocusSession(tx, existingSummary.id, user.id)
+      : null;
 
     const pausedUpdates = await pauseRunningSessions(
       tx,
@@ -293,45 +207,45 @@ export async function pauseFocusSession(
   sessionId: string,
 ): Promise<FocusMutationResult | { error: string }> {
   const user = await requireUser();
-  const session = await findSessionForUser(sessionId, user.id);
-  if (!session) {
-    return { error: "Focus session not found" };
-  }
-
-  if (session.status !== "running") {
-    return { session: mapFocusSession(session), taskUpdates: [] };
-  }
-
   const now = new Date();
+
   const result = await prisma.$transaction(async (tx) => {
+    const session = await lockFocusSession(tx, sessionId, user.id);
+    if (!session) {
+      return { error: "Focus session not found" };
+    }
+
+    if (session.status !== "running") {
+      return { session: mapFocusSession(session), taskUpdates: [] };
+    }
+
     const paused = await pauseSession(tx, session, now);
     return {
-      session: paused.session,
+      session: mapFocusSession(paused.session),
       taskUpdates: paused.taskUpdate ? [paused.taskUpdate] : [],
     };
   });
 
+  if ("error" in result) return result;
   revalidateFocusPaths(result.taskUpdates);
-  return {
-    session: mapFocusSession(result.session),
-    taskUpdates: result.taskUpdates,
-  };
+  return result;
 }
 
 export async function resumeFocusSession(
   sessionId: string,
 ): Promise<FocusMutationResult | { error: string }> {
   const user = await requireUser();
-  const session = await findSessionForUser(sessionId, user.id);
-  if (!session) {
-    return { error: "Focus session not found" };
-  }
-  if (session.status === "completed") {
-    return { session: mapFocusSession(session), taskUpdates: [] };
-  }
-
   const now = new Date();
+
   const result = await prisma.$transaction(async (tx) => {
+    const session = await lockFocusSession(tx, sessionId, user.id);
+    if (!session) {
+      return { error: "Focus session not found" };
+    }
+    if (session.status === "completed" || session.status === "running") {
+      return { session: mapFocusSession(session), taskUpdates: [] };
+    }
+
     const taskUpdates = await pauseRunningSessions(
       tx,
       user.id,
@@ -349,14 +263,12 @@ export async function resumeFocusSession(
       include: sessionInclude,
     });
 
-    return { session: running, taskUpdates };
+    return { session: mapFocusSession(running), taskUpdates };
   });
 
+  if ("error" in result) return result;
   revalidateFocusPaths(result.taskUpdates);
-  return {
-    session: mapFocusSession(result.session),
-    taskUpdates: result.taskUpdates,
-  };
+  return result;
 }
 
 export async function finishFocusSession(
@@ -364,30 +276,31 @@ export async function finishFocusSession(
   markTaskDone = false,
 ): Promise<FocusMutationResult | { error: string }> {
   const user = await requireUser();
-  const session = await findSessionForUser(sessionId, user.id);
-  if (!session) {
-    return { error: "Focus session not found" };
-  }
+  const now = new Date();
 
-  if (session.status === "completed") {
-    if (!markTaskDone) {
-      return { session: mapFocusSession(session), taskUpdates: [] };
+  const result = await prisma.$transaction(async (tx) => {
+    const session = await lockFocusSession(tx, sessionId, user.id);
+    if (!session) {
+      return { error: "Focus session not found" };
     }
 
-    await prisma.dailyPlannerTask.update({
-      where: { id: session.taskId, userId: user.id },
-      data: { status: "done", updatedAt: new Date() },
-    });
-    revalidatePath("/planner");
-    revalidatePath("/analytics");
-    return {
-      session: mapFocusSession(session),
-      taskUpdates: [{ id: session.taskId, status: "done" }],
-    };
-  }
+    if (session.status === "completed") {
+      if (!markTaskDone) {
+        return { session: mapFocusSession(session), taskUpdates: [] };
+      }
 
-  const now = new Date();
-  const result = await prisma.$transaction(async (tx) => {
+      await tx.dailyPlannerTask.update({
+        where: { id: session.taskId, userId: user.id },
+        data: { status: "done", updatedAt: now },
+      });
+      return {
+        session: mapFocusSession(session),
+        taskUpdates: [
+          { id: session.taskId, status: "done" as const },
+        ],
+      };
+    }
+
     const elapsedSeconds = getSessionElapsedSeconds(session, now);
     const sync = await syncTrackedTime(tx, session, elapsedSeconds, now);
     const taskUpdates: PlannerTaskPatch[] = [];
@@ -416,30 +329,29 @@ export async function finishFocusSession(
       mergeTaskUpdate(taskUpdates, { id: session.taskId, status: "done" });
     }
 
-    return { session: finished, taskUpdates };
+    return { session: mapFocusSession(finished), taskUpdates };
   });
 
+  if ("error" in result) return result;
   revalidateFocusPaths(result.taskUpdates);
-  return {
-    session: mapFocusSession(result.session),
-    taskUpdates: result.taskUpdates,
-  };
+  return result;
 }
 
 export async function heartbeatFocusSession(
   sessionId: string,
 ): Promise<FocusMutationResult | { error: string }> {
   const user = await requireUser();
-  const session = await findSessionForUser(sessionId, user.id);
-  if (!session) {
-    return { error: "Focus session not found" };
-  }
-  if (session.status !== "running") {
-    return { session: mapFocusSession(session), taskUpdates: [] };
-  }
-
   const now = new Date();
+
   const result = await prisma.$transaction(async (tx) => {
+    const session = await lockFocusSession(tx, sessionId, user.id);
+    if (!session) {
+      return { error: "Focus session not found" };
+    }
+    if (session.status !== "running") {
+      return { session: mapFocusSession(session), taskUpdates: [] };
+    }
+
     const elapsedSeconds = getSessionElapsedSeconds(session, now);
     const sync = await syncTrackedTime(tx, session, elapsedSeconds, now);
 
@@ -455,13 +367,10 @@ export async function heartbeatFocusSession(
     });
 
     return {
-      session: updated,
+      session: mapFocusSession(updated),
       taskUpdates: sync.taskUpdate ? [sync.taskUpdate] : [],
     };
   });
 
-  return {
-    session: mapFocusSession(result.session),
-    taskUpdates: result.taskUpdates,
-  };
+  return result;
 }

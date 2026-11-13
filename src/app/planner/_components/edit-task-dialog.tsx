@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { getDurationMinutesUpdate } from "@/lib/planner-utils";
 import type { PlannerPriority, PlannerTask } from "@/lib/planner-types";
 import { usePlannerStore } from "@/stores/planner.store";
 
@@ -33,6 +34,7 @@ function EditTaskForm({
   );
   const [notes, setNotes] = React.useState(task.notes ?? "");
   const [saving, setSaving] = React.useState(false);
+  const initialDuration = React.useRef(task.durationMinutes);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -40,10 +42,16 @@ function EditTaskForm({
     if (!trimmed) return;
     setSaving(true);
     try {
+      const durationUpdate = getDurationMinutesUpdate(
+        initialDuration.current,
+        duration,
+      );
       await updateTask(task.id, {
         title: trimmed,
         startTime: startTime || null,
-        durationMinutes: duration ? Number(duration) : null,
+        ...(durationUpdate === undefined
+          ? {}
+          : { durationMinutes: durationUpdate }),
         priority,
         notes: notes || null,
       });
