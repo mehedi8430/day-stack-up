@@ -8,6 +8,7 @@ import type {
   PlannerPriority,
   PlannerStatus,
   PlannerTask,
+  PlannerTaskPatch,
 } from "@/lib/planner-types";
 
 function genId(): string {
@@ -77,6 +78,7 @@ interface PlannerState {
   moveTaskToYesterday: (id: string) => Promise<void>;
   reorderTasks: (ids: string[]) => Promise<void>;
   setTaskStatus: (id: string, status: PlannerStatus) => Promise<void>;
+  applyTaskUpdates: (updates: PlannerTaskPatch[]) => void;
 }
 
 export const usePlannerStore = create<PlannerState>()((set, get) => ({
@@ -310,5 +312,16 @@ export const usePlannerStore = create<PlannerState>()((set, get) => ({
 
   setTaskStatus: async (id, status) => {
     await get().updateTask(id, { status });
+  },
+
+  applyTaskUpdates: (updates) => {
+    if (updates.length === 0) return;
+    const byId = new Map(updates.map((update) => [update.id, update]));
+    set((state) => ({
+      tasks: state.tasks.map((task) => {
+        const update = byId.get(task.id);
+        return update ? { ...task, ...update } : task;
+      }),
+    }));
   },
 }));

@@ -154,6 +154,21 @@ export async function updatePlannerTask(
 
 export async function deletePlannerTask(id: string): Promise<{ error?: string }> {
   const user = await requireUser();
+  const task = await prisma.dailyPlannerTask.findFirst({
+    where: { id, userId: user.id },
+    select: {
+      focusSessions: {
+        where: { endedAt: null },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+  if (!task) return { error: "Task not found" };
+  if (task.focusSessions.length > 0) {
+    return { error: "Finish the focus timer before deleting this task" };
+  }
+
   await prisma.dailyPlannerTask.delete({
     where: { id, userId: user.id },
   });
@@ -182,9 +197,21 @@ export async function movePlannerTaskToDate(
   const user = await requireUser();
   const existingTask = await prisma.dailyPlannerTask.findFirst({
     where: { id, userId: user.id },
-    select: { durationMinutes: true },
+    select: {
+      durationMinutes: true,
+      focusSessions: {
+        where: { endedAt: null },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
   if (!existingTask) return { error: "Task not found" };
+  if (existingTask.focusSessions.length > 0) {
+    return {
+      error: "Finish the focus timer before moving this task to another day",
+    };
+  }
   if ((existingTask.durationMinutes ?? 0) > 0) {
     return { error: "Tasks with logged time cannot be moved to another day" };
   }
