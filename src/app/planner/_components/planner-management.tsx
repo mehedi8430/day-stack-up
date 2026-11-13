@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { Clock3 } from "lucide-react";
+import type { FocusSession } from "@/lib/focus-types";
 import type { PlannerTask } from "@/lib/planner-types";
+import { useFocusStore } from "@/stores/focus.store";
 import { usePlannerStore } from "@/stores/planner.store";
 import { DeleteTaskDialog } from "./delete-task-dialog";
 import { EditTaskDialog } from "./edit-task-dialog";
@@ -13,6 +15,7 @@ import { WeekStrip } from "./week-strip";
 
 interface PlannerManagementProps {
   initialTasks: PlannerTask[];
+  initialFocusSession: FocusSession | null;
   today: string;
   selectedDate: string;
   weekStart: string;
@@ -20,19 +23,25 @@ interface PlannerManagementProps {
 
 export function PlannerManagement({
   initialTasks,
+  initialFocusSession,
   today,
   selectedDate,
   weekStart,
 }: PlannerManagementProps) {
   const initialize = usePlannerStore((s) => s.initialize);
   const reset = usePlannerStore((s) => s.reset);
+  const initializeFocus = useFocusStore((s) => s.initialize);
+  const resetFocus = useFocusStore((s) => s.reset);
+  const activeFocusStatus = useFocusStore((s) => s.activeSession?.status);
   const ready = usePlannerStore(
     (s) => s.initialized && Boolean(s.selectedDate),
   );
+  const focusReady = useFocusStore((s) => s.initialized);
   const [showWeekStrip, setShowWeekStrip] = React.useState(false);
 
   const initialRef = React.useRef({
     initialTasks,
+    initialFocusSession,
     today,
     selectedDate,
     weekStart,
@@ -46,10 +55,22 @@ export function PlannerManagement({
       initial.selectedDate,
       initial.today,
     );
-    return () => reset();
-  }, [initialize, reset]);
+    initializeFocus(initial.initialFocusSession);
+    return () => {
+      reset();
+      resetFocus();
+    };
+  }, [initialize, initializeFocus, reset, resetFocus]);
 
-  if (!ready) {
+  React.useEffect(() => {
+    if (activeFocusStatus !== "running") return;
+    const timer = window.setInterval(() => {
+      void useFocusStore.getState().heartbeat();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [activeFocusStatus]);
+
+  if (!ready || !focusReady) {
     return (
       <div
         className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8"
