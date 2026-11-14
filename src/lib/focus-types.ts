@@ -1,6 +1,7 @@
 import type { PlannerStatus, PlannerTaskPatch } from "./planner-types";
 
 export type FocusSessionStatus = "running" | "paused" | "completed";
+export type PomodoroPhase = "focus" | "short_break" | "long_break";
 
 export interface FocusSession {
   id: string;
@@ -15,6 +16,14 @@ export interface FocusSession {
   endedAt: string | null;
   accumulatedSeconds: number;
   reportedSeconds: number;
+  pomodoroEnabled: boolean;
+  pomodoroPhase: PomodoroPhase | null;
+  pomodoroPhaseEndsAt: string | null;
+  pomodoroRemainingSeconds: number | null;
+  pomodoroFocusMinutes: number;
+  pomodoroShortBreakMinutes: number;
+  pomodoroLongBreakMinutes: number;
+  pomodoroCompletedCount: number;
   createdAt: string;
   updatedAt: string;
 }

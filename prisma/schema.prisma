@@ -71,17 +71,25 @@ model DailyPlannerTask {
 }
 
 model FocusSession {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId             String    @map("user_id") @db.Uuid
-  taskId             String    @map("task_id") @db.Uuid
-  status             String    @default("running")
-  startedAt          DateTime  @map("started_at") @db.Timestamptz(6)
-  segmentStartedAt   DateTime? @map("segment_started_at") @db.Timestamptz(6)
-  endedAt            DateTime? @map("ended_at") @db.Timestamptz(6)
-  accumulatedSeconds Int       @default(0) @map("accumulated_seconds")
-  reportedSeconds    Int       @default(0) @map("reported_seconds")
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String    @map("user_id") @db.Uuid
+  taskId                    String    @map("task_id") @db.Uuid
+  status                    String    @default("running")
+  startedAt                 DateTime  @map("started_at") @db.Timestamptz(6)
+  segmentStartedAt          DateTime? @map("segment_started_at") @db.Timestamptz(6)
+  endedAt                   DateTime? @map("ended_at") @db.Timestamptz(6)
+  accumulatedSeconds        Int       @default(0) @map("accumulated_seconds")
+  reportedSeconds           Int       @default(0) @map("reported_seconds")
+  pomodoroEnabled           Boolean   @default(false) @map("pomodoro_enabled")
+  pomodoroPhase             String?   @map("pomodoro_phase")
+  pomodoroPhaseEndsAt       DateTime? @map("pomodoro_phase_ends_at") @db.Timestamptz(6)
+  pomodoroRemainingSeconds  Int?      @map("pomodoro_remaining_seconds")
+  pomodoroFocusMinutes      Int       @default(25) @map("pomodoro_focus_minutes")
+  pomodoroShortBreakMinutes Int       @default(5) @map("pomodoro_short_break_minutes")
+  pomodoroLongBreakMinutes  Int       @default(15) @map("pomodoro_long_break_minutes")
+  pomodoroCompletedCount    Int       @default(0) @map("pomodoro_completed_count")
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   task DailyPlannerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 

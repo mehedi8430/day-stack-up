@@ -19,7 +19,12 @@ export type FocusSessionRow = Prisma.FocusSessionGetPayload<{
 export function getSessionElapsedSeconds(
   session: Pick<
     FocusSessionModel,
-    "status" | "accumulatedSeconds" | "segmentStartedAt"
+    | "status"
+    | "accumulatedSeconds"
+    | "segmentStartedAt"
+    | "pomodoroEnabled"
+    | "pomodoroPhase"
+    | "pomodoroPhaseEndsAt"
   >,
   now: Date,
 ): number {
@@ -28,11 +33,22 @@ export function getSessionElapsedSeconds(
     return accumulated;
   }
 
+  const effectiveNow =
+    session.pomodoroEnabled &&
+    session.pomodoroPhase === "focus" &&
+    session.pomodoroPhaseEndsAt
+      ? new Date(
+          Math.min(now.getTime(), session.pomodoroPhaseEndsAt.getTime()),
+        )
+      : now;
+
   return (
     accumulated +
     Math.max(
       0,
-      Math.floor((now.getTime() - session.segmentStartedAt.getTime()) / 1000),
+      Math.floor(
+        (effectiveNow.getTime() - session.segmentStartedAt.getTime()) / 1000,
+      ),
     )
   );
 }

@@ -30,6 +30,28 @@ export function formatFocusElapsed(totalSeconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+export function getPomodoroRemainingSeconds(
+  phaseEndsAt: string | null,
+  pausedSeconds: number | null,
+  nowMs: number,
+): number | null {
+  if (phaseEndsAt) {
+    const deadline = Date.parse(phaseEndsAt);
+    if (!Number.isNaN(deadline)) {
+      return Math.max(0, Math.ceil((deadline - nowMs) / 1000));
+    }
+  }
+  return pausedSeconds === null ? null : Math.max(0, pausedSeconds);
+}
+
+export function getPomodoroBreakPhase(
+  completedFocusSessions: number,
+): "short_break" | "long_break" {
+  return Math.floor(completedFocusSessions) % 4 === 0
+    ? "long_break"
+    : "short_break";
+}
+
 export function getTrackedMinuteSync(
   reportedSeconds: number,
   elapsedSeconds: number,
