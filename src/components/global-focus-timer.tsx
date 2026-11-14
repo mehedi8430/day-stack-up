@@ -5,6 +5,7 @@ import type { FocusSession } from "@/lib/focus-types";
 import { useFocusStore } from "@/stores/focus.store";
 import { FinishFocusDialog } from "@/app/planner/_components/focus-dialogs";
 import { FocusTimerBar } from "@/app/planner/_components/focus-timer-bar";
+import { FocusPomodoroDialog } from "@/app/planner/_components/focus-pomodoro-dialog";
 
 export function GlobalFocusTimer({
   initialFocusSession,
@@ -34,6 +35,7 @@ export function GlobalFocusTimer({
     <>
       <FocusTimerBar />
       <FinishFocusDialog />
+      <FocusPomodoroDialog />
     </>
   );
 }

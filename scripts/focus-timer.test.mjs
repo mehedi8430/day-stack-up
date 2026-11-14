@@ -16,8 +16,13 @@ registerHooks({
   },
 });
 
-const { formatFocusElapsed, getElapsedSeconds, getTrackedMinuteSync } =
-  await import("../src/lib/focus-timer.ts");
+const {
+  formatFocusElapsed,
+  getPomodoroBreakPhase,
+  getElapsedSeconds,
+  getPomodoroRemainingSeconds,
+  getTrackedMinuteSync,
+} = await import("../src/lib/focus-timer.ts");
 
 test("running elapsed adds the current segment", () => {
   const session = {
@@ -65,6 +70,35 @@ test("formats focus time as minutes or hours", () => {
   assert.equal(formatFocusElapsed(3600), "1:00:00");
   assert.equal(formatFocusElapsed(3661), "1:01:01");
   assert.equal(formatFocusElapsed(-1), "00:00");
+});
+
+test("Pomodoro remaining time survives active and paused states", () => {
+  assert.equal(
+    getPomodoroRemainingSeconds(
+      "2026-11-13T10:25:00.000Z",
+      null,
+      Date.parse("2026-11-13T10:20:00.000Z"),
+    ),
+    300,
+  );
+  assert.equal(getPomodoroRemainingSeconds(null, 75, Date.now()), 75);
+  assert.equal(
+    getPomodoroRemainingSeconds(
+      "2026-11-13T10:25:00.000Z",
+      null,
+      Date.parse("2026-11-13T10:30:00.000Z"),
+    ),
+    0,
+  );
+  assert.equal(getPomodoroRemainingSeconds(null, null, Date.now()), null);
+});
+
+test("Pomodoro schedules a long break after every fourth focus session", () => {
+  assert.equal(getPomodoroBreakPhase(1), "short_break");
+  assert.equal(getPomodoroBreakPhase(3), "short_break");
+  assert.equal(getPomodoroBreakPhase(4), "long_break");
+  assert.equal(getPomodoroBreakPhase(5), "short_break");
+  assert.equal(getPomodoroBreakPhase(8), "long_break");
 });
 
 test("only whole unreported minutes are synced", () => {

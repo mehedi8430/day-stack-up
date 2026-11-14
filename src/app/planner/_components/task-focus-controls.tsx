@@ -2,11 +2,14 @@
 
 import { Pause, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatFocusElapsed } from "@/lib/focus-timer";
+import {
+  formatFocusElapsed,
+  getPomodoroRemainingSeconds,
+} from "@/lib/focus-timer";
 import type { PlannerTask } from "@/lib/planner-types";
 import { useFocusStore } from "@/stores/focus.store";
 import { runPlannerAction } from "./planner-feedback";
-import { useFocusElapsed } from "./use-focus-elapsed";
+import { useFocusClock, useFocusElapsed } from "./use-focus-elapsed";
 
 export function TaskFocusControls({
   task,
@@ -25,6 +28,7 @@ export function TaskFocusControls({
   const isActive =
     activeSession?.taskId === task.id && activeSession.status !== "completed";
   const elapsed = useFocusElapsed(isActive ? activeSession : null);
+  const now = useFocusClock(isActive ? activeSession : null);
   const iconClass = compact ? "h-8 w-8" : "h-9 w-9";
   const terminal = task.status === "done" || task.status === "skipped";
 
@@ -50,7 +54,20 @@ export function TaskFocusControls({
     );
   }
 
-  const running = activeSession.status === "running";
+  const isPomodoroBreak =
+    activeSession.pomodoroEnabled &&
+    (activeSession.pomodoroPhase === "short_break" ||
+      activeSession.pomodoroPhase === "long_break");
+  const breakRemaining = isPomodoroBreak
+    ? getPomodoroRemainingSeconds(
+        activeSession.pomodoroPhaseEndsAt,
+        activeSession.pomodoroRemainingSeconds,
+        now,
+      )
+    : null;
+  const running =
+    activeSession.status === "running" ||
+    (isPomodoroBreak && breakRemaining !== null && breakRemaining > 0);
 
   return (
     <div className="flex items-center gap-1">
@@ -69,8 +86,28 @@ export function TaskFocusControls({
           })
         }
         disabled={isMutating}
-        aria-label={running ? "Pause focus timer" : "Resume focus timer"}
-        title={running ? "Pause focus timer" : "Resume focus timer"}
+        aria-label={
+          running
+            ? isPomodoroBreak
+              ? "Pause Pomodoro break"
+              : "Pause focus timer"
+            : isPomodoroBreak
+              ? breakRemaining === 0
+                ? "Start next focus session"
+                : "Resume Pomodoro break"
+              : "Resume focus timer"
+        }
+        title={
+          running
+            ? isPomodoroBreak
+              ? "Pause Pomodoro break"
+              : "Pause focus timer"
+            : isPomodoroBreak
+              ? breakRemaining === 0
+                ? "Start next focus session"
+                : "Resume Pomodoro break"
+              : "Resume focus timer"
+        }
       >
         {running ? (
           <Pause className="h-4 w-4" />

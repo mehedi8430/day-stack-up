@@ -1,13 +1,16 @@
 "use client";
 
-import { Pause, Play, Square } from "lucide-react";
+import { Pause, Play, Square, Timer } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { formatFocusElapsed } from "@/lib/focus-timer";
+import {
+  formatFocusElapsed,
+  getPomodoroRemainingSeconds,
+} from "@/lib/focus-timer";
 import { useFocusStore } from "@/stores/focus.store";
 import { cn } from "@/lib/utils";
 import { runPlannerAction } from "./planner-feedback";
-import { useFocusElapsed } from "./use-focus-elapsed";
+import { useFocusClock, useFocusElapsed } from "./use-focus-elapsed";
 
 export function FocusTimerBar() {
   const activeSession = useFocusStore((s) => s.activeSession);
@@ -15,18 +18,35 @@ export function FocusTimerBar() {
   const pause = useFocusStore((s) => s.pause);
   const resume = useFocusStore((s) => s.resume);
   const requestFinish = useFocusStore((s) => s.requestFinish);
+  const setPomodoroDialogOpen = useFocusStore(
+    (s) => s.setPomodoroDialogOpen,
+  );
   const elapsed = useFocusElapsed(activeSession);
+  const now = useFocusClock(activeSession);
 
   if (!activeSession) return null;
 
   const running = activeSession.status === "running";
+  const isPomodoroBreak =
+    activeSession.pomodoroEnabled &&
+    (activeSession.pomodoroPhase === "short_break" ||
+      activeSession.pomodoroPhase === "long_break");
+  const breakRemaining = isPomodoroBreak
+    ? getPomodoroRemainingSeconds(
+        activeSession.pomodoroPhaseEndsAt,
+        activeSession.pomodoroRemainingSeconds,
+        now,
+      )
+    : null;
+  const timerRunning =
+    running || (isPomodoroBreak && breakRemaining !== null && breakRemaining > 0);
 
   return (
     <div
       role="timer"
       aria-live="off"
       aria-label={`Focus timer for ${activeSession.taskTitle}, ${
-        running ? "running" : "paused"
+        timerRunning ? "running" : "paused"
       }`}
       className="fixed inset-x-3 bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] z-[60] mx-auto flex max-w-md items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[min(28rem,calc(100vw-3rem))] sm:max-w-none"
     >
@@ -34,7 +54,11 @@ export function FocusTimerBar() {
         aria-hidden="true"
         className={cn(
           "size-2 shrink-0 rounded-full",
-          running ? "bg-emerald-500" : "bg-amber-500",
+          isPomodoroBreak
+            ? "bg-amber-500"
+            : running
+              ? "bg-emerald-500"
+              : "bg-amber-500",
         )}
       />
       <div className="min-w-0">
@@ -46,7 +70,15 @@ export function FocusTimerBar() {
           {activeSession.taskTitle}
         </Link>
         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          {running ? "Focusing" : "Paused"}
+          {activeSession.pomodoroEnabled
+            ? activeSession.pomodoroPhase === "focus"
+              ? "Pomodoro · Focus"
+              : activeSession.pomodoroPhase === "long_break"
+                ? "Pomodoro · Long break"
+                : "Pomodoro · Short break"
+            : running
+              ? "Focusing"
+              : "Paused"}
         </p>
       </div>
       <span className="ml-auto text-sm font-semibold tabular-nums">
@@ -56,16 +88,59 @@ export function FocusTimerBar() {
         variant="ghost"
         size="icon"
         className="h-8 w-8"
+        onClick={() => setPomodoroDialogOpen(true)}
+        disabled={isMutating}
+        aria-label={
+          activeSession.pomodoroEnabled
+            ? "Open Pomodoro timer"
+            : "Set up Pomodoro timer"
+        }
+        title={
+          activeSession.pomodoroEnabled
+            ? "Open Pomodoro timer"
+            : "Set up Pomodoro timer"
+        }
+      >
+        <Timer className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
         onClick={() =>
-          runPlannerAction(running ? pause() : resume(), {
+          runPlannerAction(timerRunning ? pause() : resume(), {
             fallback: "Failed to update focus timer",
           })
         }
         disabled={isMutating}
-        aria-label={running ? "Pause focus timer" : "Resume focus timer"}
-        title={running ? "Pause focus timer" : "Resume focus timer"}
+        aria-label={
+          timerRunning
+            ? isPomodoroBreak
+              ? "Pause Pomodoro break"
+              : "Pause focus timer"
+            : isPomodoroBreak
+              ? breakRemaining === 0
+                ? "Start next focus session"
+                : "Resume Pomodoro break"
+              : "Resume focus timer"
+        }
+        title={
+          timerRunning
+            ? isPomodoroBreak
+              ? "Pause Pomodoro break"
+              : "Pause focus timer"
+            : isPomodoroBreak
+              ? breakRemaining === 0
+                ? "Start next focus session"
+                : "Resume Pomodoro break"
+              : "Resume focus timer"
+        }
       >
-        {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        {timerRunning ? (
+          <Pause className="h-4 w-4" />
+        ) : (
+          <Play className="h-4 w-4" />
+        )}
       </Button>
       <Button
         variant="ghost"

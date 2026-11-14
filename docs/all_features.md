@@ -65,6 +65,7 @@ A full-stack daily habit tracker. Track progress from the Home dashboard and hab
   - Elapsed time is derived from saved timestamps and persisted automatically: pausing, finishing, switching tasks, or a 60-second heartbeat folds whole minutes into the task's logged time, so a reload or navigation never loses tracked time.
   - Only one timer runs per user. Starting a different task asks for confirmation; the previous session is paused with its time preserved rather than discarded.
   - Finishing saves the time and offers an optional "Mark this task as done" checkbox; timer state and task completion stay separate.
+  - Pomodoro is an optional mode on the same task-linked session, with 25/5 or 50/10 focus/break presets and a long break after every four completed focus sessions. Break time is excluded from the task's recorded work time; phase and remaining time persist across reloads. Users can switch back to the count-up timer without ending the task's focus session.
 - Footer note reminding that time blocks are guidance
 - **Weekly planner strip** — a collapsible strip for the Saturday-to-Friday
   week containing the selected date (always 7 days; weeks may cross a month

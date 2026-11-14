@@ -41,12 +41,23 @@ function subscribeToNothing(): () => void {
   return () => {};
 }
 
-export function useFocusElapsed(session: FocusSession | null): number {
-  const now = React.useSyncExternalStore(
-    session?.status === "running" ? subscribeToClock : subscribeToNothing,
+export function useFocusClock(session: FocusSession | null): number {
+  const isPomodoroBreakRunning = Boolean(
+    session?.pomodoroEnabled &&
+      (session.pomodoroPhase === "short_break" ||
+        session.pomodoroPhase === "long_break") &&
+      session.pomodoroPhaseEndsAt,
+  );
+  const shouldTick = session?.status === "running" || isPomodoroBreakRunning;
+  return React.useSyncExternalStore(
+    shouldTick ? subscribeToClock : subscribeToNothing,
     getClockSnapshot,
     getServerClockSnapshot,
   );
+}
+
+export function useFocusElapsed(session: FocusSession | null): number {
+  const now = useFocusClock(session);
 
   if (!session) return 0;
   if (session.status !== "running") return getElapsedSeconds(session, 0);
