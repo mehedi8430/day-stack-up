@@ -8,18 +8,19 @@ datasource db {
 }
 
 model Habit {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  name      String
-  category  String   @default("other")
-  sortOrder Int      @default(0) @map("sort_order")
-  goal      String   @default("")
-  notes     String?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  name         String
+  category     String   @default("other")
+  sortOrder    Int      @default(0) @map("sort_order")
+  goal         String   @default("")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   /// Days per week this habit targets (1-7). 7 means "every day" and is the
   /// default for all pre-existing habits.
-  weeklyTarget Int @default(7) @map("weekly_target")
+  weeklyTarget Int      @default(7) @map("weekly_target")
 
+  user        AuthUser        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   completions Completion[]
   topics      HabitTopic[]
   schedules   HabitSchedule[]
@@ -39,7 +40,8 @@ model Completion {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habit Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([habitId, date], map: "completions_habit_id_date_key")
   @@index([userId], map: "idx_completions_user_id")
@@ -64,6 +66,7 @@ model DailyPlannerTask {
   updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   focusSessions FocusSession[]
+  user          AuthUser       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId, date], map: "idx_daily_planner_tasks_user_date")
   @@map("daily_planner_tasks")
@@ -92,6 +95,7 @@ model FocusSession {
   updatedAt                 DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   task DailyPlannerTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user AuthUser         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId], map: "idx_focus_sessions_user_id")
   @@index([taskId], map: "idx_focus_sessions_task_id")
@@ -125,7 +129,8 @@ model HabitTopic {
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
-  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habit Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([habitId, sortOrder], map: "idx_habit_topics_habit_order")
   @@map("habit_topics")
@@ -144,11 +149,29 @@ model HabitSchedule {
   weeklyTarget Int      @map("weekly_target")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habit Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user  AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([habitId, startsOn], map: "habit_schedules_habit_id_starts_on_key")
   @@index([userId], map: "idx_habit_schedules_user_id")
   @@index([habitId], map: "idx_habit_schedules_habit_id")
   @@map("habit_schedules")
   @@schema("public")
+}
+
+/// Supabase's managed auth.users table. Local Docker Postgres gets an
+/// equivalent stub from the auth_bootstrap migration. Marked as an external
+/// table in prisma.config.ts so migrations never alter or drop it.
+model AuthUser {
+  id                String             @id @db.Uuid
+  email             String?
+  habits            Habit[]
+  completions       Completion[]
+  dailyPlannerTasks DailyPlannerTask[]
+  focusSessions     FocusSession[]
+  habitTopics       HabitTopic[]
+  habitSchedules    HabitSchedule[]
+
+  @@map("users")
+  @@schema("auth")
 }

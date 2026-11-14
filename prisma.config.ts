@@ -19,4 +19,13 @@ export default defineConfig({
   datasource: {
     url: datasourceUrl,
   },
+  // auth.users is owned by Supabase (or by the local auth_bootstrap stub).
+  // Without this, Prisma treats it as drift and generates a migration that
+  // drops the table and every foreign key referencing it.
+  experimental: {
+    externalTables: true,
+  },
+  tables: {
+    external: ["auth.users"],
+  },
 });
