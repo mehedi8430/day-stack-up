@@ -27,6 +27,26 @@ registerHooks({
 const runDbTests =
   process.env.RUN_DB_TESTS === "1" && Boolean(process.env.DATABASE_URL);
 
+const { getSessionElapsedSeconds } = await import(
+  "../src/lib/focus-accounting.ts"
+);
+
+test("Pomodoro work elapsed stops at the focus deadline", () => {
+  const session = {
+    status: "running",
+    accumulatedSeconds: 60,
+    segmentStartedAt: new Date("2026-11-13T10:00:00.000Z"),
+    pomodoroEnabled: true,
+    pomodoroPhase: "focus",
+    pomodoroPhaseEndsAt: new Date("2026-11-13T10:25:00.000Z"),
+  };
+
+  assert.equal(
+    getSessionElapsedSeconds(session, new Date("2026-11-13T10:40:00.000Z")),
+    1560,
+  );
+});
+
 test(
   "a stale focus snapshot cannot sync the same minutes twice",
   {
